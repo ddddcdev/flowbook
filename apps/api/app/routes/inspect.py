@@ -9,13 +9,8 @@ from fastapi import APIRouter
 
 from adapters.fastapi.contracts import InspectRequest, InspectResponse
 from adapters.fastapi.errors import to_http_error
-from adapters.fastapi.mapping import inspect_to_profile
+from adapters.fastapi.handlers import inspect as handle_inspect
 from apps.api.app.deps import ensure_initialized
-
-"""
-Route: /inspect
-- Accept input and return a profile
-"""
 
 router = APIRouter()
 
@@ -24,7 +19,6 @@ router = APIRouter()
 def inspect_route(req: InspectRequest) -> InspectResponse:
     ensure_initialized()
     try:
-        profile = inspect_to_profile(req.input)
-        return InspectResponse(profile=profile)
+        return handle_inspect(req)
     except Exception as e:
         raise to_http_error(e)
