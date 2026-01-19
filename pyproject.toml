@@ -11,3 +11,10 @@ dependencies = []
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+fastapi = "^0.128.0"
+httpx = "^0.28.1"
+uvicorn = "^0.40.0"
+
