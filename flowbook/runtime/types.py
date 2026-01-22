@@ -1,6 +1,6 @@
 """
 Runtime types:
-- Thin definitions for profile, pipeline, step_spec, run_info
+- Thin definitions for pipeline, step_spec, run_info
 Rule:
 - No semantics
 - No implementation details
@@ -12,24 +12,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-"""
-Runtime types:
-- Thin definitions for profile, pipeline, step_spec, run_info
-Rule:
-- No semantics
-- No implementation details
-"""
-
-
-Profile = dict[str, Any]
-
-
 @dataclass(frozen=True)
 class Step:
     name: str
     op: str
-    inputs: dict[str, str]      # param -> artifact key
-    outputs: list[str]          # output names only
+    inputs: dict[str, str]  # param -> artifact key
+    outputs: list[str]  # output names only
 
 
 @dataclass(frozen=True)
@@ -52,4 +40,5 @@ class RunInfo:
     status: str
     steps: list[StepRunInfo] = field(default_factory=list)
     artifacts_written: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)

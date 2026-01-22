@@ -27,7 +27,7 @@ def test_extensions_register_and_engine_execute() -> None:
     }
 
     engine = Engine(store=store, registry=registry, meta={"env": "test"})
-    _, info = engine.execute(profile_spec={"note": "opaque"}, config=config)
+    _, info = engine.execute(config=config)
 
     out_key = info.steps[0].outputs["sum"]
     assert store.get(out_key) == 5

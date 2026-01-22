@@ -5,7 +5,7 @@ description = ""
 authors = [{ name = "me", email = "me@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["pytest (>=9.0.2,<10.0.0)"]
 
 
 [build-system]

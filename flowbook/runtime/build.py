@@ -1,6 +1,6 @@
 """
 build:
-- Construct a pipeline from profile and config
+- Construct a pipeline from and config
 - Pipeline is an executable sequence of steps (serial by default)
 Not included:
 - Execution
@@ -9,21 +9,10 @@ Not included:
 
 from __future__ import annotations
 
-from flowbook.runtime.types import Pipeline, Profile, Step
+from flowbook.runtime.types import Pipeline, Step
 
 
-"""
-build:
-- Construct a pipeline from profile and config
-- Pipeline is an executable sequence of steps (serial by default)
-Not included:
-- Execution
-- DAG, branching, or optimization
-"""
-
-
-def build(profile: Profile, config: dict) -> Pipeline:
-    # profile currently opaque; config drives pipeline
+def build(config: dict) -> Pipeline:
     steps_cfg = config.get("steps", [])
     if not isinstance(steps_cfg, list):
         raise ValueError("config.steps must be a list")
