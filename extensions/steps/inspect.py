@@ -4,6 +4,15 @@ from flowbook.artifacts.keys import INSPECT_RESULT, READ_SPEC, SOURCE_URI
 
 
 def inspect_op(inputs: dict, store_):
+    """
+    Policy:
+    - inspect = facts extraction (observation), not planning.
+    - Output is control artifacts with stable schema; keep it usable across runs.
+    - No file I/O yet; contract-first stub. Later: read/scan/fingerprint/schema inference.
+    - Writes to fixed control keys to stabilize downstream integration early.
+      (May evolve to keyed-by-source when multi-source is introduced.)
+    """
+
     # inputs: {"source_uri": "...", "read_spec": {...}} を想定
     source_uri = inputs.get("source_uri")
     read_spec = inputs.get("read_spec") or {}

@@ -1,11 +1,9 @@
 """
 run:
-- Execute a pipeline in order and return run_info
-- All data products must go to artifacts
-- Return value contains execution info only
-Not included:
-- Persistence
-- Async, retries, or distributed execution
+- Executes a Pipeline sequentially.
+- Step.inputs are logical names; resolution is done via RunContext.bindings:
+    logical -> artifact_key -> store.get -> value passed to op.
+- Ops MUST NOT assume artifact keys; they receive values.
 """
 
 from __future__ import annotations
@@ -14,15 +12,14 @@ from flowbook.runtime.context import RunContext
 from flowbook.runtime.types import Pipeline, RunInfo, StepRunInfo
 
 
-"""
-run:
-- Execute a pipeline in order and return run_info
-- All data products must go to artifacts
-- Return value contains execution info only
-Not included:
-- Persistence
-- Async, retries, or distributed execution
-"""
+def _resolve_inputs(step, ctx):
+    resolved = {}
+    for param, logical in step.inputs.items():
+        if logical not in ctx.bindings:
+            raise KeyError(f"BindingNotFound: {logical}")
+        artifact_key = ctx.bindings[logical]
+        resolved[param] = ctx.store.get(artifact_key)
+    return resolved
 
 
 def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
@@ -38,9 +35,7 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
             info.steps.append(s_info)
 
             # Resolve inputs: artifact key -> value
-            resolved_inputs: dict[str, object] = {}
-            for k, artifact_key in step.inputs.items():
-                resolved_inputs[k] = ctx.store.get(artifact_key)
+            resolved_inputs = _resolve_inputs(step, ctx)
 
             # Resolve op
             op_fn = ctx.registry.get(step.op)

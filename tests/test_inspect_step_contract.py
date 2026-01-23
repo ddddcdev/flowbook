@@ -19,20 +19,22 @@ def test_inspect_step_writes_control_artifacts() -> None:
             {
                 "name": "inspect",
                 "op": "inspect",
-                "inputs": {
-                    "source_uri": SOURCE_URI,
-                    "read_spec": "artifact:input/read_spec",
-                },
+                "inputs": {"source_uri": "source_uri", "read_spec": "read_spec"},
                 "outputs": [],
             }
         ]
+    }
+
+    bindings = {
+        "source_uri": "artifact:input/source_uri",
+        "read_spec": "artifact:input/read_spec",
     }
 
     # read_specは未指定でも動くようにしているが、ここでは一応置く
     store.put("artifact:input/read_spec", {"sheet": 0})
 
     engine = Engine(store=store, registry=registry, meta={"env": "test"})
-    engine.execute(config=config)
+    engine.execute(config=config, bindings=bindings)
 
     r = store.get(INSPECT_RESULT)
 

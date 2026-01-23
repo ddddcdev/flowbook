@@ -4,24 +4,31 @@ from flowbook.artifacts.keys import PLAN
 
 
 def plan_from_two_numbers_op(inputs: dict, store_):
-    # inputs["x"], inputs["y"] は artifact key（文字列）として受け取る
-    x_key = inputs["x"]
-    y_key = inputs["y"]
+    """
+    Policy:
+    - planner = policy decision (produces plan), not execution.
+    - Planner may consume resolved values (e.g., Excel contents) for decision-making.
+    - Produced plan MUST use logical names for inputs (no artifact keys).
+      Artifact bindings are supplied externally via RunContext.bindings.
+    """
 
-    # 「2つなら add」：規定のinspect/planner
+    # inputs は値（2,3）
+    x = inputs["x"]
+    y = inputs["y"]
+
+    # 今回規定：2つなら add
     plan_config = {
         "steps": [
             {
                 "name": "add",
                 "op": "add",
-                # inputs は書かない（Engineが注入）
+                "inputs": {"x": "x", "y": "y"},  # param -> logical
                 "outputs": ["sum"],
             }
         ]
     }
-
     store_.put(PLAN, plan_config)
-    return {}  # control artifact 固定キーへ書くので outputs不要
+    return {}
 
 
 def register(registry) -> None:

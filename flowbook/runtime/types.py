@@ -16,7 +16,7 @@ from typing import Any
 class Step:
     name: str
     op: str
-    inputs: dict[str, str]  # param -> artifact key
+    inputs: dict[str, str]  # param -> logical name
     outputs: list[str]  # output names only
 
 
@@ -40,5 +40,6 @@ class RunInfo:
     status: str
     steps: list[StepRunInfo] = field(default_factory=list)
     artifacts_written: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)

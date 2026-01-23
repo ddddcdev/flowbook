@@ -1,6 +1,12 @@
+"""
+Engine policy:
+- Engine orchestrates build+run only.
+- Planning is expressed as steps that write control artifacts (PLAN, INSPECT_RESULT, ...).
+- Engine may execute a plan after planning, but does not interpret domain semantics.
+"""
+
 from __future__ import annotations
 
-import copy
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -16,45 +22,39 @@ class Engine:
     store: Any
     registry: Any
     meta: dict[str, Any] | None = None
-    profile: Any | None = None  # 追加（DI）
 
     def execute(
         self,
         *,
         config: dict[str, Any],
+        bindings: dict[str, str],
         run_id: str | None = None,
     ):
         rid = run_id or str(uuid.uuid4())
 
         pipeline = build(config)
-
         ctx = RunContext(
             run_id=rid,
             store=self.store,
             registry=self.registry,
             meta=self.meta or {},
+            bindings=bindings,
         )
         info = run(pipeline, ctx)
         return rid, info
 
     def execute_with_plan_once(
-        self, *, planner_config: dict, run_id: str | None = None
+        self,
+        *,
+        planner_config: dict[str, Any],
+        bindings: dict[str, str],
+        run_id: str | None = None,
     ):
-        rid, info1 = self.execute(config=planner_config, run_id=run_id)
+        rid, info1 = self.execute(
+            config=planner_config, bindings=bindings, run_id=run_id
+        )
 
-        plan_config = self.store.get(PLAN)
+        plan_config = self.store.get(PLAN)  # planは論理名のみ
+        _, info2 = self.execute(config=plan_config, bindings=bindings, run_id=rid)
 
-        # plannerに渡したのと同じ input bindings を抽出（artifact参照）
-        planner_steps = planner_config.get("steps", [])
-        if not planner_steps:
-            raise ValueError("planner_config.steps is empty")
-        bindings = dict(planner_steps[0].get("inputs", {}))
-
-        # planへ注入（inputs未指定のstepのみ）
-        exec_config = copy.deepcopy(plan_config)
-        for s in exec_config.get("steps", []):
-            if "inputs" not in s or s["inputs"] is None:
-                s["inputs"] = bindings
-
-        _, info2 = self.execute(config=exec_config, run_id=rid)
         return rid, info1, info2
