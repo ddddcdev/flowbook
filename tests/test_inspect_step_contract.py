@@ -12,8 +12,6 @@ def test_inspect_step_writes_control_artifacts() -> None:
     registry = Registry()
     register_steps(registry)
 
-    store.put(SOURCE_URI, "/tmp/dummy.xlsx")
-
     config = {
         "steps": [
             {
@@ -25,21 +23,17 @@ def test_inspect_step_writes_control_artifacts() -> None:
         ]
     }
 
-    bindings = {
-        "source_uri": "artifact:input/source_uri",
-        "read_spec": "artifact:input/read_spec",
-    }
-
-    # read_specは未指定でも動くようにしているが、ここでは一応置く
-    store.put("artifact:input/read_spec", {"sheet": 0})
-
     engine = Engine(store=store, registry=registry, meta={"env": "test"})
-    engine.execute(config=config, bindings=bindings)
+    run = engine.prepare()
 
-    r = store.get(INSPECT_RESULT)
+    # inputs は run 内へ投入（bindingsはrunが内部で保持する想定）
+    run.put_input("source_uri", "/tmp/dummy.xlsx")
+    run.put_input("read_spec", {"sheet": 0})
 
-    print(r)
+    info = run.exec(config=config)
+    assert info.status == "succeeded"
 
+    r = run.get(INSPECT_RESULT)
     assert r["source_uri"] == "/tmp/dummy.xlsx"
     assert "warnings" in r
     assert "suggested_read_spec" in r
