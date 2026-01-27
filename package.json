@@ -1,0 +1,30 @@
+{
+  "name": "flowbook",
+  "version": "1.0.0",
+  "description": "flowbook — a framework for flexible data flows.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "typecheck": "pyright",
+    "lint": "ruff check .",
+    "fmt": "ruff format .",
+    "test": "poetry run pytest -q"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kojimat/flowbook.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kojimat/flowbook/issues"
+  },
+  "homepage": "https://github.com/kojimat/flowbook#readme",
+  "devDependencies": {
+    "pyright": "^1.1.408"
+  }
+}

@@ -17,6 +17,7 @@ pytest = "^9.0.2"
 fastapi = "^0.128.0"
 httpx = "^0.28.1"
 uvicorn = "^0.40.0"
+ruff = "^0.14.14"
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
@@ -31,3 +32,15 @@ disable = [
   "fixme",
   "assignment-from-no-return",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

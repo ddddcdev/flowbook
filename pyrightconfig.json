@@ -1,0 +1,8 @@
+{
+  "include": ["flowbook", "tests", "apps", "extensions"],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "standard",
+  "reportMissingTypeStubs": "none",
+  "venvPath": ".",
+  "venv": ".venv"
+}
