@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Dict, List, Mapping, Optional, Protocol, Union, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
 # ---- JSON typing ----
-JsonPrimitive = Union[str, int, float, bool, None]
-JsonValue = Union[JsonPrimitive, List["JsonValue"], Dict[str, "JsonValue"]]
+JsonPrimitive = str | int | float | bool | None
+JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 class ArtifactNotFound(KeyError):

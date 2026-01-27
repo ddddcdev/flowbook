@@ -8,8 +8,9 @@ Rule:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 class UnknownOp(KeyError):
@@ -29,6 +30,7 @@ class Registry:
     - Dependency resolution only
     - No execution logic
     """
+
     _ops: dict[str, OpFn] = field(default_factory=dict)
 
     def register(self, op: str, fn: OpFn) -> None:

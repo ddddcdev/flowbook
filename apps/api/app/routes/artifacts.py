@@ -29,7 +29,7 @@ def list_artifacts_route() -> ArtifactsListResponse:
     try:
         return ArtifactsListResponse(keys=STATE.store.list())
     except Exception as e:
-        raise to_http_error(e)
+        raise to_http_error(e) from e
 
 
 @router.get("/artifacts/{key:path}", response_model=ArtifactGetResponse)
@@ -39,4 +39,4 @@ def get_artifact_route(key: str) -> ArtifactGetResponse:
         val = STATE.store.get(key)
         return ArtifactGetResponse(key=key, value=val)
     except Exception as e:
-        raise to_http_error(e)
+        raise to_http_error(e) from e

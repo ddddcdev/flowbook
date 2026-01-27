@@ -13,8 +13,8 @@ def plan_from_two_numbers_op(inputs: dict, store_):
     """
 
     # inputs は値（2,3）
-    x = inputs["x"]
-    y = inputs["y"]
+    inputs["x"]
+    inputs["y"]
 
     # 今回規定：2つなら add
     plan_config = {

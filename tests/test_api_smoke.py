@@ -28,8 +28,10 @@
 #     pipeline_id = body["pipeline_id"]
 #     assert isinstance(pipeline_id, str) and len(pipeline_id) > 0
 
-#     # Seed artifacts (this endpoint can be added later; for now directly via /artifacts/{key} PUT is also OK,
-#     # but since it's not in your plan, the app should pre-seed in-memory for smoke test OR provide a minimal seed route.)
+#     # Seed artifacts (this endpoint can be added later).
+#     # For now directly via /artifacts/{key} PUT is also OK,
+#     # but since it's not in your plan, the app should pre-seed in-memory for smoke test
+#     # OR provide a minimal seed route.
 #     # For now, require app startup to seed:
 #     # artifact:input/x = 2, artifact:input/y = 3
 

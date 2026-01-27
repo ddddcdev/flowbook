@@ -13,7 +13,6 @@ from fastapi import HTTPException
 from flowbook.artifacts.store import ArtifactNotFound
 from flowbook.registry.registry import UnknownOp
 
-
 """
 FastAPI error mapping:
 - Convert flowbook exceptions to HTTP errors

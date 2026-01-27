@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -61,17 +61,17 @@ class RunSession:
     def exec_with_plan_once(self, *, planner_config: dict[str, Any]) -> tuple[Any, Any]:
         info1 = self.exec(config=planner_config)
         if info1.status != "succeeded":
-            raise RuntimeError(
-                f"planner run failed (run_id={self.run_id}): {info1.errors}"
-            )
+            raise RuntimeError(f"planner run failed (run_id={self.run_id}): {info1.errors}")
 
-        plan_config = self.store.get(PLAN)
+        plan_config_raw = self.store.get(PLAN)
+        if not isinstance(plan_config_raw, dict):
+            raise TypeError(f"PLAN must be a dict config: got {type(plan_config_raw).__name__}")
+
+        plan_config = cast(dict[str, Any], plan_config_raw)
         # 2nd exec は同一session内で許可するので例外扱い（フラグ制御を分ける）
         self._executed = False
         info2 = self.exec(config=plan_config)
         if info2.status != "succeeded":
-            raise RuntimeError(
-                f"plan execution failed (run_id={self.run_id}): {info2.errors}"
-            )
+            raise RuntimeError(f"plan execution failed (run_id={self.run_id}): {info2.errors}")
 
         return info1, info2

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flowbook.artifacts.keys import INSPECT_RESULT, READ_SPEC, SOURCE_URI
+from flowbook.artifacts.keys import INSPECT_RESULT, READ_SPEC
 
 
 def inspect_op(inputs: dict, store_):

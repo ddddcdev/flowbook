@@ -71,5 +71,9 @@ def new_run_id() -> str:
 def create_run_context(run_id: str | None, meta: dict[str, Any] | None) -> RunContext:
     rid = run_id or new_run_id()
     return RunContext(
-        run_id=rid, store=STATE.store, registry=STATE.registry, meta=meta or {}
+        run_id=rid,
+        store=STATE.store,
+        registry=STATE.registry,
+        bindings={},
+        meta=meta or {},
     )

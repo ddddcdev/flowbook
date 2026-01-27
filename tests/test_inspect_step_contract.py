@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flowbook.artifacts.keys import INSPECT_RESULT, SOURCE_URI
+from flowbook.artifacts.keys import INSPECT_RESULT
 from flowbook.artifacts.store import InMemoryArtifactsStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps

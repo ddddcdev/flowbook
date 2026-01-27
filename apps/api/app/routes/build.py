@@ -21,4 +21,4 @@ def build_route(req: BuildRequest) -> BuildResponse:
     try:
         return handle_build(req)
     except Exception as e:
-        raise to_http_error(e)
+        raise to_http_error(e) from e

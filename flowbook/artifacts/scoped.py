@@ -36,8 +36,8 @@ class RunScopedStore:
     def get_bytes(self, key: str) -> bytes:
         return self.base.get_bytes(scope_key(self.run_id, key))
 
-    def put_df(self, key: str, df: "pd.DataFrame") -> str:
+    def put_df(self, key: str, df: pd.DataFrame) -> str:
         return self.base.put_df(scope_key(self.run_id, key), df)
 
-    def get_df(self, key: str) -> "pd.DataFrame":
+    def get_df(self, key: str) -> pd.DataFrame:
         return self.base.get_df(scope_key(self.run_id, key))

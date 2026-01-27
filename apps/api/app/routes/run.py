@@ -21,4 +21,4 @@ def run_route(req: RunRequest) -> RunResponse:
     try:
         return handle_run(req)
     except Exception as e:
-        raise to_http_error(e)
+        raise to_http_error(e) from e

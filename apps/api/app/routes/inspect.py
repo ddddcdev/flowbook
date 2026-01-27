@@ -21,4 +21,4 @@ def inspect_route(req: InspectRequest) -> InspectResponse:
     try:
         return handle_inspect(req)
     except Exception as e:
-        raise to_http_error(e)
+        raise to_http_error(e) from e

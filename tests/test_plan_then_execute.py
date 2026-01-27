@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from flowbook.artifacts.keys import PLAN
-from flowbook.artifacts.scoped import RunScopedStore
 from flowbook.artifacts.store import InMemoryArtifactsStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
