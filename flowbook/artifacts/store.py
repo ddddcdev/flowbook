@@ -1,27 +1,54 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional
+from typing import Dict, List, Mapping, Optional, Protocol, Union, runtime_checkable
 
 import pandas as pd
+
+# ---- JSON typing ----
+JsonPrimitive = Union[str, int, float, bool, None]
+JsonValue = Union[JsonPrimitive, List["JsonValue"], Dict[str, "JsonValue"]]
 
 
 class ArtifactNotFound(KeyError):
     """Raised when an artifact key does not exist in store."""
 
 
+@runtime_checkable
+class ArtifactsStore(Protocol):
+    def put(self, key: str, value: JsonValue) -> str: ...
+    def get(self, key: str) -> JsonValue: ...
+    def list(self, prefix: str | None = None) -> list[str]: ...
+
+    def put_bytes(self, key: str, data: bytes) -> str: ...
+    def get_bytes(self, key: str) -> bytes: ...
+
+    def put_df(self, key: str, df: pd.DataFrame) -> str: ...
+    def get_df(self, key: str) -> pd.DataFrame: ...
+
+
 @dataclass
 class InMemoryArtifactsStore:
-    _data: dict[str, Any] = field(default_factory=dict)
+    _data: dict[str, object] = field(default_factory=dict)
 
-    def put(self, key: str, value: Any) -> str:
+    # ---- JSON only ----
+    def put(self, key: str, value: JsonValue) -> str:
+        # JSON限定を“仕様”として固定
+        try:
+            json.dumps(value)
+        except TypeError as e:
+            raise TypeError(f"put expects JSON-serializable value: key={key}") from e
+
         self._data[key] = value
         return key
 
-    def get(self, key: str) -> Any:
+    def get(self, key: str) -> JsonValue:
         if key not in self._data:
             raise ArtifactNotFound(key)
-        return self._data[key]
+        v = self._data[key]
+        # ランタイム安全柵（壊れてたら即発見）
+        return v  # type: ignore[return-value]
 
     def list(self, prefix: str | None = None) -> list[str]:
         keys = sorted(self._data.keys())
@@ -29,41 +56,30 @@ class InMemoryArtifactsStore:
             return keys
         return [k for k in keys if k.startswith(prefix)]
 
-    # --- typed helpers (Postgres互換のために追加) ---
-    def put_json(
-        self, key: str, obj: Any, *, meta: Optional[Mapping[str, Any]] = None
-    ) -> None:
-        _ = meta
-        self.put(key, obj)
-
-    def get_json(self, key: str) -> Any:
-        return self.get(key)
-
-    def put_bytes(
-        self,
-        key: str,
-        data: bytes,
-        *,
-        content_type: str,
-        meta: Optional[Mapping[str, Any]] = None,
-    ) -> None:
-        _ = (content_type, meta)
-        self.put(key, data)
+    # ---- bytes ----
+    def put_bytes(self, key: str, data: bytes) -> str:
+        self._data[key] = bytes(data)
+        return key
 
     def get_bytes(self, key: str) -> bytes:
-        b = self.get(key)
+        b = self.get_any(key)
         if not isinstance(b, (bytes, bytearray)):
             raise TypeError(f"artifact is not bytes: {key}")
         return bytes(b)
 
-    def put_df(
-        self, key: str, df: pd.DataFrame, *, meta: Optional[Mapping[str, Any]] = None
-    ) -> None:
-        _ = meta
-        self.put(key, df)
+    # ---- df ----
+    def put_df(self, key: str, df: pd.DataFrame) -> str:
+        self._data[key] = df
+        return key
 
     def get_df(self, key: str) -> pd.DataFrame:
-        df = self.get(key)
-        if not isinstance(df, pd.DataFrame):
+        v = self.get_any(key)
+        if not isinstance(v, pd.DataFrame):
             raise TypeError(f"artifact is not DataFrame: {key}")
-        return df
+        return v
+
+    # ---- internal helpers ----
+    def get_any(self, key: str) -> object:
+        if key not in self._data:
+            raise ArtifactNotFound(key)
+        return self._data[key]

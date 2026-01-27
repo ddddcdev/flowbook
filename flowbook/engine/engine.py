@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from flowbook.artifacts.scoped import RunScopedStore
+from flowbook.artifacts.store import ArtifactsStore
 from flowbook.engine.session import RunSession
 from flowbook.runtime.run_id import new_run_id
 
 
 @dataclass(frozen=True)
 class Engine:
-    store: Any
+    store: ArtifactsStore
     registry: Any
     meta: dict[str, Any] | None = None
 

@@ -18,3 +18,16 @@ fastapi = "^0.128.0"
 httpx = "^0.28.1"
 uvicorn = "^0.40.0"
 
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+  "missing-module-docstring",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-locals",
+  "too-many-branches",
+  "too-many-statements",
+  "fixme",
+  "assignment-from-no-return",
+]

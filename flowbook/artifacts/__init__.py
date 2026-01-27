@@ -1,3 +1,3 @@
-from .store import InMemoryArtifactsStore, ArtifactNotFound
+from .store import ArtifactNotFound, ArtifactsStore, InMemoryArtifactsStore, JsonValue
 
-__all__ = ["InMemoryArtifactsStore", "ArtifactNotFound"]
+__all__ = ["ArtifactsStore", "JsonValue", "InMemoryArtifactsStore", "ArtifactNotFound"]

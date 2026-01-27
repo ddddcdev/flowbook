@@ -20,7 +20,7 @@ def test_df_roundtrip_across_store_instances():
     )
 
     store1 = PostgresArtifactsStore(url)
-    store1.put_df(key, df0, meta={"purpose": "roundtrip"})
+    store1.put_df(key, df0)
 
     store2 = PostgresArtifactsStore(url)
     df1 = store2.get_df(key)

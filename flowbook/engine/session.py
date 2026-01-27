@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from flowbook.artifacts.keys import PLAN
+from flowbook.artifacts.store import ArtifactsStore, JsonValue
 from flowbook.runtime.build import build
 from flowbook.runtime.context import RunContext
 from flowbook.runtime.run import run
@@ -14,7 +15,7 @@ from flowbook.runtime.run import run
 @dataclass
 class RunSession:
     run_id: str
-    store: Any  # RunScopedStore想定
+    store: ArtifactsStore
     registry: Any
     meta: dict[str, Any]
 
@@ -22,7 +23,7 @@ class RunSession:
     _executed: bool = False  # 1 session = 1 run を強制したいなら使う
 
     # ---- inputs ----
-    def put_input(self, name: str, value: Any) -> str:
+    def put_input(self, name: str, value: JsonValue) -> str:
         key = f"artifact:input/{name}"
         self.store.put(key, value)
         self._bindings[name] = key

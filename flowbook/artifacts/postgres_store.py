@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import io
+import json
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Optional
 
 import pandas as pd
 from sqlalchemy import (
@@ -13,10 +14,12 @@ from sqlalchemy import (
     Table,
     Text,
     create_engine,
-    func,
+    delete,
     select,
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from flowbook.artifacts.store import ArtifactNotFound, JsonValue
 
 metadata = MetaData()
 
@@ -50,90 +53,129 @@ class PostgresArtifactsStore:
     def __post_init__(self) -> None:
         self.engine = create_engine(self.database_url, future=True)
 
-    def put_bytes(
-        self,
-        key: str,
-        data: bytes,
-        *,
-        content_type: str,
-        meta: Optional[Mapping[str, Any]] = None,
-    ) -> None:
-        meta = dict(meta or {})
-        stmt = (
-            pg_insert(artifacts)
-            .values(
-                artifact_key=key,
-                content_type=content_type,
-                bytes=data,
-                json=None,
-                meta=meta,
-            )
-            .on_conflict_do_update(
-                index_elements=[artifacts.c.artifact_key],
-                set_={
-                    "content_type": content_type,
-                    "bytes": data,
-                    "json": None,
-                    "meta": meta,
-                },
-            )
-        )
-        with self.engine.begin() as conn:
-            conn.execute(stmt)
+    # ---- Protocol: JSON only ----
+    def put(self, key: str, value: JsonValue) -> str:
+        # JSON serializable 固定（暗黙エンコード禁止）
+        try:
+            json.dumps(value)
+        except TypeError as e:
+            raise TypeError(f"put expects JSON-serializable value: key={key}") from e
 
-    def get_bytes(self, key: str) -> bytes:
-        stmt = select(artifacts.c.bytes).where(artifacts.c.artifact_key == key)
-        with self.engine.begin() as conn:
-            row = conn.execute(stmt).one()
-        b = row[0]
-        if b is None:
-            raise KeyError(key)
-        return b
-
-    def put_json(
-        self, key: str, obj: Any, *, meta: Optional[Mapping[str, Any]] = None
-    ) -> None:
-        meta = dict(meta or {})
         stmt = (
             pg_insert(artifacts)
             .values(
                 artifact_key=key,
                 content_type="application/json",
+                codec="none",
                 bytes=None,
-                json=obj,
-                meta=meta,
+                json=value,
+                meta={},
             )
             .on_conflict_do_update(
                 index_elements=[artifacts.c.artifact_key],
                 set_={
                     "content_type": "application/json",
+                    "codec": "none",
                     "bytes": None,
-                    "json": obj,
-                    "meta": meta,
+                    "json": value,
+                    "meta": {},
                 },
             )
         )
         with self.engine.begin() as conn:
             conn.execute(stmt)
+        return key
 
-    def get_json(self, key: str) -> Any:
+    def get(self, key: str) -> JsonValue:
         stmt = select(artifacts.c.json).where(artifacts.c.artifact_key == key)
         with self.engine.begin() as conn:
-            row = conn.execute(stmt).one()
-        j = row[0]
-        if j is None:
-            raise KeyError(key)
-        return j
+            row = conn.execute(stmt).one_or_none()
+        if row is None or row[0] is None:
+            raise ArtifactNotFound(key)
+        return row[0]
 
-    def put_df(
-        self, key: str, df: pd.DataFrame, *, meta: Optional[Mapping[str, Any]] = None
-    ) -> None:
-        self.put_bytes(
-            key,
-            df_to_parquet_bytes(df),
-            content_type="application/x-parquet",
-            meta=meta,
+    def list(self, prefix: str | None = None) -> list[str]:
+        stmt = select(artifacts.c.artifact_key)
+        if prefix is not None:
+            stmt = stmt.where(artifacts.c.artifact_key.like(f"{prefix}%"))
+        stmt = stmt.order_by(artifacts.c.artifact_key)
+
+        with self.engine.begin() as conn:
+            rows = conn.execute(stmt).all()
+        return [r[0] for r in rows]
+
+    # ---- Protocol: bytes ----
+    def put_bytes(self, key: str, data: bytes) -> str:
+        stmt = (
+            pg_insert(artifacts)
+            .values(
+                artifact_key=key,
+                content_type="application/octet-stream",
+                codec="none",
+                bytes=data,
+                json=None,
+                meta={},
+            )
+            .on_conflict_do_update(
+                index_elements=[artifacts.c.artifact_key],
+                set_={
+                    "content_type": "application/octet-stream",
+                    "codec": "none",
+                    "bytes": data,
+                    "json": None,
+                    "meta": {},
+                },
+            )
         )
+        with self.engine.begin() as conn:
+            conn.execute(stmt)
+        return key
+
+    def get_bytes(self, key: str) -> bytes:
+        stmt = select(artifacts.c.bytes).where(artifacts.c.artifact_key == key)
+        with self.engine.begin() as conn:
+            row = conn.execute(stmt).one_or_none()
+        if row is None or row[0] is None:
+            raise ArtifactNotFound(key)
+        return row[0]
+
+    # ---- Protocol: df ----
+    def put_df(self, key: str, df: pd.DataFrame) -> str:
+        # content_type を区別したいなら codec/content_type をここで変更する
+        # （bytes列に置く運用は維持）
+        b = df_to_parquet_bytes(df)
+        stmt = (
+            pg_insert(artifacts)
+            .values(
+                artifact_key=key,
+                content_type="application/x-parquet",
+                codec="none",
+                bytes=b,
+                json=None,
+                meta={},
+            )
+            .on_conflict_do_update(
+                index_elements=[artifacts.c.artifact_key],
+                set_={
+                    "content_type": "application/x-parquet",
+                    "codec": "none",
+                    "bytes": b,
+                    "json": None,
+                    "meta": {},
+                },
+            )
+        )
+        with self.engine.begin() as conn:
+            conn.execute(stmt)
+        return key
 
     def get_df(self, key: str) -> pd.DataFrame:
         return parquet_bytes_to_df(self.get_bytes(key))
+
+    def delete_run(self, run_id: str) -> int:
+        if not run_id:
+            raise ValueError("run_id must be non-empty")
+        stmt = delete(artifacts).where(artifacts.c.artifact_key.like(f"{run_id}/%"))
+        with self.engine.begin() as conn:
+            res = conn.execute(stmt)
+        return int(res.rowcount or 0)

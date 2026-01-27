@@ -1,64 +1,43 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
 
 import pandas as pd
 
+from flowbook.artifacts.store import ArtifactsStore, JsonValue
+
 
 def scope_key(run_id: str, key: str) -> str:
-    if not run_id:
-        raise ValueError("run_id must be a non-empty string")
-    return key if key.startswith(f"{run_id}/") else f"{run_id}/{key}"
+    return f"{run_id}/{key}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class RunScopedStore:
-    base: Any
+    base: ArtifactsStore
     run_id: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.run_id, str) or not self.run_id:
-            raise ValueError("run_id must be a non-empty string")
+        if not self.run_id:
+            raise ValueError("run_id must be non-empty")
 
-    # --- InMemory互換（必須） ---
-    def put(self, key: str, value: Any) -> str:
+    def put(self, key: str, value: JsonValue) -> str:
         return self.base.put(scope_key(self.run_id, key), value)
 
-    def get(self, key: str) -> Any:
+    def get(self, key: str) -> JsonValue:
         return self.base.get(scope_key(self.run_id, key))
 
     def list(self, prefix: str | None = None) -> list[str]:
-        if prefix is None:
-            return self.base.list(prefix=f"{self.run_id}/")
-        return self.base.list(prefix=scope_key(self.run_id, prefix))
+        scoped_prefix = None if prefix is None else scope_key(self.run_id, prefix)
+        return self.base.list(scoped_prefix)
 
-    # --- typed helpers（Postgres向け） ---
-    def put_bytes(
-        self,
-        key: str,
-        data: bytes,
-        *,
-        content_type: str,
-        meta: Optional[Mapping[str, Any]] = None,
-    ) -> None:
-        return self.base.put_bytes(
-            scope_key(self.run_id, key), data, content_type=content_type, meta=meta
-        )
+    def put_bytes(self, key: str, data: bytes) -> str:
+        return self.base.put_bytes(scope_key(self.run_id, key), data)
 
     def get_bytes(self, key: str) -> bytes:
         return self.base.get_bytes(scope_key(self.run_id, key))
 
-    def put_json(
-        self, key: str, obj: Any, *, meta: Optional[Mapping[str, Any]] = None
-    ) -> None:
-        return self.base.put_json(scope_key(self.run_id, key), obj, meta=meta)
+    def put_df(self, key: str, df: "pd.DataFrame") -> str:
+        return self.base.put_df(scope_key(self.run_id, key), df)
 
-    def get_json(self, key: str) -> Any:
-        return self.base.get_json(scope_key(self.run_id, key))
-
-    def put_df(
-        self, key: str, df: pd.DataFrame, *, meta: Optional[Mapping[str, Any]] = None
-    ) -> None:
-        return self.base.put_df(scope_key(self.run_id, key), df, meta=meta)
-
-    def get_df(self, key: str) -> pd.DataFrame:
+    def get_df(self, key: str) -> "pd.DataFrame":
         return self.base.get_df(scope_key(self.run_id, key))
