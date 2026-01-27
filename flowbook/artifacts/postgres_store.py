@@ -19,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from flowbook.artifacts.store import ArtifactNotFound, JsonValue
+from flowbook.artifacts.store import ArtifactNotFound, ArtifactsStore, JsonValue
 
 metadata = MetaData()
 
@@ -47,7 +47,7 @@ def parquet_bytes_to_df(b: bytes) -> pd.DataFrame:
 
 
 @dataclass
-class PostgresArtifactsStore:
+class PostgresArtifactsStore(ArtifactsStore):
     database_url: str
 
     def __post_init__(self) -> None:

@@ -29,7 +29,7 @@ class ArtifactsStore(Protocol):
 
 
 @dataclass
-class InMemoryArtifactsStore:
+class InMemoryArtifactsStore(ArtifactsStore):
     _data: dict[str, object] = field(default_factory=dict)
 
     # ---- JSON only ----
