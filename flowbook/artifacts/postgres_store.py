@@ -140,27 +140,33 @@ class PostgresArtifactsStore(ArtifactsStore):
 
     # ---- Protocol: df ----
     def put_df(self, key: str, df: pd.DataFrame) -> str:
-        # content_type を区別したいなら codec/content_type をここで変更する
-        # （bytes列に置く運用は維持）
         b = df_to_parquet_bytes(df)
+
+        meta = {
+            "row_count": int(df.shape[0]),
+            "col_count": int(df.shape[1]),
+            "columns": [str(c) for c in df.columns.tolist()],
+            "schema": {str(c): str(df.dtypes[c]) for c in df.columns},
+        }
+
         stmt = (
             pg_insert(artifacts)
             .values(
                 artifact_key=key,
                 content_type="application/x-parquet",
-                codec="none",
+                codec="parquet",
                 bytes=b,
                 json=None,
-                meta={},
+                meta=meta,
             )
             .on_conflict_do_update(
                 index_elements=[artifacts.c.artifact_key],
                 set_={
                     "content_type": "application/x-parquet",
-                    "codec": "none",
+                    "codec": "parquet",
                     "bytes": b,
                     "json": None,
-                    "meta": {},
+                    "meta": meta,
                 },
             )
         )
