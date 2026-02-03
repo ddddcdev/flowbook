@@ -8,9 +8,12 @@
   },
   "scripts": {
     "typecheck": "pyright",
-    "lint": "ruff check .",
-    "fmt": "ruff format .",
-    "test": "poetry run pytest -q"
+    "lint": "poetry run ruff check .",
+    "fmt": "poetry run ruff format .",
+    "test": "poetry run pytest -q",
+
+    "ci": "npm run lint && npm run typecheck && npm run test",
+    "ci:fix": "npm run fmt && npm run lint && npm run typecheck && npm run test"
   },
   "repository": {
     "type": "git",

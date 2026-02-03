@@ -11,28 +11,25 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from flowbook.artifacts.store import InMemoryArtifactsStore
+from flowbook.artifacts.memory_store import InMemoryArtifactsStore
+from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.registry.registry import Registry
 from flowbook.runtime.context import RunContext
+from flowbook.runtime.default_store import DefaultRunStore
 from flowbook.runtime.types import Pipeline
-
-"""
-Dependencies:
-- Create and provide RunContext, Registry, and Artifacts
-Rule:
-- RunContext must be created here only
-"""
 
 
 @dataclass
 class AppState:
     store: InMemoryArtifactsStore
+    config_store: InMemoryConfigStore
     registry: Registry
     pipelines: dict[str, Pipeline]
 
 
 STATE = AppState(
     store=InMemoryArtifactsStore(),
+    config_store=InMemoryConfigStore(),
     registry=Registry(),
     pipelines={},
 )
@@ -70,9 +67,10 @@ def new_run_id() -> str:
 
 def create_run_context(run_id: str | None, meta: dict[str, Any] | None) -> RunContext:
     rid = run_id or new_run_id()
+    run_store = DefaultRunStore(artifacts=STATE.store, configs=STATE.config_store)
     return RunContext(
         run_id=rid,
-        store=STATE.store,
+        store=run_store,
         registry=STATE.registry,
         bindings={},
         meta=meta or {},

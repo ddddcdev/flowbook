@@ -5,7 +5,10 @@ from typing import Any
 
 from flowbook.artifacts.scoped import RunScopedStore
 from flowbook.artifacts.store import ArtifactsStore
+from flowbook.configs.null_store import NullConfigStore
+from flowbook.configs.store import ConfigStore
 from flowbook.engine.session import RunSession
+from flowbook.runtime.default_store import DefaultRunStore
 from flowbook.runtime.run_id import new_run_id
 
 
@@ -13,14 +16,17 @@ from flowbook.runtime.run_id import new_run_id
 class Engine:
     store: ArtifactsStore
     registry: Any
+    config_store: ConfigStore | None = None
     meta: dict[str, Any] | None = None
 
     def prepare(self, run_id: str | None = None) -> RunSession:
         rid = run_id or new_run_id()
-        scoped = RunScopedStore(self.store, rid)
+        scoped_artifacts = RunScopedStore(self.store, rid)
+        cfg = self.config_store or NullConfigStore()
+        run_store = DefaultRunStore(artifacts=scoped_artifacts, configs=cfg)
         return RunSession(
             run_id=rid,
-            store=scoped,
+            store=run_store,
             registry=self.registry,
             meta=self.meta or {},
         )

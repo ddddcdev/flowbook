@@ -6,16 +6,17 @@ from typing import Any, cast
 import pandas as pd
 
 from flowbook.artifacts.keys import PLAN
-from flowbook.artifacts.store import ArtifactsStore, JsonValue
+from flowbook.artifacts.store import JsonValue
 from flowbook.runtime.build import build
 from flowbook.runtime.context import RunContext
 from flowbook.runtime.run import run
+from flowbook.runtime.store import RunStore
 
 
 @dataclass
 class RunSession:
     run_id: str
-    store: ArtifactsStore
+    store: RunStore
     registry: Any
     meta: dict[str, Any]
 
