@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 
@@ -15,20 +15,22 @@ def read_excel_to_df(
     dtype: dict[str, Any] | None = None,
     engine: str | None = "openpyxl",
 ) -> pd.DataFrame:
-    return pd.read_excel(
-        Path(path),
-        sheet_name=sheet,
-        header=header,
-        dtype=dtype,
-        engine=engine,
-    )
+    kwargs: dict[str, Any] = {
+        "sheet_name": sheet,
+        "header": header,
+    }
+    if dtype is not None:
+        kwargs["dtype"] = dtype
+    if engine is not None:
+        kwargs["engine"] = engine
+    return pd.read_excel(Path(path), **kwargs)
 
 
 def write_df_to_excel(
     df: pd.DataFrame,
     sheet: str = "out",
     index: bool = False,
-    engine: str | None = "openpyxl",
+    engine: Literal["openpyxl", "odf", "xlsxwriter", "auto"] | None = "openpyxl",
 ) -> bytes:
     # pandas は engine を ExcelWriter で見る。ここでは openpyxl を暗黙利用
     import io

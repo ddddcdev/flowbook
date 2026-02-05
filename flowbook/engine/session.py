@@ -40,6 +40,12 @@ class RunSession:
     def get(self, key: str) -> Any:
         return self.store.get(key)
 
+    def get_bytes(self, key: str) -> bytes:
+        return self.store.get_bytes(key)
+
+    def get_df(self, key: str) -> pd.DataFrame:
+        return self.store.get_df(key)
+
     def list(self, prefix: str | None = None) -> list[str]:
         return self.store.list(prefix=prefix)
 
