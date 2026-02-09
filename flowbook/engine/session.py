@@ -5,7 +5,6 @@ from typing import Any, cast
 
 import pandas as pd
 
-from flowbook.artifacts.keys import PLAN
 from flowbook.artifacts.store import JsonValue
 from flowbook.runtime.build import build
 from flowbook.runtime.context import RunContext
@@ -70,9 +69,27 @@ class RunSession:
         if info1.status != "succeeded":
             raise RuntimeError(f"planner run failed (run_id={self.run_id}): {info1.errors}")
 
-        plan_config_raw = self.store.get(PLAN)
+        # Find planner step and extract plan output
+        planner_step = None
+        for step in info1.steps:
+            if step.name == "planner":
+                planner_step = step
+                break
+        
+        if not planner_step:
+            raise RuntimeError("No step named 'planner' found in planner_config execution")
+        
+        if "plan" not in planner_step.outputs:
+            raise KeyError(
+                f"planner step did not produce 'plan' output. "
+                f"Available outputs: {list(planner_step.outputs.keys())}"
+            )
+        
+        plan_key = planner_step.outputs["plan"]
+        plan_config_raw = self.store.get(plan_key)
+        
         if not isinstance(plan_config_raw, dict):
-            raise TypeError(f"PLAN must be a dict config: got {type(plan_config_raw).__name__}")
+            raise TypeError(f"plan must be a dict config: got {type(plan_config_raw).__name__}")
 
         plan_config = cast(dict[str, Any], plan_config_raw)
         # 2nd exec は同一session内で許可するので例外扱い（フラグ制御を分ける）

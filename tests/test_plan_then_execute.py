@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from flowbook.artifacts.keys import PLAN
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
 
 
-def test_inspect_produces_plan_then_engine_executes_plan() -> None:
+def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
+    """
+    Day10 pattern:
+    1) Planner step produces a plan config dict as output (not global PLAN)
+    2) Plan is persisted and artifact key recorded in StepRunInfo.outputs["plan"]
+    3) exec_with_plan_once reads plan from that artifact and executes it
+    """
     store = InMemoryArtifactsStore()
     registry = Registry()
     register_steps(registry)
@@ -18,7 +23,7 @@ def test_inspect_produces_plan_then_engine_executes_plan() -> None:
                 "name": "planner",
                 "op": "plan_from_two_numbers",
                 "inputs": {"x": "x", "y": "y"},
-                "outputs": [],
+                "outputs": ["plan"],  # ✅ Declare that planner produces plan
             }
         ]
     }
@@ -31,10 +36,27 @@ def test_inspect_produces_plan_then_engine_executes_plan() -> None:
 
     info1, info2 = run.exec_with_plan_once(planner_config=planner_config)
 
-    plan = run.get(PLAN)
+    # ✅ Verify planner step produced plan output
+    assert info1.status == "succeeded"
+    assert len(info1.steps) == 1
+    planner_step = info1.steps[0]
+    assert planner_step.name == "planner"
+    assert "plan" in planner_step.outputs
 
+    # ✅ Load plan from artifact (traceable via StepRunInfo)
+    plan_key = planner_step.outputs["plan"]
+    plan = run.get(plan_key)
+    
+    assert isinstance(plan, dict)
+    assert "steps" in plan
     assert plan["steps"][0]["op"] == "add"
     assert plan["steps"][0]["inputs"] == {"x": "x", "y": "y"}
+    assert plan["steps"][0]["outputs"] == ["sum"]
 
+    # ✅ Verify plan execution produced expected output
+    assert info2.status == "succeeded"
+    assert len(info2.steps) == 1
+    assert info2.steps[0].name == "add"
+    
     out_sum_key = info2.steps[0].outputs["sum"]
     assert run.get(out_sum_key) == 5
