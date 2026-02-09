@@ -255,3 +255,73 @@ def test_plan_from_template_plan_not_dict() -> None:
         assert False, "should raise error for non-dict plan"
     except RuntimeError as e:
         assert "planner run failed" in str(e)
+
+
+def test_preflight_validates_required_inputs_in_plan_execution() -> None:
+    """
+    Preflight validation: plan execution fails fast if referenced inputs are missing.
+
+    Scenario:
+    1. Store a plan template requiring x and y inputs
+    2. Planner produces the plan successfully with template_name only
+    3. Plan execution should fail at preflight validation (missing x, y)
+    4. Error message includes run_id, missing keys, and step references
+    """
+    artifacts_store = InMemoryArtifactsStore()
+    config_store = InMemoryConfigStore()
+
+    registry = Registry()
+    register_steps(registry)
+
+    # Put template requiring x and y
+    template_spec = {
+        "plan": {
+            "steps": [
+                {
+                    "name": "add",
+                    "op": "add",
+                    "inputs": {"x": "x", "y": "y"},  # requires x, y
+                }
+            ]
+        }
+    }
+    config_store.put_spec(
+        kind="plan_template",
+        name="tmpl_add",
+        spec=template_spec,
+        config_id="test_config_v1",
+    )
+
+    engine = Engine(
+        store=artifacts_store, registry=registry, config_store=config_store, meta={"env": "test"}
+    )
+    run = engine.prepare()
+
+    # Set only template_name; omit x and y
+    run.put_input("template_name", "tmpl_add")
+
+    planner_config = {
+        "steps": [
+            {
+                "name": "planner",
+                "op": "plan_from_template",
+                "inputs": {"template_name": "template_name"},
+            }
+        ]
+    }
+
+    try:
+        run.exec_with_plan_once(planner_config=planner_config)
+        assert False, "should fail at plan execution preflight due to missing x, y"
+    except RuntimeError as e:
+        error_str = str(e)
+        # Verify error message content
+        assert "missing required input" in error_str, (
+            f"error should mention missing inputs: {error_str}"
+        )
+        assert "run_id=" in error_str, f"error should include run_id: {error_str}"
+        # Check that both missing keys are mentioned
+        assert "'x'" in error_str, f"error should mention missing key 'x': {error_str}"
+        assert "'y'" in error_str, f"error should mention missing key 'y': {error_str}"
+        # Verify that "add" step is referenced
+        assert "add" in error_str, f"error should reference 'add' step: {error_str}"

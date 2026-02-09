@@ -14,6 +14,40 @@ from flowbook.runtime.context import RunContext
 from flowbook.runtime.types import Pipeline, RunInfo, StepRunInfo
 
 
+def _validate_required_inputs(pipeline: Pipeline, ctx: RunContext) -> None:
+    """
+    Preflight validation: ensure all referenced input keys exist in bindings.
+
+    Fails fast if any step references a logical input key that is not in the
+    run input space (ctx.bindings).
+
+    Raises:
+        RuntimeError: If any required inputs are missing, with details about
+                     run_id, missing keys, and steps that referenced them.
+    """
+    referenced_keys = set()
+    step_refs = {}  # key -> list of step names that reference it
+
+    for step in pipeline.steps:
+        for logical_name in step.inputs.values():
+            referenced_keys.add(logical_name)
+            if logical_name not in step_refs:
+                step_refs[logical_name] = []
+            step_refs[logical_name].append(step.name)
+
+    missing_keys = sorted(k for k in referenced_keys if k not in ctx.bindings)
+
+    if missing_keys:
+        missing_details = ", ".join(f"'{k}'" for k in missing_keys)
+        step_details = " | ".join(
+            f"'{k}' used by {{{', '.join(step_refs[k])}}}" for k in missing_keys
+        )
+        raise RuntimeError(
+            f"missing required input keys in run_id='{ctx.run_id}': {missing_details} "
+            f"({step_details})"
+        )
+
+
 def _resolve_inputs(step, ctx):
     resolved = {}
     for param, logical in step.inputs.items():
@@ -38,6 +72,8 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
     info = RunInfo(run_id=ctx.run_id, status="running")
 
     try:
+        _validate_required_inputs(pipeline, ctx)
+
         for step in pipeline.steps:
             s_info = StepRunInfo(
                 name=step.name,
