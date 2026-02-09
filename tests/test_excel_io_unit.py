@@ -25,6 +25,6 @@ def test_read_excel_table_missing_required_cols_raises(tmp_path):
 
     try:
         read_excel_table(path=p, sheet="in", header=0, required_cols=["a", "b"])
-        assert False, "expected MissingRequiredColumnsError"
+        raise AssertionError("expected MissingRequiredColumnsError")
     except MissingRequiredColumnsError as e:
         assert e.missing == ["b"]

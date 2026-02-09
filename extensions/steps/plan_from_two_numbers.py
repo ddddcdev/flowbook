@@ -11,10 +11,6 @@ def plan_from_two_numbers_op(inputs: dict, store_):
     - Returns plan as output value; runtime persists it and records key in StepRunInfo.outputs.
     """
 
-    # inputs は値（2,3）
-    x = inputs["x"]
-    y = inputs["y"]
-
     # 今回規定：2つなら add
     plan_config = {
         "steps": [

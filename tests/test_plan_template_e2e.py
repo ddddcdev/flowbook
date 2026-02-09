@@ -131,7 +131,7 @@ def test_plan_from_template_missing_template_name() -> None:
 
     try:
         run.exec_with_plan_once(planner_config=planner_config)
-        assert False, "should raise error for missing template_name"
+        raise AssertionError("should raise error for missing template_name")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
 
@@ -166,7 +166,7 @@ def test_plan_from_template_template_not_found() -> None:
 
     try:
         run.exec_with_plan_once(planner_config=planner_config)
-        assert False, "should raise error for missing template"
+        raise AssertionError("should raise error for missing template")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
 
@@ -209,7 +209,7 @@ def test_plan_from_template_missing_plan_key() -> None:
 
     try:
         run.exec_with_plan_once(planner_config=planner_config)
-        assert False, "should raise error for missing plan key"
+        raise AssertionError("should raise error for missing plan key")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
 
@@ -252,7 +252,7 @@ def test_plan_from_template_plan_not_dict() -> None:
 
     try:
         run.exec_with_plan_once(planner_config=planner_config)
-        assert False, "should raise error for non-dict plan"
+        raise AssertionError("should raise error for non-dict plan")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
 
@@ -312,7 +312,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
 
     try:
         run.exec_with_plan_once(planner_config=planner_config)
-        assert False, "should fail at plan execution preflight due to missing x, y"
+        raise AssertionError("should fail at plan execution preflight due to missing x, y")
     except RuntimeError as e:
         error_str = str(e)
         # Verify error message content
