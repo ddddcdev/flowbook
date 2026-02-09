@@ -17,7 +17,7 @@ def op(inputs: dict, store_) -> dict:
         required_cols=required_cols,
     )
     store_.put_df(out_key, df)
-    return {"out_key": out_key}
+    return {"df": df}
 
 
 def register(registry) -> None:

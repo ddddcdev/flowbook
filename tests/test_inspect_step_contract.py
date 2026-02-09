@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from flowbook.artifacts.keys import INSPECT_RESULT
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
@@ -18,7 +17,6 @@ def test_inspect_step_writes_control_artifacts() -> None:
                 "name": "inspect",
                 "op": "inspect",
                 "inputs": {"source_uri": "source_uri", "read_spec": "read_spec"},
-                "outputs": [],
             }
         ]
     }
@@ -33,7 +31,8 @@ def test_inspect_step_writes_control_artifacts() -> None:
     info = run.exec(config=config)
     assert info.status == "succeeded"
 
-    r = run.get(INSPECT_RESULT)
+    inspect_key = info.steps[0].outputs["inspect_result"]
+    r = run.get(inspect_key)
     assert r["source_uri"] == "/tmp/dummy.xlsx"
     assert "warnings" in r
     assert "suggested_read_spec" in r

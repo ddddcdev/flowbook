@@ -16,7 +16,6 @@ class Step:
     name: str
     op: str
     inputs: dict[str, str]  # param -> logical name
-    outputs: list[str]  # output names only
 
 
 @dataclass(frozen=True)

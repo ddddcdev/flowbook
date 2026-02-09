@@ -51,7 +51,6 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
                     "header": "header_row",
                     "out_key": "out_key_read",
                 },
-                "outputs": [],
             },
             {
                 "name": "map",
@@ -61,16 +60,13 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
                     "out_key": "out_key_map",
                     "mapping_name": "mapping_name_val",
                 },
-                "outputs": [],
             },
             {
                 "name": "write",
                 "op": "write_excel",
                 "inputs": {
                     "in_key": "out_key_map",
-                    "out_key": "out_key_write",
                 },
-                "outputs": [],
             },
         ]
     }
@@ -91,7 +87,6 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     run.put_input("out_key_read", "artifact:df/in")
     run.put_input("mapping_name_val", mapping_name)
     run.put_input("out_key_map", "artifact:df/mapped")
-    run.put_input("out_key_write", "artifact:file/out.xlsx")
     info = run.exec(config=pipeline_config)
 
     # 5) Verify execution succeeded
@@ -99,7 +94,8 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     assert len(info.steps) == 3
 
     # 6) Verify output bytes and content
-    out_bytes = run.get_bytes("artifact:file/out.xlsx")
+    out_bytes_key = info.steps[2].outputs["bytes"]
+    out_bytes = run.get_bytes(out_bytes_key)
     out_excel_path = tmp_path / "out.xlsx"
     out_excel_path.write_bytes(out_bytes)
 

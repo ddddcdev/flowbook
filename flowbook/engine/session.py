@@ -75,19 +75,19 @@ class RunSession:
             if step.name == "planner":
                 planner_step = step
                 break
-        
+
         if not planner_step:
             raise RuntimeError("No step named 'planner' found in planner_config execution")
-        
+
         if "plan" not in planner_step.outputs:
             raise KeyError(
                 f"planner step did not produce 'plan' output. "
                 f"Available outputs: {list(planner_step.outputs.keys())}"
             )
-        
+
         plan_key = planner_step.outputs["plan"]
         plan_config_raw = self.store.get(plan_key)
-        
+
         if not isinstance(plan_config_raw, dict):
             raise TypeError(f"plan must be a dict config: got {type(plan_config_raw).__name__}")
 

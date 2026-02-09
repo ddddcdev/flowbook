@@ -24,7 +24,6 @@ def build(config: dict) -> Pipeline:
                 name=s["name"],
                 op=s["op"],
                 inputs=dict(s.get("inputs", {})),
-                outputs=list(s.get("outputs", [])),
             )
         )
     return Pipeline(steps=steps)

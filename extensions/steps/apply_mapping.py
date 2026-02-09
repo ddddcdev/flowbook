@@ -17,7 +17,7 @@ def apply_mapping_op(inputs: dict, store_):
     out = apply_mapping_ops(df, ops)
     store_.put_df(out_key, out)
 
-    return {"out_key": out_key}
+    return {"df": out}
 
 
 def register(registry) -> None:

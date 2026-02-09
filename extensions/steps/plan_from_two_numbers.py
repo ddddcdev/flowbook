@@ -22,7 +22,6 @@ def plan_from_two_numbers_op(inputs: dict, store_):
                 "name": "add",
                 "op": "add",
                 "inputs": {"x": "x", "y": "y"},  # param -> logical
-                "outputs": ["sum"],
             }
         ]
     }

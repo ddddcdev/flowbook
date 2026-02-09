@@ -11,7 +11,7 @@ def op(inputs: dict, store_) -> dict:
 
     df = read_excel_to_df(path, sheet=sheet, header=header)
     store_.put_df(out_key, df)
-    return {"out_key": out_key}
+    return {"df": df}
 
 
 def register(registry) -> None:

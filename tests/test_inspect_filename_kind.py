@@ -88,7 +88,6 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
                     "input_profile_name": "input_profile_name",
                     "path": "path",
                 },
-                "outputs": ["result"],
             }
         ]
     }
@@ -134,7 +133,6 @@ def test_inspect_unknown_filename_no_error():
                     "input_profile_name": "input_profile_name",
                     "path": "path",
                 },
-                "outputs": ["result"],
             }
         ]
     }
@@ -189,7 +187,6 @@ def test_inspect_missing_config_raises_error():
                     "input_profile_name": "input_profile_name",
                     "path": "path",
                 },
-                "outputs": ["result"],
             }
         ]
     }
@@ -241,7 +238,6 @@ def test_inspect_missing_kind_rules_raises_error():
                     "input_profile_name": "input_profile_name",
                     "path": "path",
                 },
-                "outputs": ["result"],
             }
         ]
     }
@@ -273,7 +269,6 @@ def test_inspect_missing_path_input_raises_error():
                     "input_profile_name": "input_profile_name",
                     # Note: path binding missing/unresolved
                 },
-                "outputs": ["result"],
             }
         ]
     }

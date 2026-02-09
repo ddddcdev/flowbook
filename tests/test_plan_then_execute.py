@@ -23,7 +23,6 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
                 "name": "planner",
                 "op": "plan_from_two_numbers",
                 "inputs": {"x": "x", "y": "y"},
-                "outputs": ["plan"],  # ✅ Declare that planner produces plan
             }
         ]
     }
@@ -46,17 +45,16 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
     # ✅ Load plan from artifact (traceable via StepRunInfo)
     plan_key = planner_step.outputs["plan"]
     plan = run.get(plan_key)
-    
+
     assert isinstance(plan, dict)
     assert "steps" in plan
     assert plan["steps"][0]["op"] == "add"
     assert plan["steps"][0]["inputs"] == {"x": "x", "y": "y"}
-    assert plan["steps"][0]["outputs"] == ["sum"]
 
     # ✅ Verify plan execution produced expected output
     assert info2.status == "succeeded"
     assert len(info2.steps) == 1
     assert info2.steps[0].name == "add"
-    
+
     out_sum_key = info2.steps[0].outputs["sum"]
     assert run.get(out_sum_key) == 5

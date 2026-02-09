@@ -4,8 +4,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from flowbook.artifacts.keys import INSPECT_RESULT, READ_SPEC
-
 
 def inspect_op(inputs: dict, store_):
     """
@@ -29,12 +27,11 @@ def inspect_op(inputs: dict, store_):
         "columns": [],  # 将来: [{"name": "...", "dtype": "..."}]
     }
 
-    # control artifacts を固定キーに保存
-    store_.put(INSPECT_RESULT, result)
-    store_.put(READ_SPEC, result["suggested_read_spec"])
-
-    # runtimeのoutputsを使わない（契約揺れ回避）
-    return {}
+    # runtimeに任せて outputs を永続化する
+    return {
+        "inspect_result": result,
+        "read_spec": result["suggested_read_spec"],
+    }
 
 
 def inspect_filename_kind_op(inputs: dict[str, Any], store_) -> dict[str, Any]:

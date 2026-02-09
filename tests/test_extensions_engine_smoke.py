@@ -21,7 +21,6 @@
 #                 "name": "s1",
 #                 "op": "add",
 #                 "inputs": {"x": "artifact:input/x", "y": "artifact:input/y"},
-#                 "outputs": ["sum"],
 #             }
 #         ]
 #     }
