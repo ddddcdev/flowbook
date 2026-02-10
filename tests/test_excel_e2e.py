@@ -90,7 +90,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     run.put_input("out_key_read", "artifact:df/in")
     run.put_input("mapping_name_val", mapping_name)
     run.put_input("out_key_map", "artifact:df/mapped")
-    info = run.exec(config=pipeline_config)
+    info = run.exec(pipeline_config=pipeline_config)
 
     # 5) Verify execution succeeded
     assert info.status == "succeeded"

@@ -21,10 +21,10 @@ class Registry:
 
     _ops: dict[str, BaseOp] = field(default_factory=dict)
 
-    def register(self, op: str, fn: BaseOp) -> None:
-        self._ops[op] = fn
+    def register(self, op_name: str, op_impl: BaseOp) -> None:
+        self._ops[op_name] = op_impl
 
-    def get(self, op: str) -> BaseOp:
-        if op not in self._ops:
-            raise UnknownOp(op)
-        return self._ops[op]
+    def get(self, op_name: str) -> BaseOp:
+        if op_name not in self._ops:
+            raise UnknownOp(op_name)
+        return self._ops[op_name]

@@ -1,6 +1,6 @@
 """
 build:
-- Construct a pipeline from and config
+- Construct a pipeline from a pipeline config (steps list).
 - Pipeline is an executable sequence of steps (serial by default)
 Not included:
 - Execution
@@ -14,18 +14,18 @@ from typing import Any
 from flowbook.runtime.types import Pipeline, Step
 
 
-def build(config: dict[str, Any]) -> Pipeline:
-    steps_cfg = config.get("steps", [])
-    if not isinstance(steps_cfg, list):
-        raise ValueError("config.steps must be a list")
+def build(pipeline_config: dict[str, Any]) -> Pipeline:
+    step_configs = pipeline_config.get("steps", [])
+    if not isinstance(step_configs, list):
+        raise ValueError("pipeline_config.steps must be a list")
 
     steps: list[Step] = []
-    for s in steps_cfg:
+    for step_cfg in step_configs:
         steps.append(
             Step(
-                name=s["name"],
-                op=s["op"],
-                inputs=dict(s.get("inputs", {})),
+                name=step_cfg["name"],
+                op=step_cfg["op"],
+                inputs=dict(step_cfg.get("inputs", {})),
             )
         )
     return Pipeline(steps=steps)

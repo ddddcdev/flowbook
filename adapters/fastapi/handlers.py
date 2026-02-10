@@ -25,7 +25,8 @@ def inspect(req: InspectRequest) -> InspectResponse:
 
 
 def build_pipeline_handler(req: BuildRequest) -> BuildResponse:
-    pipeline = build_pipeline(req.profile, req.config)
+    pipeline_config = {**(req.profile or {}), **(req.config or {})}
+    pipeline = build_pipeline(pipeline_config)
 
     pid = new_pipeline_id()
     STATE.pipelines[pid] = pipeline

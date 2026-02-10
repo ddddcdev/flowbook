@@ -21,12 +21,12 @@ class Engine:
     meta: dict[str, Any] | None = None
 
     def prepare(self, run_id: str | None = None) -> RunSession:
-        rid = run_id or new_run_id()
-        scoped_artifacts = RunScopedStore(self.store, rid)
-        cfg = self.config_store or NullConfigStore()
-        run_store = DefaultRunStore(artifacts=scoped_artifacts, configs=cfg)
+        run_id = run_id or new_run_id()
+        scoped_artifacts = RunScopedStore(self.store, run_id)
+        config_store = self.config_store or NullConfigStore()
+        run_store = DefaultRunStore(artifacts=scoped_artifacts, configs=config_store)
         return RunSession(
-            run_id=rid,
+            run_id=run_id,
             store=run_store,
             registry=self.registry,
             meta=self.meta or {},

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 
@@ -54,29 +54,32 @@ class RunSession:
         return self.store.list(prefix=prefix)
 
     # ---- execution ----
-    def exec(self, *, config: dict[str, Any]) -> RunInfo:
+    def exec(self, *, pipeline_config: dict[str, Any]) -> RunInfo:
         if self._executed:
             raise RuntimeError("RunSession already executed; create a new session")
         self._executed = True
 
-        pipeline = build(config)
-        ctx = RunContext(
+        pipeline = build(pipeline_config)
+        run_ctx = RunContext(
             run_id=self.run_id,
             store=self.store,
             registry=self.registry,
             meta=self.meta,
             bindings=self._bindings,
         )
-        return run(pipeline, ctx)
+        return run(pipeline, run_ctx)
 
-    def exec_with_plan_once(self, *, planner_config: dict[str, Any]) -> tuple[RunInfo, RunInfo]:
-        info1 = self.exec(config=planner_config)
-        if info1.status != "succeeded":
-            raise RuntimeError(f"planner run failed (run_id={self.run_id}): {info1.errors}")
+    def exec_with_plan_once(
+        self, *, planner_config: dict[str, Any]
+    ) -> tuple[RunInfo, RunInfo]:
+        planner_info = self.exec(pipeline_config=planner_config)
+        if planner_info.status != "succeeded":
+            raise RuntimeError(
+                f"planner run failed (run_id={self.run_id}): {planner_info.errors}"
+            )
 
-        # Find planner step and extract plan output
         planner_step = None
-        for step in info1.steps:
+        for step in planner_info.steps:
             if step.name == "planner":
                 planner_step = step
                 break
@@ -91,16 +94,12 @@ class RunSession:
             )
 
         plan_key = planner_step.outputs["plan"]
-        plan_config_raw = self.store.get(plan_key)
-
-        if not isinstance(plan_config_raw, dict):
-            raise TypeError(f"plan must be a dict config: got {type(plan_config_raw).__name__}")
-
-        plan_config = cast(dict[str, Any], plan_config_raw)
-        # 2nd exec は同一session内で許可するので例外扱い（フラグ制御を分ける）
+        plan_config = self.store.get_dict(plan_key)
         self._executed = False
-        info2 = self.exec(config=plan_config)
-        if info2.status != "succeeded":
-            raise RuntimeError(f"plan execution failed (run_id={self.run_id}): {info2.errors}")
+        exec_info = self.exec(pipeline_config=plan_config)
+        if exec_info.status != "succeeded":
+            raise RuntimeError(
+                f"plan execution failed (run_id={self.run_id}): {exec_info.errors}"
+            )
 
-        return info1, info2
+        return planner_info, exec_info

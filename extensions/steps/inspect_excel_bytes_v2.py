@@ -65,11 +65,11 @@ class InspectExcelBytesV2Op(BaseOp):
         filename = inputs[KEY_SRC_EXCEL_FILENAME]
 
         try:
-            config = store.configs.get_spec("input_profile", input_profile_name)
+            input_profile = store.configs.get_spec("input_profile", input_profile_name)
         except KeyError as e:
             raise ValueError(f"input_profile '{input_profile_name}' not found in configs") from e
 
-        kind_rules = config.get("kind_rules")
+        kind_rules = input_profile.get("kind_rules")
         if kind_rules is None:
             raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
 
@@ -83,7 +83,7 @@ class InspectExcelBytesV2Op(BaseOp):
                 matched_pattern = pattern
                 break
 
-        date_rule = config.get("date_rule") or {}
+        date_rule = input_profile.get("date_rule") or {}
         sheet_name = date_rule.get("sheet")
         cell = date_rule.get("cell")
 

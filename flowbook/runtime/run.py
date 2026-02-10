@@ -64,21 +64,21 @@ def _validate_required_inputs(pipeline: Pipeline, ctx: RunContext) -> None:
                      run_id, missing keys, and steps that referenced them.
     """
     referenced_keys = set()
-    step_refs = {}  # key -> list of step names that reference it
+    steps_by_logical: dict[str, list[str]] = {}  # logical key -> step names that reference it
 
     for step in pipeline.steps:
         for logical_name in step.inputs.values():
             referenced_keys.add(logical_name)
-            if logical_name not in step_refs:
-                step_refs[logical_name] = []
-            step_refs[logical_name].append(step.name)
+            if logical_name not in steps_by_logical:
+                steps_by_logical[logical_name] = []
+            steps_by_logical[logical_name].append(step.name)
 
     missing_keys = sorted(k for k in referenced_keys if k not in ctx.bindings)
 
     if missing_keys:
         missing_details = ", ".join(f"'{k}'" for k in missing_keys)
         step_details = " | ".join(
-            f"'{k}' used by {{{', '.join(step_refs[k])}}}" for k in missing_keys
+            f"'{k}' used by {{{', '.join(steps_by_logical[k])}}}" for k in missing_keys
         )
         raise RuntimeError(
             f"missing required input keys in run_id='{ctx.run_id}': {missing_details} "
@@ -114,29 +114,28 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
         _validate_required_inputs(pipeline, ctx)
 
         for step in pipeline.steps:
-            s_info = StepRunInfo(
+            step_info = StepRunInfo(
                 name=step.name,
                 status="running",
                 inputs=dict(step.inputs),
             )
-            info.steps.append(s_info)
+            info.steps.append(step_info)
 
             # Resolve inputs: artifact key -> value
             resolved_inputs = _resolve_inputs(step, ctx)
 
-            # Resolve op
-            op_fn = ctx.registry.get(step.op)
+            step_op = ctx.registry.get(step.op)
 
-            # Execute op (pure function expectation; artifacts writing done here)
-            produced = op_fn(resolved_inputs, ctx.store)
-            if not isinstance(produced, dict):
+            step_output = step_op(resolved_inputs, ctx.store)
+            if not isinstance(step_output, dict):
+                got = type(step_output).__name__
                 raise TypeError(
-                    f"Step '{step.name}' must return dict[str, Any]; got {type(produced).__name__}"
+                    f"Step '{step.name}' must return dict[str, Any]; got {got}"
                 )
 
             # Persist outputs to artifacts (all returned keys, except those starting with '_')
             out_map: dict[str, str] = {}
-            for out_name, out_value in produced.items():
+            for out_name, out_value in step_output.items():
                 if out_name.startswith("_"):
                     continue
                 out_key = f"artifact:{ctx.run_id}/{step.name}/{out_name}"
@@ -144,8 +143,8 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 out_map[out_name] = out_key
                 info.artifacts_written.append(out_key)
 
-            s_info.outputs = out_map
-            s_info.status = "succeeded"
+            step_info.outputs = out_map
+            step_info.status = "succeeded"
 
         info.status = "succeeded"
         return info

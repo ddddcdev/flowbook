@@ -8,8 +8,8 @@ from flowbook.runtime.run import run as fb_run
 from flowbook.runtime.types import Pipeline, RunInfo
 
 
-def build_pipeline(config: dict[str, Any]) -> Pipeline:
-    return fb_build(config)
+def build_pipeline(pipeline_config: dict[str, Any]) -> Pipeline:
+    return fb_build(pipeline_config)
 
 
 def run_pipeline(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
@@ -22,13 +22,13 @@ def run_info_dict(info: RunInfo) -> dict[str, Any]:
         "status": info.status,
         "steps": [
             {
-                "name": s.name,
-                "status": s.status,
-                "inputs": dict(s.inputs),
-                "outputs": dict(s.outputs),
-                "error": s.error,
+                "name": step.name,
+                "status": step.status,
+                "inputs": dict(step.inputs),
+                "outputs": dict(step.outputs),
+                "error": step.error,
             }
-            for s in info.steps
+            for step in info.steps
         ],
         "artifacts_written": list(info.artifacts_written),
         "errors": list(info.errors),

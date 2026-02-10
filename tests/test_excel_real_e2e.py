@@ -136,7 +136,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         ]
     }
 
-    inspect_info = inspect_run.exec(config=inspect_config)
+    inspect_info = inspect_run.exec(pipeline_config=inspect_config)
     assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
 
     result_key = inspect_info.steps[0].outputs["result"]

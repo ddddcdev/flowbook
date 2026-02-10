@@ -21,8 +21,8 @@ class ApplyMappingOp(BaseOp):
         out_key = inputs[KEY_OUT_KEY]
         mapping_name = inputs[KEY_MAPPING_NAME]
 
-        spec = store.configs.get_spec("mapping", mapping_name)
-        ops = spec.get("ops")
+        mapping_spec = store.configs.get_spec("mapping", mapping_name)
+        ops = mapping_spec.get("ops")
         if not isinstance(ops, list):
             raise ValueError("mapping spec must have ops: list")
 
