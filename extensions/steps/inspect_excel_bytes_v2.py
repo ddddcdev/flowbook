@@ -7,6 +7,13 @@ from typing import Any
 
 import openpyxl
 
+from flowbook.registry.base_op import BaseOp
+
+
+KEY_INPUT_PROFILE_NAME = "input_profile_name"
+KEY_SRC_EXCEL_BYTES_KEY = "src_excel_bytes_key"
+KEY_SRC_EXCEL_FILENAME = "src_excel_filename"
+
 
 def _normalize_date(value: Any) -> str | None:
     if isinstance(value, datetime):
@@ -42,83 +49,78 @@ def _get_cell_value(ws, cell_ref: str) -> object | None:
     return getattr(cell_obj, "value", None)
 
 
-def inspect_excel_bytes_v2_op(inputs: dict[str, Any], store_) -> dict[str, Any]:
-    input_profile_name = inputs.get("input_profile_name")
-    if not input_profile_name:
-        raise ValueError("input_profile_name is required")
+class InspectExcelBytesV2Op(BaseOp):
+    required_inputs = (
+        KEY_INPUT_PROFILE_NAME,
+        KEY_SRC_EXCEL_BYTES_KEY,
+        KEY_SRC_EXCEL_FILENAME,
+    )
+    optional_inputs = ()
 
-    bytes_key = inputs.get("src_excel_bytes_key")
-    if not bytes_key:
-        raise ValueError("src_excel_bytes_key is required")
+    def __call__(self, inputs: dict[str, Any], store_) -> dict[str, Any]:
+        input_profile_name = inputs[KEY_INPUT_PROFILE_NAME]
+        bytes_key = inputs[KEY_SRC_EXCEL_BYTES_KEY]
+        filename = inputs[KEY_SRC_EXCEL_FILENAME]
 
-    filename = inputs.get("src_excel_filename")
-    if not filename:
-        raise ValueError("src_excel_filename is required")
-
-    try:
-        config = store_.configs.get_spec("input_profile", input_profile_name)
-    except KeyError as e:
-        raise ValueError(f"input_profile '{input_profile_name}' not found in configs") from e
-
-    kind_rules = config.get("kind_rules")
-    if kind_rules is None:
-        raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
-
-    detected_kind = None
-    matched_pattern = None
-    for rule in kind_rules:
-        pattern = rule.get("pattern")
-        kind = rule.get("kind")
-        if pattern and kind and re.match(pattern, filename):
-            detected_kind = kind
-            matched_pattern = pattern
-            break
-
-    date_rule = config.get("date_rule") or {}
-    sheet_name = date_rule.get("sheet")
-    cell = date_rule.get("cell")
-
-    raw_value: Any = None
-    effective_date: str | None = None
-
-    if sheet_name and cell:
-        src = store_.get_bytes(bytes_key)
-        wb = openpyxl.load_workbook(BytesIO(src), data_only=True)
         try:
-            ws = wb[sheet_name]
-        except KeyError:
-            ws = None
-        if ws is not None:
-            raw_value = _get_cell_value(ws, cell)
-            effective_date = _normalize_date(raw_value)
+            config = store_.configs.get_spec("input_profile", input_profile_name)
+        except KeyError as e:
+            raise ValueError(
+                f"input_profile '{input_profile_name}' not found in configs"
+            ) from e
 
-    result = {
-        "schema_version": "inspect_result_v2",
-        "input_profile_name": input_profile_name,
-        "filename": filename,
-        "detected_kind": detected_kind,
-        "effective_date": effective_date,
-        "evidence": {
-            "matcher": "filename_regex",
-            "matched_pattern": matched_pattern,
-            "date": {
-                "sheet": sheet_name,
-                "cell": cell,
-                "raw_value": raw_value,
+        kind_rules = config.get("kind_rules")
+        if kind_rules is None:
+            raise ValueError(
+                f"input_profile '{input_profile_name}' missing 'kind_rules' key"
+            )
+
+        detected_kind = None
+        matched_pattern = None
+        for rule in kind_rules:
+            pattern = rule.get("pattern")
+            kind = rule.get("kind")
+            if pattern and kind and re.match(pattern, filename):
+                detected_kind = kind
+                matched_pattern = pattern
+                break
+
+        date_rule = config.get("date_rule") or {}
+        sheet_name = date_rule.get("sheet")
+        cell = date_rule.get("cell")
+
+        raw_value: Any = None
+        effective_date: str | None = None
+
+        if sheet_name and cell:
+            src = store_.get_bytes(bytes_key)
+            wb = openpyxl.load_workbook(BytesIO(src), data_only=True)
+            try:
+                ws = wb[sheet_name]
+            except KeyError:
+                ws = None
+            if ws is not None:
+                raw_value = _get_cell_value(ws, cell)
+                effective_date = _normalize_date(raw_value)
+
+        result = {
+            "schema_version": "inspect_result_v2",
+            "input_profile_name": input_profile_name,
+            "filename": filename,
+            "detected_kind": detected_kind,
+            "effective_date": effective_date,
+            "evidence": {
+                "matcher": "filename_regex",
+                "matched_pattern": matched_pattern,
+                "date": {
+                    "sheet": sheet_name,
+                    "cell": cell,
+                    "raw_value": raw_value,
+                },
             },
-        },
-    }
-
-    return {"result": result}
+        }
+        return {"result": result}
 
 
 def register(registry) -> None:
-    registry.register(
-        "inspect_excel_bytes_v2",
-        inspect_excel_bytes_v2_op,
-        required_inputs=(
-            "input_profile_name",
-            "src_excel_bytes_key",
-            "src_excel_filename",
-        ),
-    )
+    registry.register("inspect_excel_bytes_v2", InspectExcelBytesV2Op())

@@ -1,28 +1,25 @@
 from __future__ import annotations
 
+from flowbook.registry.base_op import BaseOp
 
-def plan_from_two_numbers_op(inputs: dict, store_):
-    """
-    Policy:
-    - planner = policy decision (produces plan), not execution.
-    - Planner may consume resolved values (e.g., Excel contents) for decision-making.
-    - Produced plan MUST use logical names for inputs (no artifact keys).
-      Artifact bindings are supplied externally via RunContext.bindings.
-    - Returns plan as output value; runtime persists it and records key in StepRunInfo.outputs.
-    """
 
-    # 今回規定：2つなら add
-    plan_config = {
-        "steps": [
-            {
-                "name": "add",
-                "op": "add",
-                "inputs": {"x": "x", "y": "y"},  # param -> logical
-            }
-        ]
-    }
-    return {"plan": plan_config}
+class PlanFromTwoNumbersOp(BaseOp):
+    """Planner: produces plan with add step. No inputs required for this policy."""
+    required_inputs = ()
+    optional_inputs = ()
+
+    def __call__(self, inputs: dict, store_) -> dict:
+        plan_config = {
+            "steps": [
+                {
+                    "name": "add",
+                    "op": "add",
+                    "inputs": {"x": "x", "y": "y"},
+                }
+            ]
+        }
+        return {"plan": plan_config}
 
 
 def register(registry) -> None:
-    registry.register("plan_from_two_numbers", plan_from_two_numbers_op)
+    registry.register("plan_from_two_numbers", PlanFromTwoNumbersOp())

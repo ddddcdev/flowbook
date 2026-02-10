@@ -50,11 +50,9 @@ def init_state_for_demo() -> None:
     STATE.store.put("artifact:input/x", 2)
     STATE.store.put("artifact:input/y", 3)
 
-    # Register ops
-    def add_op(inputs: dict[str, Any], store: Any) -> dict[str, Any]:
-        return {"sum": inputs["x"] + inputs["y"]}
+    from extensions.steps.add import AddOp
 
-    STATE.registry.register("add", add_op)
+    STATE.registry.register("add", AddOp())
 
 
 def new_pipeline_id() -> str:

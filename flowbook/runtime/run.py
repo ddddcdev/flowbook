@@ -18,20 +18,20 @@ from flowbook.runtime.types import Pipeline, RunInfo, StepRunInfo
 
 def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
     """
-    Preflight: every step has a registered op; if op has a PortSpec, step inputs
-    satisfy required and have no surplus keys.
+    Preflight: every step has a registered op; if op has a contract (non-empty port_spec),
+    step inputs satisfy required and have no surplus keys.
     Raises RuntimeError with run_id, step name, and missing/surplus keys.
     """
     for step in pipeline.steps:
         try:
-            ctx.registry.get(step.op)
+            op = ctx.registry.get(step.op)
         except UnknownOp as e:
             raise RuntimeError(
                 f"unregistered op in run_id='{ctx.run_id}': step '{step.name}' op '{e.args[0]}'"
             ) from e
 
-        spec = ctx.registry.get_spec(step.op)
-        if spec is None:
+        spec = op.port_spec()
+        if not spec.allowed_keys():
             continue
         param_keys = set(step.inputs.keys())
         required_set = set(spec.required)
