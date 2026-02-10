@@ -2,9 +2,9 @@
 import pandas as pd
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from flowbook.mapping.apply import apply_mapping_ops
+
+pytestmark = pytest.mark.unit
 
 
 def test_apply_mapping_ops_select_rename_filter():

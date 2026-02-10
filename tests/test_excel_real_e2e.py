@@ -7,13 +7,13 @@ from uuid import uuid4
 import openpyxl
 import pytest
 
-pytestmark = pytest.mark.e2e
-
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
+
+pytestmark = pytest.mark.e2e
 
 
 def _resolve_template_name(config_store: InMemoryConfigStore, detected_kind: str | None) -> str:

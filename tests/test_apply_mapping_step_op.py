@@ -5,14 +5,14 @@ from uuid import uuid4
 
 import pandas as pd
 import pytest
-
-pytestmark = pytest.mark.integration
 from sqlalchemy import text
 
 from extensions.steps.apply_mapping import apply_mapping_op
 from flowbook.artifacts.postgres_store import PostgresArtifactsStore
 from flowbook.configs.postgres_store import PostgresConfigStore
 from flowbook.runtime.default_store import DefaultRunStore
+
+pytestmark = pytest.mark.integration
 
 
 def _database_url() -> str:

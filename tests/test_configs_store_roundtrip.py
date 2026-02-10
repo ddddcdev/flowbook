@@ -6,11 +6,11 @@ import os
 from uuid import uuid4
 
 import pytest
-
-pytestmark = pytest.mark.integration
 from sqlalchemy import text
 
 from flowbook.configs.postgres_store import PostgresConfigStore
+
+pytestmark = pytest.mark.integration
 
 
 def _database_url() -> str:

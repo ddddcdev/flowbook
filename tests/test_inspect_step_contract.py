@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
-
-pytestmark = pytest.mark.unit
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
+
+pytestmark = pytest.mark.unit
 
 
 def test_inspect_step_writes_control_artifacts() -> None:

@@ -1,5 +1,13 @@
 flowbook — a framework for flexible data flows.
 
+## Development
+
+- **CI before commit**: `npm run ci` (lint, typecheck, test) runs automatically via [pre-commit](https://pre-commit.com/). After clone, run:
+  ```sh
+  poetry install
+  pre-commit install
+  ```
+
 ## License
 
 Apache License 2.0

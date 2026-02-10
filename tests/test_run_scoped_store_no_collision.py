@@ -2,12 +2,12 @@ import os
 
 import pandas as pd
 import pytest
-
-pytestmark = pytest.mark.integration
 from pandas.testing import assert_frame_equal
 
 from flowbook.artifacts.postgres_store import PostgresArtifactsStore
 from flowbook.artifacts.scoped import RunScopedStore
+
+pytestmark = pytest.mark.integration
 
 
 def test_run_scoped_store_prevents_collisions():

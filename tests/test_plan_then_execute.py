@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
-
-pytestmark = pytest.mark.integration
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
+
+pytestmark = pytest.mark.integration
 
 
 def test_planner_produces_plan_output_then_engine_executes_plan() -> None:

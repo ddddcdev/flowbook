@@ -3,10 +3,10 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from flowbook.excel.errors import MissingRequiredColumnsError
 from flowbook.excel.io import read_excel_table, write_df_to_excel
+
+pytestmark = pytest.mark.unit
 
 
 def test_write_df_to_excel_bytes_readable(tmp_path):

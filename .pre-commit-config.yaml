@@ -1,0 +1,10 @@
+# Run full CI before each commit. Install once: pre-commit install
+# https://pre-commit.com/
+repos:
+  - repo: local
+    hooks:
+      - id: npm-ci
+        name: npm run ci
+        entry: npm run ci
+        language: system
+        pass_filenames: false
