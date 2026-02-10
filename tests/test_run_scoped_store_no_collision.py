@@ -1,6 +1,9 @@
 import os
 
 import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.integration
 from pandas.testing import assert_frame_equal
 
 from flowbook.artifacts.postgres_store import PostgresArtifactsStore

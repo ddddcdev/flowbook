@@ -15,6 +15,8 @@ import uuid
 import pytest
 
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
+
+pytestmark = pytest.mark.unit
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps

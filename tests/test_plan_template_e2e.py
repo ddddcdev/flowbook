@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import pytest
+
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
+
+pytestmark = pytest.mark.e2e
 
 
 def test_plan_from_template_reads_template_from_config_store() -> None:

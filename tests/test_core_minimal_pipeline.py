@@ -1,3 +1,5 @@
+# import pytest
+# pytestmark = pytest.mark.unit
 # import uuid
 
 # from flowbook.artifacts.store import InMemoryArtifactsStore

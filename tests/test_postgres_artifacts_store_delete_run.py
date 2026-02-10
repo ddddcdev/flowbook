@@ -1,6 +1,10 @@
 import os
 
+import pytest
+
 from flowbook.artifacts.postgres_store import PostgresArtifactsStore
+
+pytestmark = pytest.mark.integration
 
 
 def test_delete_run_removes_prefixed_keys():

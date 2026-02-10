@@ -5,6 +5,9 @@ from pathlib import Path
 from uuid import uuid4
 
 import openpyxl
+import pytest
+
+pytestmark = pytest.mark.e2e
 
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore

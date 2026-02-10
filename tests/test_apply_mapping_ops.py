@@ -1,5 +1,8 @@
 # tests/test_apply_mapping_ops.py
 import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.unit
 
 from flowbook.mapping.apply import apply_mapping_ops
 

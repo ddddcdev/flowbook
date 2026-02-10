@@ -1,3 +1,5 @@
+# import pytest
+# pytestmark = pytest.mark.smoke
 # from fastapi.testclient import TestClient
 
 # from apps.api.app.main import app

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.unit
 
 from flowbook.excel.errors import MissingRequiredColumnsError
 from flowbook.excel.io import read_excel_table, write_df_to_excel

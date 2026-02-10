@@ -1,5 +1,7 @@
 # from __future__ import annotations
 
+# import pytest
+# pytestmark = pytest.mark.smoke
 # from flowbook.artifacts.store import InMemoryArtifactsStore
 # from flowbook.engine.engine import Engine
 # from flowbook.registry.extensions import register_steps

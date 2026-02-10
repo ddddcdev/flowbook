@@ -19,6 +19,14 @@ httpx = "^0.28.1"
 uvicorn = "^0.40.0"
 ruff = "^0.14.14"
 
+[tool.pytest.ini_options]
+markers = [
+    "unit: unit tests (no DB, no real files, fast)",
+    "integration: integration tests (DB or multi-component)",
+    "e2e: end-to-end tests (real files or full pipeline)",
+    "smoke: smoke tests (API or engine entry point)",
+]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100

@@ -4,6 +4,9 @@ import os
 from uuid import uuid4
 
 import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.integration
 from sqlalchemy import text
 
 from extensions.steps.apply_mapping import apply_mapping_op

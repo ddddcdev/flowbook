@@ -3,6 +3,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.e2e
 
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
