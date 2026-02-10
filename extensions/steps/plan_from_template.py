@@ -41,4 +41,8 @@ def plan_from_template_op(inputs: dict, store_):
 
 
 def register(registry) -> None:
-    registry.register("plan_from_template", plan_from_template_op)
+    registry.register(
+        "plan_from_template",
+        plan_from_template_op,
+        required_inputs=("template_name",),
+    )

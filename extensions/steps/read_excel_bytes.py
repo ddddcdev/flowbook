@@ -19,4 +19,9 @@ def op(inputs: dict, store_) -> dict:
 
 
 def register(registry) -> None:
-    registry.register("read_excel_bytes", op)
+    registry.register(
+        "read_excel_bytes",
+        op,
+        required_inputs=("bytes_key", "out_key"),
+        optional_inputs=("sheet", "header"),
+    )

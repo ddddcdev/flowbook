@@ -21,4 +21,8 @@ def apply_mapping_op(inputs: dict, store_):
 
 
 def register(registry) -> None:
-    registry.register("apply_mapping", apply_mapping_op)
+    registry.register(
+        "apply_mapping",
+        apply_mapping_op,
+        required_inputs=("in_key", "out_key", "mapping_name"),
+    )

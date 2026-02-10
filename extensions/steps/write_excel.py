@@ -12,4 +12,4 @@ def op(inputs: dict, store_) -> dict:
 
 
 def register(registry) -> None:
-    registry.register("write_excel", op)
+    registry.register("write_excel", op, required_inputs=("in_key",))

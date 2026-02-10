@@ -4,14 +4,48 @@ run:
 - Step.inputs are logical names; resolution is done via RunContext.bindings:
     logical -> artifact_key -> store.get -> value passed to op.
 - Ops MUST NOT assume artifact keys; they receive values.
+- Preflight: missing bindings, unregistered op, PortSpec (required/surplus).
 """
 
 from __future__ import annotations
 
 import pandas as pd
 
+from flowbook.registry.registry import UnknownOp
 from flowbook.runtime.context import RunContext
 from flowbook.runtime.types import Pipeline, RunInfo, StepRunInfo
+
+
+def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
+    """
+    Preflight: every step has a registered op; if op has a PortSpec, step inputs
+    satisfy required and have no surplus keys.
+    Raises RuntimeError with run_id, step name, and missing/surplus keys.
+    """
+    for step in pipeline.steps:
+        try:
+            ctx.registry.get(step.op)
+        except UnknownOp as e:
+            raise RuntimeError(
+                f"unregistered op in run_id='{ctx.run_id}': step '{step.name}' op '{e.args[0]}'"
+            ) from e
+
+        spec = ctx.registry.get_spec(step.op)
+        if spec is None:
+            continue
+        param_keys = set(step.inputs.keys())
+        required_set = set(spec.required)
+        allowed = spec.allowed_keys()
+        missing = required_set - param_keys
+        surplus = param_keys - allowed
+        if missing:
+            raise RuntimeError(
+                f"missing required inputs in run_id='{ctx.run_id}': step '{step.name}' keys {sorted(missing)}"
+            )
+        if surplus:
+            raise RuntimeError(
+                f"surplus inputs in run_id='{ctx.run_id}': step '{step.name}' keys {sorted(surplus)}"
+            )
 
 
 def _validate_required_inputs(pipeline: Pipeline, ctx: RunContext) -> None:
@@ -72,6 +106,7 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
     info = RunInfo(run_id=ctx.run_id, status="running")
 
     try:
+        _validate_step_contracts(pipeline, ctx)
         _validate_required_inputs(pipeline, ctx)
 
         for step in pipeline.steps:

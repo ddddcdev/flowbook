@@ -113,4 +113,12 @@ def inspect_excel_bytes_v2_op(inputs: dict[str, Any], store_) -> dict[str, Any]:
 
 
 def register(registry) -> None:
-    registry.register("inspect_excel_bytes_v2", inspect_excel_bytes_v2_op)
+    registry.register(
+        "inspect_excel_bytes_v2",
+        inspect_excel_bytes_v2_op,
+        required_inputs=(
+            "input_profile_name",
+            "src_excel_bytes_key",
+            "src_excel_filename",
+        ),
+    )
