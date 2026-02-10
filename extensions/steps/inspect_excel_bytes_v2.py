@@ -6,16 +6,18 @@ from io import BytesIO
 from typing import Any
 
 import openpyxl
+from openpyxl.worksheet.worksheet import Worksheet
 
 from flowbook.registry.base_op import BaseOp
-
+from flowbook.registry.registry import Registry
+from flowbook.runtime.store import RunStore
 
 KEY_INPUT_PROFILE_NAME = "input_profile_name"
 KEY_SRC_EXCEL_BYTES_KEY = "src_excel_bytes_key"
 KEY_SRC_EXCEL_FILENAME = "src_excel_filename"
 
 
-def _normalize_date(value: Any) -> str | None:
+def _normalize_date(value: object) -> str | None:
     if isinstance(value, datetime):
         return value.strftime("%Y-%m-%d")
     if isinstance(value, date):
@@ -37,7 +39,7 @@ def _normalize_date(value: Any) -> str | None:
     return None
 
 
-def _get_cell_value(ws, cell_ref: str) -> object | None:
+def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
     cell_obj = ws[cell_ref]
     if isinstance(cell_obj, tuple):
         if cell_obj and isinstance(cell_obj[0], tuple):
@@ -57,23 +59,19 @@ class InspectExcelBytesV2Op(BaseOp):
     )
     optional_inputs = ()
 
-    def __call__(self, inputs: dict[str, Any], store_) -> dict[str, Any]:
+    def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         input_profile_name = inputs[KEY_INPUT_PROFILE_NAME]
         bytes_key = inputs[KEY_SRC_EXCEL_BYTES_KEY]
         filename = inputs[KEY_SRC_EXCEL_FILENAME]
 
         try:
-            config = store_.configs.get_spec("input_profile", input_profile_name)
+            config = store.configs.get_spec("input_profile", input_profile_name)
         except KeyError as e:
-            raise ValueError(
-                f"input_profile '{input_profile_name}' not found in configs"
-            ) from e
+            raise ValueError(f"input_profile '{input_profile_name}' not found in configs") from e
 
         kind_rules = config.get("kind_rules")
         if kind_rules is None:
-            raise ValueError(
-                f"input_profile '{input_profile_name}' missing 'kind_rules' key"
-            )
+            raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
 
         detected_kind = None
         matched_pattern = None
@@ -89,11 +87,11 @@ class InspectExcelBytesV2Op(BaseOp):
         sheet_name = date_rule.get("sheet")
         cell = date_rule.get("cell")
 
-        raw_value: Any = None
+        raw_value: object | None = None
         effective_date: str | None = None
 
         if sheet_name and cell:
-            src = store_.get_bytes(bytes_key)
+            src = store.get_bytes(bytes_key)
             wb = openpyxl.load_workbook(BytesIO(src), data_only=True)
             try:
                 ws = wb[sheet_name]
@@ -122,5 +120,5 @@ class InspectExcelBytesV2Op(BaseOp):
         return {"result": result}
 
 
-def register(registry) -> None:
+def register(registry: Registry) -> None:
     registry.register("inspect_excel_bytes_v2", InspectExcelBytesV2Op())

@@ -9,9 +9,12 @@ Base op: class-based operation with contract on the class.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from flowbook.registry.spec import PortSpec
+
+if TYPE_CHECKING:
+    from flowbook.runtime.store import RunStore
 
 
 class BaseOp(ABC):
@@ -23,8 +26,7 @@ class BaseOp(ABC):
     - optional_inputs: tuple of optional param names.
     If both are empty, the op has no input contract (any keys allowed; use for policy-only ops).
 
-    Implement __call__(self, inputs, store) -> dict. The second argument is RunStore at runtime
-    (artifact get/put, configs); typed as Any here to avoid circular import with runtime.
+    Implement __call__(self, inputs, store) -> dict. The second argument is RunStore.
     """
 
     required_inputs: tuple[str, ...] = ()
@@ -35,6 +37,6 @@ class BaseOp(ABC):
         return PortSpec(required=self.required_inputs, optional=self.optional_inputs)
 
     @abstractmethod
-    def __call__(self, inputs: dict[str, Any], store: Any) -> dict[str, Any]:
+    def __call__(self, inputs: dict[str, Any], store: "RunStore") -> dict[str, Any]:  # noqa: UP037
         """Execute the op. inputs are resolved values; store is the run-scoped RunStore."""
         ...

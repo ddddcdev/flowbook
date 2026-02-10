@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flowbook.excel.io import read_excel_table as read_excel_table_fn
 from flowbook.registry.base_op import BaseOp
-
+from flowbook.registry.registry import Registry
+from flowbook.runtime.store import RunStore
 
 KEY_PATH = "path"
 KEY_SHEET = "sheet"
@@ -15,7 +18,7 @@ class ReadExcelTableOp(BaseOp):
     required_inputs = (KEY_PATH, KEY_SHEET, KEY_REQUIRED_COLS, KEY_OUT_KEY)
     optional_inputs = (KEY_HEADER,)
 
-    def __call__(self, inputs: dict, store_) -> dict:
+    def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         path = inputs[KEY_PATH]
         sheet = inputs[KEY_SHEET]
         header = inputs.get(KEY_HEADER, 0)
@@ -27,9 +30,9 @@ class ReadExcelTableOp(BaseOp):
             header=header,
             required_cols=required_cols,
         )
-        store_.put_df(out_key, df)
+        store.put_df(out_key, df)
         return {"df": df}
 
 
-def register(registry) -> None:
+def register(registry: Registry) -> None:
     registry.register("read_excel_table", ReadExcelTableOp())

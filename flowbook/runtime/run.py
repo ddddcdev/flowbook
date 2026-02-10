@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import pandas as pd
 
+from flowbook.artifacts.store import JsonValue
 from flowbook.registry.registry import UnknownOp
 from flowbook.runtime.context import RunContext
-from flowbook.runtime.types import Pipeline, RunInfo, StepRunInfo
+from flowbook.runtime.store import RunStore
+from flowbook.runtime.types import Pipeline, RunInfo, Step, StepRunInfo
 
 
 def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
@@ -40,11 +42,13 @@ def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
         surplus = param_keys - allowed
         if missing:
             raise RuntimeError(
-                f"missing required inputs in run_id='{ctx.run_id}': step '{step.name}' keys {sorted(missing)}"
+                f"missing required inputs in run_id='{ctx.run_id}': "
+                f"step '{step.name}' keys {sorted(missing)}"
             )
         if surplus:
             raise RuntimeError(
-                f"surplus inputs in run_id='{ctx.run_id}': step '{step.name}' keys {sorted(surplus)}"
+                f"surplus inputs in run_id='{ctx.run_id}': "
+                f"step '{step.name}' keys {sorted(surplus)}"
             )
 
 
@@ -82,8 +86,8 @@ def _validate_required_inputs(pipeline: Pipeline, ctx: RunContext) -> None:
         )
 
 
-def _resolve_inputs(step, ctx):
-    resolved = {}
+def _resolve_inputs(step: Step, ctx: RunContext) -> dict[str, object]:
+    resolved: dict[str, object] = {}
     for param, logical in step.inputs.items():
         if logical not in ctx.bindings:
             raise KeyError(f"BindingNotFound: {logical}")
@@ -92,7 +96,9 @@ def _resolve_inputs(step, ctx):
     return resolved
 
 
-def _persist_output(store, out_key: str, value) -> None:
+def _persist_output(
+    store: RunStore, out_key: str, value: JsonValue | bytes | pd.DataFrame
+) -> None:
     if isinstance(value, bytes):
         store.put_bytes(out_key, value)
         return

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flowbook.registry.base_op import BaseOp
+from flowbook.registry.registry import Registry
+from flowbook.runtime.store import RunStore
 
 # Single source for input key names (no hardcoding in config/docs)
 KEY_TEMPLATE_NAME = "template_name"
@@ -10,11 +14,11 @@ class PlanFromTemplateOp(BaseOp):
     required_inputs = (KEY_TEMPLATE_NAME,)
     optional_inputs = ()
 
-    def __call__(self, inputs: dict, store_) -> dict:
+    def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         template_name = inputs[KEY_TEMPLATE_NAME]
 
         try:
-            tmpl = store_.configs.get_spec("plan_template", template_name)
+            tmpl = store.configs.get_spec("plan_template", template_name)
         except KeyError as e:
             raise KeyError(f"plan_template '{template_name}' not found") from e
 
@@ -34,5 +38,5 @@ class PlanFromTemplateOp(BaseOp):
         return {"plan": plan}
 
 
-def register(registry) -> None:
+def register(registry: Registry) -> None:
     registry.register("plan_from_template", PlanFromTemplateOp())

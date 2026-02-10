@@ -4,6 +4,8 @@ import importlib
 import pkgutil
 from types import ModuleType
 
+from flowbook.registry.registry import Registry
+
 
 def _iter_submodules(pkg: ModuleType) -> list[str]:
     names: list[str] = []
@@ -12,7 +14,7 @@ def _iter_submodules(pkg: ModuleType) -> list[str]:
     return names
 
 
-def register_steps(registry, package: str = "extensions.steps") -> None:
+def register_steps(registry: Registry, package: str = "extensions.steps") -> None:
     """
     Load modules under `extensions.steps.*` and call `register(registry)` if present.
     Repo root must be on sys.path (true when running from repo root).

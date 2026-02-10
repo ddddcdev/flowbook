@@ -3,15 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 from flowbook.runtime.build import build as fb_build
+from flowbook.runtime.context import RunContext
 from flowbook.runtime.run import run as fb_run
-from flowbook.runtime.types import RunInfo
+from flowbook.runtime.types import Pipeline, RunInfo
 
 
-def build_pipeline(config: dict[str, Any]):
+def build_pipeline(config: dict[str, Any]) -> Pipeline:
     return fb_build(config)
 
 
-def run_pipeline(pipeline, ctx):
+def run_pipeline(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
     return fb_run(pipeline, ctx)
 
 

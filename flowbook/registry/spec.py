@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class PortSpec:
-    """Allowed input param names. Strict: no surplus keys. required and optional must be disjoint."""
+    """Allowed input param names. Strict: no surplus. required/optional must be disjoint."""
 
     required: tuple[str, ...]
     optional: tuple[str, ...]

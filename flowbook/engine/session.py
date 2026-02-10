@@ -6,17 +6,19 @@ from typing import Any, cast
 import pandas as pd
 
 from flowbook.artifacts.store import JsonValue
+from flowbook.registry.registry import Registry
 from flowbook.runtime.build import build
 from flowbook.runtime.context import RunContext
 from flowbook.runtime.run import run
 from flowbook.runtime.store import RunStore
+from flowbook.runtime.types import RunInfo
 
 
 @dataclass
 class RunSession:
     run_id: str
     store: RunStore
-    registry: Any
+    registry: Registry
     meta: dict[str, Any]
 
     _bindings: dict[str, str] = field(default_factory=dict)
@@ -36,7 +38,7 @@ class RunSession:
         return key
 
     # ---- artifacts access ----
-    def get(self, key: str) -> Any:
+    def get(self, key: str) -> JsonValue:
         return self.store.get(key)
 
     def get_bytes(self, key: str) -> bytes:
@@ -49,7 +51,7 @@ class RunSession:
         return self.store.list(prefix=prefix)
 
     # ---- execution ----
-    def exec(self, *, config: dict[str, Any]) -> Any:
+    def exec(self, *, config: dict[str, Any]) -> RunInfo:
         if self._executed:
             raise RuntimeError("RunSession already executed; create a new session")
         self._executed = True
@@ -64,7 +66,9 @@ class RunSession:
         )
         return run(pipeline, ctx)
 
-    def exec_with_plan_once(self, *, planner_config: dict[str, Any]) -> tuple[Any, Any]:
+    def exec_with_plan_once(
+        self, *, planner_config: dict[str, Any]
+    ) -> tuple[RunInfo, RunInfo]:
         info1 = self.exec(config=planner_config)
         if info1.status != "succeeded":
             raise RuntimeError(f"planner run failed (run_id={self.run_id}): {info1.errors}")

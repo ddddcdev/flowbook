@@ -9,10 +9,12 @@ Not included:
 
 from __future__ import annotations
 
+from typing import Any
+
 from flowbook.runtime.types import Pipeline, Step
 
 
-def build(config: dict) -> Pipeline:
+def build(config: dict[str, Any]) -> Pipeline:
     steps_cfg = config.get("steps", [])
     if not isinstance(steps_cfg, list):
         raise ValueError("config.steps must be a list")

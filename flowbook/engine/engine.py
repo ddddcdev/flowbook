@@ -8,6 +8,7 @@ from flowbook.artifacts.store import ArtifactsStore
 from flowbook.configs.null_store import NullConfigStore
 from flowbook.configs.store import ConfigStore
 from flowbook.engine.session import RunSession
+from flowbook.registry.registry import Registry
 from flowbook.runtime.default_store import DefaultRunStore
 from flowbook.runtime.run_id import new_run_id
 
@@ -15,7 +16,7 @@ from flowbook.runtime.run_id import new_run_id
 @dataclass(frozen=True)
 class Engine:
     store: ArtifactsStore
-    registry: Any
+    registry: Registry
     config_store: ConfigStore | None = None
     meta: dict[str, Any] | None = None
 
