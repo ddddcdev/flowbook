@@ -96,9 +96,7 @@ def _resolve_inputs(step: Step, ctx: RunContext) -> dict[str, object]:
     return resolved
 
 
-def _persist_output(
-    store: RunStore, out_key: str, value: JsonValue | bytes | pd.DataFrame
-) -> None:
+def _persist_output(store: RunStore, out_key: str, value: JsonValue | bytes | pd.DataFrame) -> None:
     if isinstance(value, bytes):
         store.put_bytes(out_key, value)
         return

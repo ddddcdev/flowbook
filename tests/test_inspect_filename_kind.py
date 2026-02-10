@@ -103,7 +103,7 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
     assert step_info.status == "succeeded"
 
     result_key = step_info.outputs["result"]
-    result = run_session.get(result_key)
+    result = run_session.get_dict(result_key)
 
     # Validate result schema
     assert result["schema_version"] == "inspect_result_v1"
@@ -147,7 +147,7 @@ def test_inspect_unknown_filename_no_error():
     step_info = info.steps[0]
 
     result_key = step_info.outputs["result"]
-    result = run_session.get(result_key)
+    result = run_session.get_dict(result_key)
 
     # Key assertion: detected_kind is None for unknown kind
     assert result["detected_kind"] is None

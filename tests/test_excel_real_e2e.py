@@ -140,7 +140,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
 
     result_key = inspect_info.steps[0].outputs["result"]
-    result = inspect_run.get(result_key)
+    result = inspect_run.get_dict(result_key)
     assert result["detected_kind"] == "fileA"
     assert result["effective_date"] == "2026-02-10"
 

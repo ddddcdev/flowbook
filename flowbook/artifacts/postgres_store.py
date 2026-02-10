@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 from sqlalchemy import (
@@ -92,6 +93,12 @@ class PostgresArtifactsStore(ArtifactsStore):
         if row is None or row[0] is None:
             raise ArtifactNotFound(key)
         return row[0]
+
+    def get_dict(self, key: str) -> dict[str, Any]:
+        v = self.get(key)
+        if not isinstance(v, dict):
+            raise TypeError(f"artifact is not a dict: {key}")
+        return v
 
     def list(self, prefix: str | None = None) -> list[str]:
         stmt = select(artifacts.c.artifact_key)

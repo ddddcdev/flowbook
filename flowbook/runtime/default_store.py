@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 
@@ -19,6 +20,9 @@ class DefaultRunStore(RunStore):
 
     def get(self, key: str) -> JsonValue:
         return self.artifacts.get(key)
+
+    def get_dict(self, key: str) -> dict[str, Any]:
+        return self.artifacts.get_dict(key)
 
     def list(self, prefix: str | None = None) -> list[str]:
         return self.artifacts.list(prefix=prefix)

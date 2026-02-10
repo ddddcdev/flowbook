@@ -36,7 +36,7 @@ def test_inspect_step_writes_control_artifacts() -> None:
     assert info.status == "succeeded"
 
     inspect_key = info.steps[0].outputs["inspect_result"]
-    r = run.get(inspect_key)
+    r = run.get_dict(inspect_key)
     assert r["source_uri"] == "/tmp/dummy.xlsx"
     assert "warnings" in r
     assert "suggested_read_spec" in r

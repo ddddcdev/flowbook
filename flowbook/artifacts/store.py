@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -15,9 +15,14 @@ class ArtifactNotFound(KeyError):
 
 @runtime_checkable
 class ArtifactsStore(Protocol):
+    """Use get_dict(key) when the artifact is a dict (e.g. inspect result, plan).
+    Use get(key) for other JsonValue (primitives, lists)."""
+
     def put(self, key: str, value: JsonValue) -> str: ...
     def get(self, key: str) -> JsonValue: ...
     def list(self, prefix: str | None = None) -> list[str]: ...
+
+    def get_dict(self, key: str) -> dict[str, Any]: ...
 
     def put_bytes(self, key: str, data: bytes) -> str: ...
     def get_bytes(self, key: str) -> bytes: ...

@@ -82,7 +82,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
 
     # ✅ Load and verify plan from artifact
     plan_key = planner_step.outputs["plan"]
-    plan = run.get(plan_key)
+    plan = run.get_dict(plan_key)
 
     assert isinstance(plan, dict), f"plan should be dict, got {type(plan).__name__}"
     assert "steps" in plan

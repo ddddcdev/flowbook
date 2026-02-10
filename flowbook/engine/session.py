@@ -41,6 +41,9 @@ class RunSession:
     def get(self, key: str) -> JsonValue:
         return self.store.get(key)
 
+    def get_dict(self, key: str) -> dict[str, Any]:
+        return self.store.get_dict(key)
+
     def get_bytes(self, key: str) -> bytes:
         return self.store.get_bytes(key)
 
@@ -66,9 +69,7 @@ class RunSession:
         )
         return run(pipeline, ctx)
 
-    def exec_with_plan_once(
-        self, *, planner_config: dict[str, Any]
-    ) -> tuple[RunInfo, RunInfo]:
+    def exec_with_plan_once(self, *, planner_config: dict[str, Any]) -> tuple[RunInfo, RunInfo]:
         info1 = self.exec(config=planner_config)
         if info1.status != "succeeded":
             raise RuntimeError(f"planner run failed (run_id={self.run_id}): {info1.errors}")

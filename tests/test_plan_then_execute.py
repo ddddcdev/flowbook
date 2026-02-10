@@ -48,7 +48,7 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
 
     # ✅ Load plan from artifact (traceable via StepRunInfo)
     plan_key = planner_step.outputs["plan"]
-    plan = run.get(plan_key)
+    plan = run.get_dict(plan_key)
 
     assert isinstance(plan, dict)
     assert "steps" in plan

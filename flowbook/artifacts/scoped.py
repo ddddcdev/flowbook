@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 
@@ -25,6 +26,9 @@ class RunScopedStore:
 
     def get(self, key: str) -> JsonValue:
         return self.base.get(scope_key(self.run_id, key))
+
+    def get_dict(self, key: str) -> dict[str, Any]:
+        return self.base.get_dict(scope_key(self.run_id, key))
 
     def list(self, prefix: str | None = None) -> list[str]:
         scoped_prefix = None if prefix is None else scope_key(self.run_id, prefix)

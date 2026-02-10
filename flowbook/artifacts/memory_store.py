@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from typing import Any
 
 import pandas as pd
 
@@ -29,6 +30,12 @@ class InMemoryArtifactsStore(ArtifactsStore):
         v = self._data[key]
         # ランタイム安全柵（壊れてたら即発見）
         return v  # type: ignore[return-value]
+
+    def get_dict(self, key: str) -> dict[str, Any]:
+        v = self.get(key)
+        if not isinstance(v, dict):
+            raise TypeError(f"artifact is not a dict: {key}")
+        return v
 
     def list(self, prefix: str | None = None) -> list[str]:
         keys = sorted(self._data.keys())
