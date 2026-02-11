@@ -1,7 +1,7 @@
 """
 Registry:
 - Resolve step names to BaseOp instances. All ops are class-based.
-- Spec is on the op; callers use registry.get(op).port_spec() when needed.
+- Spec is on the op; callers use op.Inputs for input contract.
 """
 
 from __future__ import annotations

@@ -7,23 +7,24 @@ import pandas as pd
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
+from flowbook.registry.spec import InputsBase
 from flowbook.runtime.store import RunStore
-
-KEY_BYTES_KEY = "bytes_key"
-KEY_OUT_KEY = "out_key"
-KEY_SHEET = "sheet"
-KEY_HEADER = "header"
 
 
 class ReadExcelBytesOp(BaseOp):
-    required_inputs = (KEY_BYTES_KEY, KEY_OUT_KEY)
-    optional_inputs = (KEY_SHEET, KEY_HEADER)
+    class Inputs(InputsBase):
+        BYTES_KEY = "bytes_key"
+        OUT_KEY = "out_key"
+        SHEET = "sheet"
+        HEADER = "header"
+        REQUIRED = (BYTES_KEY, OUT_KEY)
+        OPTIONAL = (SHEET, HEADER)
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        bytes_key: str = inputs[KEY_BYTES_KEY]
-        sheet: str | int = inputs.get(KEY_SHEET, 0)
-        header: int = inputs.get(KEY_HEADER, 0)
-        out_key: str = inputs[KEY_OUT_KEY]
+        bytes_key = inputs[self.Inputs.BYTES_KEY]
+        sheet = inputs.get(self.Inputs.SHEET, 0)
+        header = inputs.get(self.Inputs.HEADER, 0)
+        out_key = inputs[self.Inputs.OUT_KEY]
 
         src = store.get_bytes(bytes_key)
         df = pd.read_excel(BytesIO(src), engine="openpyxl", sheet_name=sheet, header=header)

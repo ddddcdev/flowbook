@@ -1,26 +1,44 @@
 """
-PortSpec: minimal contract for op inputs (required / optional param names).
-Op owns and produces its PortSpec; this module is the shared type only.
+Input contract for ops. Each op defines an inner class Inputs(InputsBase) with
+key constants and REQUIRED/OPTIONAL. Run uses op.Inputs for preflight.
+Future: key constants may use StrEnum for typing/IDE; REQUIRED/OPTIONAL would
+reference enum members and .value for string keys.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 
-@dataclass(frozen=True)
-class PortSpec:
-    """Allowed input param names. Strict: no surplus. required/optional must be disjoint."""
+@runtime_checkable
+class InputSpec(Protocol):
+    """Protocol for op input contract. Implemented by op.Inputs (InputsBase subclasses)."""
 
-    required: tuple[str, ...]
-    optional: tuple[str, ...]
+    REQUIRED: tuple[str, ...]
+    OPTIONAL: tuple[str, ...]
 
-    def __post_init__(self) -> None:
-        overlap = set(self.required) & set(self.optional)
+    def allowed_keys(self) -> frozenset[str]: ...
+
+
+class InputsBase:
+    """
+    Base for op input declaration. Subclass as op.Inputs with key constants
+    and REQUIRED/OPTIONAL (disjoint validated).
+    """
+
+    REQUIRED: tuple[str, ...] = ()
+    OPTIONAL: tuple[str, ...] = ()
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        req = cls.REQUIRED
+        opt = cls.OPTIONAL
+        overlap = set(req) & set(opt)
         if overlap:
             raise ValueError(
-                f"PortSpec: required and optional must be disjoint; overlap: {sorted(overlap)}"
+                f"Inputs REQUIRED and OPTIONAL must be disjoint; overlap: {sorted(overlap)}"
             )
 
-    def allowed_keys(self) -> frozenset[str]:
-        return frozenset(self.required) | frozenset(self.optional)
+    @classmethod
+    def allowed_keys(cls) -> frozenset[str]:
+        return frozenset(cls.REQUIRED) | frozenset(cls.OPTIONAL)

@@ -4,18 +4,18 @@ from typing import Any
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
+from flowbook.registry.spec import InputsBase
 from flowbook.runtime.store import RunStore
-
-# Single source for input key names (no hardcoding in config/docs)
-KEY_TEMPLATE_NAME = "template_name"
 
 
 class PlanFromTemplateOp(BaseOp):
-    required_inputs = (KEY_TEMPLATE_NAME,)
-    optional_inputs = ()
+    class Inputs(InputsBase):
+        TEMPLATE_NAME = "template_name"
+        REQUIRED = (TEMPLATE_NAME,)
+        OPTIONAL = ()
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        template_name = inputs[KEY_TEMPLATE_NAME]
+        template_name = inputs[self.Inputs.TEMPLATE_NAME]
 
         try:
             tmpl = store.configs.get_spec("plan_template", template_name)

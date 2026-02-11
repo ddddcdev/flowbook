@@ -60,7 +60,7 @@ def test_preflight_missing_required_input_raises_with_step_and_keys() -> None:
     }
     info = run.exec(pipeline_config=config)
     assert info.status == "failed"
-    # Either preflight (PortSpec) or binding validation catches it
+    # Either preflight (op.Inputs) or binding validation catches it
     assert "missing" in info.errors[0].lower() or "template_name" in info.errors[0]
     assert "planner" in info.errors[0]
 
