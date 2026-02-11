@@ -18,11 +18,12 @@ flowbook — a framework for flexible data flows.
 
 ## Development
 
-- **CI before commit**: `npm run ci` (lint, typecheck, test) runs automatically via [pre-commit](https://pre-commit.com/). After clone, run:
+- **CI before commit**: `npm run ci` (lint, typecheck, test) runs automatically via [pre-commit](https://pre-commit.com/). It runs only unit (and smoke) tests; integration and e2e are skipped so CI does not require Postgres. After clone, run:
   ```sh
   poetry install
   pre-commit install
   ```
+- **Full test suite** (integration + e2e): Start Postgres (see below), then `npm run test` or `poetry run pytest`. To run only integration: `poetry run pytest -m integration`.
 
 ## License
 

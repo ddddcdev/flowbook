@@ -11,13 +11,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-"""
-FastAPI contracts:
-- Request/response schemas
-Rule:
-- Do not leak flowbook internal types
-"""
-
 
 class InspectRequest(BaseModel):
     input: Any
@@ -28,8 +21,18 @@ class InspectResponse(BaseModel):
 
 
 class BuildRequest(BaseModel):
-    profile: dict[str, Any]
-    config: dict[str, Any]
+    """
+    Request to build a pipeline. Merged into a single pipeline_config as:
+    pipeline_config = {**(profile or {}), **(config or {})}; config overrides profile.
+
+    - profile: Optional. Environment- or run-specific overrides (e.g. default bindings).
+      Applied first; may be overridden by config.
+    - config: Pipeline definition. Should contain at least 'steps'. Merged after profile
+      so config wins on overlapping keys. Required for a non-empty pipeline.
+    """
+
+    profile: dict[str, Any] | None = None
+    config: dict[str, Any] | None = None
 
 
 class BuildResponse(BaseModel):
