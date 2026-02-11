@@ -5,7 +5,7 @@ from typing import Any
 from flowbook.mapping.apply import apply_mapping_ops
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -16,6 +16,9 @@ class ApplyMappingOp(BaseOp):
         MAPPING_NAME = "mapping_name"
         REQUIRED = (IN_KEY, OUT_KEY, MAPPING_NAME)
         OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        DF = "df"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         in_key = inputs[self.Inputs.IN_KEY]
@@ -30,7 +33,7 @@ class ApplyMappingOp(BaseOp):
         df = store.get_df(in_key)
         out = apply_mapping_ops(df, ops)
         store.put_df(out_key, out)
-        return {"df": out}
+        return {self.Outputs.DF: out}
 
 
 apply_mapping_op = ApplyMappingOp()

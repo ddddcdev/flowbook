@@ -1,8 +1,8 @@
 """
-Input contract for ops. Each op defines an inner class Inputs(InputsBase) with
-key constants and REQUIRED/OPTIONAL. Run uses op.Inputs for preflight.
-Future: key constants may use StrEnum for typing/IDE; REQUIRED/OPTIONAL would
-reference enum members and .value for string keys.
+Input/output contracts for ops. Inputs(InputsBase): key constants + REQUIRED/OPTIONAL.
+Outputs(OutputsBase): key constants + KEYS (returned keys). Run uses op.Inputs for
+preflight and op.Outputs for postflight when non-empty.
+Future: key constants may use StrEnum for typing/IDE.
 """
 
 from __future__ import annotations
@@ -16,6 +16,15 @@ class InputSpec(Protocol):
 
     REQUIRED: tuple[str, ...]
     OPTIONAL: tuple[str, ...]
+
+    def allowed_keys(self) -> frozenset[str]: ...
+
+
+@runtime_checkable
+class OutputSpec(Protocol):
+    """Protocol for op output contract. Implemented by op.Outputs (OutputsBase subclasses)."""
+
+    KEYS: tuple[str, ...]
 
     def allowed_keys(self) -> frozenset[str]: ...
 
@@ -42,3 +51,28 @@ class InputsBase:
     @classmethod
     def allowed_keys(cls) -> frozenset[str]:
         return frozenset(cls.REQUIRED) | frozenset(cls.OPTIONAL)
+
+
+class OutputsBase:
+    """
+    Base for op output declaration. Subclass as op.Outputs with key constants only
+    (e.g. RESULT = "result"). KEYS is derived from all uppercase str attributes.
+    When non-empty, run validates return dict keys.
+    """
+
+    KEYS: tuple[str, ...] = ()
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        keys = tuple(
+            sorted(
+                v
+                for k, v in cls.__dict__.items()
+                if k != "KEYS" and k.isupper() and isinstance(v, str)
+            )
+        )
+        cls.KEYS = keys
+
+    @classmethod
+    def allowed_keys(cls) -> frozenset[str]:
+        return frozenset(cls.KEYS)

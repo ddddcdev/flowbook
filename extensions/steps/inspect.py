@@ -6,7 +6,7 @@ from typing import Any
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -19,6 +19,10 @@ class InspectOp(BaseOp):
         REQUIRED = (SOURCE_URI,)
         OPTIONAL = (READ_SPEC,)
 
+    class Outputs(OutputsBase):
+        INSPECT_RESULT = "inspect_result"
+        READ_SPEC = "read_spec"
+
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         source_uri = inputs.get(self.Inputs.SOURCE_URI)
         read_spec = inputs.get(self.Inputs.READ_SPEC) or {}
@@ -29,8 +33,8 @@ class InspectOp(BaseOp):
             "columns": [],
         }
         return {
-            "inspect_result": result,
-            "read_spec": result["suggested_read_spec"],
+            self.Outputs.INSPECT_RESULT: result,
+            self.Outputs.READ_SPEC: result["suggested_read_spec"],
         }
 
 
@@ -42,6 +46,9 @@ class InspectFilenameKindOp(BaseOp):
         PATH = "path"
         REQUIRED = (INPUT_PROFILE_NAME, PATH)
         OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        RESULT = "result"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
@@ -75,7 +82,7 @@ class InspectFilenameKindOp(BaseOp):
                 "matcher": "filename_regex",
             },
         }
-        return {"result": result}
+        return {self.Outputs.RESULT: result}
 
 
 def register(registry: Registry) -> None:

@@ -4,7 +4,7 @@ from typing import Any
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -15,8 +15,11 @@ class AddOp(BaseOp):
         REQUIRED = (X, Y)
         OPTIONAL = ()
 
+    class Outputs(OutputsBase):
+        SUM = "sum"
+
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        return {"sum": inputs[self.Inputs.X] + inputs[self.Inputs.Y]}
+        return {self.Outputs.SUM: inputs[self.Inputs.X] + inputs[self.Inputs.Y]}
 
 
 def register(registry: Registry) -> None:

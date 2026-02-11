@@ -133,6 +133,15 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                     f"Step '{step.name}' must return dict[str, Any]; got {got}"
                 )
 
+            out_spec = step_op.Outputs
+            if out_spec.allowed_keys():
+                public_keys = {k for k in step_output.keys() if not k.startswith("_")}
+                surplus = public_keys - out_spec.allowed_keys()
+                if surplus:
+                    raise RuntimeError(
+                        f"step '{step.name}' returned keys not in Outputs.KEYS: {sorted(surplus)}"
+                    )
+
             # Persist outputs to artifacts (all returned keys, except those starting with '_')
             out_map: dict[str, str] = {}
             for out_name, out_value in step_output.items():

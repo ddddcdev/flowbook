@@ -7,7 +7,7 @@ import pandas as pd
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -20,6 +20,9 @@ class ReadExcelBytesOp(BaseOp):
         REQUIRED = (BYTES_KEY, OUT_KEY)
         OPTIONAL = (SHEET, HEADER)
 
+    class Outputs(OutputsBase):
+        DF = "df"
+
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         bytes_key = inputs[self.Inputs.BYTES_KEY]
         sheet = inputs.get(self.Inputs.SHEET, 0)
@@ -29,7 +32,7 @@ class ReadExcelBytesOp(BaseOp):
         src = store.get_bytes(bytes_key)
         df = pd.read_excel(BytesIO(src), engine="openpyxl", sheet_name=sheet, header=header)
         store.put_df(out_key, df)
-        return {"df": df}
+        return {self.Outputs.DF: df}
 
 
 def register(registry: Registry) -> None:

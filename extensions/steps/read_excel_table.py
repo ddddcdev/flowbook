@@ -5,7 +5,7 @@ from typing import Any
 from flowbook.excel.io import read_excel_table as read_excel_table_fn
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -18,6 +18,9 @@ class ReadExcelTableOp(BaseOp):
         OUT_KEY = "out_key"
         REQUIRED = (PATH, SHEET, REQUIRED_COLS, OUT_KEY)
         OPTIONAL = (HEADER,)
+
+    class Outputs(OutputsBase):
+        DF = "df"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         path = inputs[self.Inputs.PATH]
@@ -32,7 +35,7 @@ class ReadExcelTableOp(BaseOp):
             required_cols=required_cols,
         )
         store.put_df(out_key, df)
-        return {"df": df}
+        return {self.Outputs.DF: df}
 
 
 def register(registry: Registry) -> None:

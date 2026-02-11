@@ -4,7 +4,7 @@ from typing import Any
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -13,6 +13,9 @@ class PlanFromTemplateOp(BaseOp):
         TEMPLATE_NAME = "template_name"
         REQUIRED = (TEMPLATE_NAME,)
         OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        PLAN = "plan"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         template_name = inputs[self.Inputs.TEMPLATE_NAME]
@@ -35,7 +38,7 @@ class PlanFromTemplateOp(BaseOp):
                 f"Got {type(plan).__name__}: {plan}"
             )
 
-        return {"plan": plan}
+        return {self.Outputs.PLAN: plan}
 
 
 def register(registry: Registry) -> None:

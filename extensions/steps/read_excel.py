@@ -5,7 +5,7 @@ from typing import Any
 from flowbook.excel.io import read_excel_to_df
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -18,6 +18,9 @@ class ReadExcelOp(BaseOp):
         REQUIRED = (PATH, OUT_KEY)
         OPTIONAL = (SHEET, HEADER)
 
+    class Outputs(OutputsBase):
+        DF = "df"
+
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         path = inputs[self.Inputs.PATH]
         sheet = inputs.get(self.Inputs.SHEET, 0)
@@ -25,7 +28,7 @@ class ReadExcelOp(BaseOp):
         out_key = inputs[self.Inputs.OUT_KEY]
         df = read_excel_to_df(path, sheet=sheet, header=header)
         store.put_df(out_key, df)
-        return {"df": df}
+        return {self.Outputs.DF: df}
 
 
 def register(registry: Registry) -> None:

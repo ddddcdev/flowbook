@@ -10,7 +10,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
-from flowbook.registry.spec import InputsBase
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
 
 
@@ -55,6 +55,9 @@ class InspectExcelBytesV2Op(BaseOp):
         SRC_EXCEL_FILENAME = "src_excel_filename"
         REQUIRED = (INPUT_PROFILE_NAME, SRC_EXCEL_BYTES_KEY, SRC_EXCEL_FILENAME)
         OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        RESULT = "result"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
@@ -114,7 +117,7 @@ class InspectExcelBytesV2Op(BaseOp):
                 },
             },
         }
-        return {"result": result}
+        return {self.Outputs.RESULT: result}
 
 
 def register(registry: Registry) -> None:
