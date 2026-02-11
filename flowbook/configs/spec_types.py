@@ -1,0 +1,86 @@
+"""
+ConfigStore spec types: each Outer (InputProfile, Mapping, ...) subclasses ConfigSpecKind,
+has KIND and nested Spec(TypedDict).
+Typed access: store.configs.get_spec(InputProfile, name) -> InputProfile.Spec.
+"""
+
+from __future__ import annotations
+
+from typing import Any, NotRequired, TypedDict
+
+
+class ConfigSpecKind:
+    """Descriptor base for ConfigStore kinds.
+
+    Subclasses must define:
+    - KIND: kind string used in ConfigStore.get_spec/put_spec
+    - Spec: nested TypedDict that describes the dict shape for this kind
+    """
+
+    KIND: str = ""
+    Spec: type = object  # overridden by nested class in each subclass
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        if cls is ConfigSpecKind:
+            return
+
+        kind = getattr(cls, "KIND", None)
+        if not isinstance(kind, str) or not kind:
+            raise TypeError(f"{cls.__name__!r} must define non-empty KIND")
+
+        spec = getattr(cls, "Spec", None)
+        if spec is None or spec is object:
+            raise TypeError(f"{cls.__name__!r} must define nested Spec(TypedDict)")
+
+
+class KindRule(TypedDict, total=False):
+    """One entry in input_profile.kind_rules."""
+
+    pattern: str
+    kind: str
+
+
+class DateRule(TypedDict, total=False):
+    """Optional date_rule in input_profile (sheet/cell for Excel)."""
+
+    sheet: str
+    cell: str
+
+
+class InputProfile(ConfigSpecKind):
+    KIND: str = "input_profile"
+
+    class Spec(TypedDict):
+        """Spec for kind='input_profile'. kind_rules required."""
+
+        kind_rules: list[KindRule]
+        date_rule: NotRequired[DateRule | dict[str, Any]]
+
+
+class Mapping(ConfigSpecKind):
+    KIND: str = "mapping"
+
+    class Spec(TypedDict):
+        """Spec for kind='mapping'. ops is list of op configs."""
+
+        ops: list[dict[str, Any]]
+
+
+class PlanTemplate(ConfigSpecKind):
+    KIND: str = "plan_template"
+
+    class Spec(TypedDict):
+        """Spec for kind='plan_template'. plan is a pipeline config."""
+
+        plan: dict[str, Any]
+
+
+class Routing(ConfigSpecKind):
+    KIND: str = "routing"
+
+    class Spec(TypedDict, total=False):
+        """Spec for kind='routing'. map: kind -> template_name; default fallback."""
+
+        map: dict[str, str]
+        default: str | None

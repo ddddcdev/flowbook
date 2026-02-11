@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from flowbook.configs.spec_types import PlanTemplate
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
 from flowbook.registry.spec import InputsBase, OutputsBase
@@ -21,7 +22,7 @@ class PlanFromTemplateOp(BaseOp):
         template_name = inputs[self.Inputs.TEMPLATE_NAME]
 
         try:
-            tmpl = store.configs.get_spec("plan_template", template_name)
+            tmpl = store.configs.get_spec(PlanTemplate, template_name)
         except KeyError as e:
             raise KeyError(f"plan_template '{template_name}' not found") from e
 

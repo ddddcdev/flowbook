@@ -14,6 +14,12 @@ from extensions.steps.read_excel_bytes import ReadExcelBytesOp
 from extensions.steps.write_excel import WriteExcelOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
+from flowbook.configs.spec_types import (
+    InputProfile,
+    Mapping,
+    PlanTemplate,
+    Routing,
+)
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
@@ -22,8 +28,12 @@ pytestmark = pytest.mark.e2e
 
 
 def _resolve_template_name(config_store: InMemoryConfigStore, detected_kind: str | None) -> str:
-    routing = config_store.get_spec("routing", "default")
-    template_name = routing.get("map", {}).get(detected_kind, routing.get("default"))
+    routing = config_store.get_spec(Routing, "default")
+    map_obj = routing.get("map") or {}
+    template_name = (
+        map_obj.get(detected_kind, routing.get("default")) if detected_kind is not None
+        else routing.get("default")
+    )
     if template_name is None:
         raise RuntimeError(f"template_name is None for detected_kind={detected_kind}")
     return template_name
@@ -45,17 +55,17 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         "date_rule": {"sheet": "meta", "cell": "B2"},
     }
     config_store.put_spec(
-        kind="input_profile",
-        name="source",
-        spec=input_profile_spec,
+        InputProfile,
+        "source",
+        input_profile_spec,
         config_id=str(uuid4()),
     )
 
     routing_spec = {"map": {"fileA": "tmpl_fileA"}, "default": None}
     config_store.put_spec(
-        kind="routing",
-        name="default",
-        spec=routing_spec,
+        Routing,
+        "default",
+        routing_spec,
         config_id=str(uuid4()),
     )
 
@@ -67,9 +77,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         ]
     }
     config_store.put_spec(
-        kind="mapping",
-        name="mvp_map",
-        spec=mapping_spec,
+        Mapping,
+        "mvp_map",
+        mapping_spec,
         config_id=str(uuid4()),
     )
 
@@ -104,9 +114,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         }
     }
     config_store.put_spec(
-        kind="plan_template",
-        name="tmpl_fileA",
-        spec=template_spec,
+        PlanTemplate,
+        "tmpl_fileA",
+        template_spec,
         config_id=str(uuid4()),
     )
 

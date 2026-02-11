@@ -10,6 +10,7 @@ from sqlalchemy import text
 from extensions.steps.apply_mapping import ApplyMappingOp, apply_mapping_op
 from flowbook.artifacts.postgres_store import PostgresArtifactsStore
 from flowbook.configs.postgres_store import PostgresConfigStore
+from flowbook.configs.spec_types import Mapping
 from flowbook.runtime.default_store import DefaultRunStore
 
 pytestmark = pytest.mark.integration
@@ -49,7 +50,6 @@ def test_apply_mapping_op_df_to_df() -> None:
 
     store = DefaultRunStore(artifacts=artifacts, configs=configs)
 
-    kind = "mapping"
     mapping_name = f"m_{uuid4().hex}"
     config_id = str(uuid4())
 
@@ -67,7 +67,7 @@ def test_apply_mapping_op_df_to_df() -> None:
     df = pd.DataFrame({"a": [1, -1, 2], "b": [10, 20, 30], "x": [9, 9, 9]})
 
     try:
-        configs.put_spec(kind, mapping_name, spec, config_id=config_id)
+        configs.put_spec(Mapping, mapping_name, spec, config_id=config_id)
         artifacts.put_df(in_key, df)
 
         apply_mapping_op(
@@ -85,4 +85,4 @@ def test_apply_mapping_op_df_to_df() -> None:
         assert out["b"].tolist() == [10, 30]
     finally:
         _cleanup(artifacts, [in_key, out_key])
-        _cleanup_config(configs, kind, mapping_name)
+        _cleanup_config(configs, Mapping.KIND, mapping_name)

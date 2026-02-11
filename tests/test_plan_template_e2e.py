@@ -6,6 +6,7 @@ from extensions.steps.add import AddOp
 from extensions.steps.plan_from_template import PlanFromTemplateOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
+from flowbook.configs.spec_types import PlanTemplate
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
@@ -43,9 +44,9 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
         }
     }
     config_store.put_spec(
-        kind="plan_template",
-        name="tmpl_add",
-        spec=template_spec,
+        PlanTemplate,
+        "tmpl_add",
+        template_spec,
         config_id="test_config_v1",
     )
 
@@ -191,9 +192,9 @@ def test_plan_from_template_missing_plan_key() -> None:
 
     # Put template without "plan" key
     config_store.put_spec(
-        kind="plan_template",
-        name="bad_template",
-        spec={"description": "missing plan"},  # ← No "plan" key
+        PlanTemplate,
+        "bad_template",
+        {"description": "missing plan"},  # ← No "plan" key
         config_id="test_config_v1",
     )
 
@@ -234,9 +235,9 @@ def test_plan_from_template_plan_not_dict() -> None:
 
     # Put template with plan as non-dict
     config_store.put_spec(
-        kind="plan_template",
-        name="bad_plan_template",
-        spec={"plan": "not a dict"},  # ← plan is string, not dict
+        PlanTemplate,
+        "bad_plan_template",
+        {"plan": "not a dict"},  # ← plan is string, not dict
         config_id="test_config_v1",
     )
 
@@ -294,9 +295,9 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
         }
     }
     config_store.put_spec(
-        kind="plan_template",
-        name="tmpl_add",
-        spec=template_spec,
+        PlanTemplate,
+        "tmpl_add",
+        template_spec,
         config_id="test_config_v1",
     )
 

@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from flowbook.configs.spec_types import InputProfile
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
 from flowbook.registry.spec import InputsBase, OutputsBase
@@ -54,7 +55,7 @@ class InspectFilenameKindOp(BaseOp):
         input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
         path_str = inputs[self.Inputs.PATH]
 
-        config = store.configs.get_spec("input_profile", input_profile_name)
+        config = store.configs.get_spec(InputProfile, input_profile_name)
         kind_rules = config.get("kind_rules")
         if kind_rules is None:
             raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from flowbook.configs.spec_types import Mapping
 from flowbook.mapping.apply import apply_mapping_ops
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
@@ -25,7 +26,7 @@ class ApplyMappingOp(BaseOp):
         out_key = inputs[self.Inputs.OUT_KEY]
         mapping_name = inputs[self.Inputs.MAPPING_NAME]
 
-        mapping_spec = store.configs.get_spec("mapping", mapping_name)
+        mapping_spec = store.configs.get_spec(Mapping, mapping_name)
         ops = mapping_spec.get("ops")
         if not isinstance(ops, list):
             raise ValueError("mapping spec must have ops: list")

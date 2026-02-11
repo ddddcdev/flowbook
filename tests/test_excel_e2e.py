@@ -10,6 +10,7 @@ from extensions.steps.read_excel import ReadExcelOp
 from extensions.steps.write_excel import WriteExcelOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
+from flowbook.configs.spec_types import Mapping
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
@@ -43,7 +44,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
             {"op": "filter_rows", "expr": "A > 0"},
         ]
     }
-    config_store.put_spec("mapping", mapping_name, mapping_spec, config_id=str(uuid4()))
+    config_store.put_spec(Mapping, mapping_name, mapping_spec, config_id=str(uuid4()))
 
     # 3) Setup pipeline config (no planner, direct execution)
     pipeline_config = {

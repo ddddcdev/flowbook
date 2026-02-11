@@ -8,6 +8,7 @@ from typing import Any
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
 
+from flowbook.configs.spec_types import InputProfile
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
 from flowbook.registry.spec import InputsBase, OutputsBase
@@ -65,7 +66,7 @@ class InspectExcelBytesV2Op(BaseOp):
         filename = inputs[self.Inputs.SRC_EXCEL_FILENAME]
 
         try:
-            input_profile = store.configs.get_spec("input_profile", input_profile_name)
+            input_profile = store.configs.get_spec(InputProfile, input_profile_name)
         except KeyError as e:
             raise ValueError(f"input_profile '{input_profile_name}' not found in configs") from e
 

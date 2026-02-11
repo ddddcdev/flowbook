@@ -17,6 +17,7 @@ import pytest
 from extensions.steps.inspect import InspectFilenameKindOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
+from flowbook.configs.spec_types import InputProfile
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
@@ -40,9 +41,9 @@ def create_engine_and_session():
 
     # Preload single input profile with kind_rules
     config_store.put_spec(
-        kind="input_profile",
-        name="source",
-        spec=PROFILE_CONFIG,
+        InputProfile,
+        "source",
+        PROFILE_CONFIG,
         config_id="test-source",
     )
 
@@ -211,9 +212,9 @@ def test_inspect_missing_kind_rules_raises_error():
 
     # Preload config without kind_rules
     config_store.put_spec(
-        kind="input_profile",
-        name="incomplete",
-        spec={"some_other_field": "value"},
+        InputProfile,
+        "incomplete",
+        {"some_other_field": "value"},
         config_id="test-incomplete",
     )
 

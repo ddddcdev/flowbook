@@ -18,6 +18,8 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Engine
 
+from flowbook.configs.store import ConfigStore
+
 metadata = MetaData()
 
 configs = Table(
@@ -38,13 +40,13 @@ configs = Table(
 
 
 @dataclass
-class PostgresConfigStore:
+class PostgresConfigStore(ConfigStore):
     database_url: str
 
     def __post_init__(self) -> None:
         self.engine: Engine = create_engine(self.database_url, future=True)
 
-    def get_spec(self, kind: str, name: str) -> dict[str, Any]:
+    def _get_spec_by_kind(self, kind: str, name: str) -> dict[str, Any]:
         stmt = (
             select(configs.c.spec)
             .where(configs.c.kind == kind)
@@ -59,7 +61,9 @@ class PostgresConfigStore:
         # row[0] is JSONB -> dict
         return dict(row[0])
 
-    def put_spec(self, kind: str, name: str, spec: dict[str, Any], *, config_id: str) -> None:
+    def _put_spec_by_kind(
+        self, kind: str, name: str, spec: dict[str, Any], *, config_id: str
+    ) -> None:
         stmt = (
             pg_insert(configs)
             .values(
