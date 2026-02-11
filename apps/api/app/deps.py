@@ -64,6 +64,11 @@ def new_run_id() -> str:
 
 
 def create_run_context(run_id: str | None, meta: dict[str, Any] | None) -> RunContext:
+    """
+    Create a RunContext for a single run. Call once per run (e.g. when starting
+    POST /run or future POST /runs/{id}/execute). The same context is used for
+    the entire run; do not reuse across runs.
+    """
     rid = run_id or new_run_id()
     run_store = DefaultRunStore(artifacts=STATE.store, configs=STATE.config_store)
     return RunContext(

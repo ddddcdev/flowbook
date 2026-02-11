@@ -4,23 +4,29 @@ import re
 from pathlib import Path
 from typing import Any
 
+from flowbook.configs.spec_types import InputProfile
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
-
-KEY_SOURCE_URI = "source_uri"
-KEY_READ_SPEC = "read_spec"
 
 
 class InspectOp(BaseOp):
     """Contract-first stub: fixed control keys, no file I/O yet."""
 
-    required_inputs = (KEY_SOURCE_URI,)
-    optional_inputs = (KEY_READ_SPEC,)
+    class Inputs(InputsBase):
+        SOURCE_URI = "source_uri"
+        READ_SPEC = "read_spec"
+        REQUIRED = (SOURCE_URI,)
+        OPTIONAL = (READ_SPEC,)
+
+    class Outputs(OutputsBase):
+        INSPECT_RESULT = "inspect_result"
+        READ_SPEC = "read_spec"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        source_uri = inputs.get(KEY_SOURCE_URI)
-        read_spec = inputs.get(KEY_READ_SPEC) or {}
+        source_uri = inputs.get(self.Inputs.SOURCE_URI)
+        read_spec = inputs.get(self.Inputs.READ_SPEC) or {}
         result = {
             "source_uri": source_uri,
             "warnings": [],
@@ -28,26 +34,28 @@ class InspectOp(BaseOp):
             "columns": [],
         }
         return {
-            "inspect_result": result,
-            "read_spec": result["suggested_read_spec"],
+            self.Outputs.INSPECT_RESULT: result,
+            self.Outputs.READ_SPEC: result["suggested_read_spec"],
         }
-
-
-KEY_INPUT_PROFILE_NAME = "input_profile_name"
-KEY_PATH = "path"
 
 
 class InspectFilenameKindOp(BaseOp):
     """Identifies input kind from filename pattern only."""
 
-    required_inputs = (KEY_INPUT_PROFILE_NAME, KEY_PATH)
-    optional_inputs = ()
+    class Inputs(InputsBase):
+        INPUT_PROFILE_NAME = "input_profile_name"
+        PATH = "path"
+        REQUIRED = (INPUT_PROFILE_NAME, PATH)
+        OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        RESULT = "result"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        input_profile_name = inputs[KEY_INPUT_PROFILE_NAME]
-        path_str = inputs[KEY_PATH]
+        input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
+        path_str = inputs[self.Inputs.PATH]
 
-        config = store.configs.get_spec("input_profile", input_profile_name)
+        config = store.configs.get_spec(InputProfile, input_profile_name)
         kind_rules = config.get("kind_rules")
         if kind_rules is None:
             raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
@@ -75,7 +83,7 @@ class InspectFilenameKindOp(BaseOp):
                 "matcher": "filename_regex",
             },
         }
-        return {"result": result}
+        return {self.Outputs.RESULT: result}
 
 
 def register(registry: Registry) -> None:

@@ -5,20 +5,24 @@ from typing import Any
 from flowbook.excel.io import write_df_to_excel
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
-
-KEY_IN_KEY = "in_key"
 
 
 class WriteExcelOp(BaseOp):
-    required_inputs = (KEY_IN_KEY,)
-    optional_inputs = ()
+    class Inputs(InputsBase):
+        IN_KEY = "in_key"
+        REQUIRED = (IN_KEY,)
+        OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        BYTES = "bytes"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        in_key: str = inputs[KEY_IN_KEY]
+        in_key = inputs[self.Inputs.IN_KEY]
         df = store.get_df(in_key)
         b = write_df_to_excel(df, sheet="out", index=False)
-        return {"bytes": b}
+        return {self.Outputs.BYTES: b}
 
 
 def register(registry: Registry) -> None:

@@ -1,9 +1,9 @@
 """
 RunContext:
-- Runtime container
-- Holds registry, artifacts, and mutable state
-Rule:
-- Data lives only in artifacts
+- Runtime container for a single run. Holds registry, artifacts, and mutable state.
+- Lifecycle: Create once per run (e.g. in API layer when starting the run); use for
+  the entire run (inputs, build, execute). Do not reuse across runs.
+- Rule: Data lives only in artifacts.
 """
 
 from __future__ import annotations

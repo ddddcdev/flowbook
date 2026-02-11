@@ -8,13 +8,11 @@ from typing import Any
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
 
+from flowbook.configs.spec_types import InputProfile
 from flowbook.registry.base_op import BaseOp
 from flowbook.registry.registry import Registry
+from flowbook.registry.spec import InputsBase, OutputsBase
 from flowbook.runtime.store import RunStore
-
-KEY_INPUT_PROFILE_NAME = "input_profile_name"
-KEY_SRC_EXCEL_BYTES_KEY = "src_excel_bytes_key"
-KEY_SRC_EXCEL_FILENAME = "src_excel_filename"
 
 
 def _normalize_date(value: object) -> str | None:
@@ -52,20 +50,23 @@ def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
 
 
 class InspectExcelBytesV2Op(BaseOp):
-    required_inputs = (
-        KEY_INPUT_PROFILE_NAME,
-        KEY_SRC_EXCEL_BYTES_KEY,
-        KEY_SRC_EXCEL_FILENAME,
-    )
-    optional_inputs = ()
+    class Inputs(InputsBase):
+        INPUT_PROFILE_NAME = "input_profile_name"
+        SRC_EXCEL_BYTES_KEY = "src_excel_bytes_key"
+        SRC_EXCEL_FILENAME = "src_excel_filename"
+        REQUIRED = (INPUT_PROFILE_NAME, SRC_EXCEL_BYTES_KEY, SRC_EXCEL_FILENAME)
+        OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        RESULT = "result"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        input_profile_name = inputs[KEY_INPUT_PROFILE_NAME]
-        bytes_key = inputs[KEY_SRC_EXCEL_BYTES_KEY]
-        filename = inputs[KEY_SRC_EXCEL_FILENAME]
+        input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
+        bytes_key = inputs[self.Inputs.SRC_EXCEL_BYTES_KEY]
+        filename = inputs[self.Inputs.SRC_EXCEL_FILENAME]
 
         try:
-            input_profile = store.configs.get_spec("input_profile", input_profile_name)
+            input_profile = store.configs.get_spec(InputProfile, input_profile_name)
         except KeyError as e:
             raise ValueError(f"input_profile '{input_profile_name}' not found in configs") from e
 
@@ -117,7 +118,7 @@ class InspectExcelBytesV2Op(BaseOp):
                 },
             },
         }
-        return {"result": result}
+        return {self.Outputs.RESULT: result}
 
 
 def register(registry: Registry) -> None:

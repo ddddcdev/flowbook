@@ -4,7 +4,7 @@ run:
 - Step.inputs are logical names; resolution is done via RunContext.bindings:
     logical -> artifact_key -> store.get -> value passed to op.
 - Ops MUST NOT assume artifact keys; they receive values.
-- Preflight: missing bindings, unregistered op, PortSpec (required/surplus).
+- Preflight: missing bindings, unregistered op, op.Inputs (required/surplus).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from flowbook.runtime.types import Pipeline, RunInfo, Step, StepRunInfo
 
 def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
     """
-    Preflight: every step has a registered op; if op has a contract (non-empty port_spec),
+    Preflight: every step has a registered op; if op has Inputs with non-empty allowed_keys,
     step inputs satisfy required and have no surplus keys.
     Raises RuntimeError with run_id, step name, and missing/surplus keys.
     """
@@ -32,11 +32,11 @@ def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
                 f"unregistered op in run_id='{ctx.run_id}': step '{step.name}' op '{e.args[0]}'"
             ) from e
 
-        spec = op.port_spec()
+        spec = op.Inputs
         if not spec.allowed_keys():
             continue
         param_keys = set(step.inputs.keys())
-        required_set = set(spec.required)
+        required_set = set(spec.REQUIRED)
         allowed = spec.allowed_keys()
         missing = required_set - param_keys
         surplus = param_keys - allowed
@@ -132,6 +132,15 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 raise TypeError(
                     f"Step '{step.name}' must return dict[str, Any]; got {got}"
                 )
+
+            out_spec = step_op.Outputs
+            if out_spec.allowed_keys():
+                public_keys = {k for k in step_output.keys() if not k.startswith("_")}
+                surplus = public_keys - out_spec.allowed_keys()
+                if surplus:
+                    raise RuntimeError(
+                        f"step '{step.name}' returned keys not in Outputs.KEYS: {sorted(surplus)}"
+                    )
 
             # Persist outputs to artifacts (all returned keys, except those starting with '_')
             out_map: dict[str, str] = {}

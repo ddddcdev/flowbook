@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import text
 
 from flowbook.configs.postgres_store import PostgresConfigStore
+from flowbook.configs.spec_types import Mapping
 
 pytestmark = pytest.mark.integration
 
@@ -38,7 +39,6 @@ def _cleanup(store: PostgresConfigStore, kind: str, name: str) -> None:
 
 
 def test_config_spec_roundtrip(config_store: PostgresConfigStore) -> None:
-    kind = "mapping"
     name = f"test_roundtrip_{uuid4().hex}"
     config_id = str(uuid4())
 
@@ -50,26 +50,25 @@ def test_config_spec_roundtrip(config_store: PostgresConfigStore) -> None:
     }
 
     try:
-        config_store.put_spec(kind, name, spec, config_id=config_id)
-        got = config_store.get_spec(kind, name)
+        config_store.put_spec(Mapping, name, spec, config_id=config_id)
+        got = config_store.get_spec(Mapping, name)
         assert got == spec
     finally:
-        _cleanup(config_store, kind, name)
+        _cleanup(config_store, Mapping.KIND, name)
 
 
 def test_config_upsert_updates_spec(config_store: PostgresConfigStore) -> None:
-    kind = "mapping"
     name = f"test_upsert_{uuid4().hex}"
 
     spec1 = {"ops": [{"op": "select_cols", "cols": ["a"]}]}
     spec2 = {"ops": [{"op": "select_cols", "cols": ["a", "b"]}]}
 
     try:
-        config_store.put_spec(kind, name, spec1, config_id=str(uuid4()))
-        assert config_store.get_spec(kind, name) == spec1
+        config_store.put_spec(Mapping, name, spec1, config_id=str(uuid4()))
+        assert config_store.get_spec(Mapping, name) == spec1
 
         # (kind, name) が同一なら upsert で更新される想定
-        config_store.put_spec(kind, name, spec2, config_id=str(uuid4()))
-        assert config_store.get_spec(kind, name) == spec2
+        config_store.put_spec(Mapping, name, spec2, config_id=str(uuid4()))
+        assert config_store.get_spec(Mapping, name) == spec2
     finally:
-        _cleanup(config_store, kind, name)
+        _cleanup(config_store, Mapping.KIND, name)

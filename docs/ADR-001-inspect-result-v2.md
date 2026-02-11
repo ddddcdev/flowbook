@@ -40,7 +40,20 @@ The step returns a dict with one public key:
 - **Additive only**: New optional fields may be added. Existing fields MUST NOT be removed or renamed for the same `schema_version`.
 - **Breaking change**: Bump `schema_version` (e.g. to `inspect_result_v3`) and document in a new ADR. Consumers that rely on the old shape should support both until migration.
 
+### Consumer contract
+
+Consumers of the inspect result MUST use only the following keys for the stated purposes. This keeps logging, routing, and tests aligned.
+
+| Consumer | Keys used | Purpose |
+|----------|-----------|--------|
+| **Routing** | `detected_kind` | Look up template name from routing config (`map[detected_kind]` or `default`). Null means use `default`. |
+| **Plan selection** | (derived from routing) | Plan is chosen by the template name resolved from `detected_kind` via routing. No direct key beyond `detected_kind`. |
+| **Tests / assertions** | `schema_version`, `input_profile_name`, `detected_kind`, `effective_date`, `evidence` | Assert output shape and values. |
+| **Logging (recommended)** | `detected_kind`, `input_profile_name` | On failure, log which profile and kind were used so operators can trace. |
+
+For `inspect_result_v1` (filename-based inspect): same consumer contract; the result dict is the artifact value (no `result` wrapper). Routing and plan selection use `detected_kind` the same way.
+
 ## References
 
-- Implementation: `extensions/steps/inspect_excel_bytes_v2.py` (result construction).
-- Consumers: routing by `detected_kind`, tests that assert on inspect output.
+- Implementation: `extensions/steps/inspect_excel_bytes_v2.py` (result construction), `extensions/steps/inspect.py` (v1).
+- Routing: resolves template name from `result["detected_kind"]` and routing config (e.g. `test_excel_real_e2e._resolve_template_name`).
