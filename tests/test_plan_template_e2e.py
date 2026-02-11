@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from extensions.steps.add import AddOp
+from extensions.steps.plan_from_template import PlanFromTemplateOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
@@ -35,7 +37,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {"x": "x", "y": "y"},
+                    "inputs": {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"},
                 }
             ]
         }
@@ -64,7 +66,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
             }
         ]
     }
@@ -78,10 +80,12 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     planner_step = info1.steps[0]
     assert planner_step.name == "planner"
     assert planner_step.status == "succeeded"
-    assert "plan" in planner_step.outputs, f"plan not in outputs: {planner_step.outputs}"
+    assert PlanFromTemplateOp.Outputs.PLAN in planner_step.outputs, (
+        f"plan not in outputs: {planner_step.outputs}"
+    )
 
     # ✅ Load and verify plan from artifact
-    plan_key = planner_step.outputs["plan"]
+    plan_key = planner_step.outputs[PlanFromTemplateOp.Outputs.PLAN]
     plan = run.get_dict(plan_key)
 
     assert isinstance(plan, dict), f"plan should be dict, got {type(plan).__name__}"
@@ -89,7 +93,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     assert len(plan["steps"]) == 1
     assert plan["steps"][0]["name"] == "add"
     assert plan["steps"][0]["op"] == "add"
-    assert plan["steps"][0]["inputs"] == {"x": "x", "y": "y"}
+    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"}
 
     # ✅ Verify plan execution succeeded
     assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
@@ -97,10 +101,10 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     add_step = info2.steps[0]
     assert add_step.name == "add"
     assert add_step.status == "succeeded"
-    assert "sum" in add_step.outputs
+    assert AddOp.Outputs.SUM in add_step.outputs
 
     # ✅ Verify final result (2 + 3 = 5)
-    sum_key = add_step.outputs["sum"]
+    sum_key = add_step.outputs[AddOp.Outputs.SUM]
     result = run.get(sum_key)
     assert result == 5, f"expected 5, got {result}"
 
@@ -163,7 +167,7 @@ def test_plan_from_template_template_not_found() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
             }
         ]
     }
@@ -206,7 +210,7 @@ def test_plan_from_template_missing_plan_key() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
             }
         ]
     }
@@ -249,7 +253,7 @@ def test_plan_from_template_plan_not_dict() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
             }
         ]
     }
@@ -284,7 +288,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {"x": "x", "y": "y"},  # requires x, y
+                    "inputs": {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"},  # requires x, y
                 }
             ]
         }
@@ -309,7 +313,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
             }
         ]
     }

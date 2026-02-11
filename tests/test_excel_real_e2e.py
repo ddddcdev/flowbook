@@ -7,6 +7,11 @@ from uuid import uuid4
 import openpyxl
 import pytest
 
+from extensions.steps.apply_mapping import ApplyMappingOp
+from extensions.steps.inspect_excel_bytes_v2 import InspectExcelBytesV2Op
+from extensions.steps.plan_from_template import PlanFromTemplateOp
+from extensions.steps.read_excel_bytes import ReadExcelBytesOp
+from extensions.steps.write_excel import WriteExcelOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
@@ -75,25 +80,25 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                     "name": "read",
                     "op": "read_excel_bytes",
                     "inputs": {
-                        "bytes_key": "src_excel_bytes_key",
-                        "sheet": "sheet_name",
-                        "header": "header_row",
-                        "out_key": "out_key_read",
+                        ReadExcelBytesOp.Inputs.BYTES_KEY: "src_excel_bytes_key",
+                        ReadExcelBytesOp.Inputs.SHEET: "sheet_name",
+                        ReadExcelBytesOp.Inputs.HEADER: "header_row",
+                        ReadExcelBytesOp.Inputs.OUT_KEY: "out_key_read",
                     },
                 },
                 {
                     "name": "map",
                     "op": "apply_mapping",
                     "inputs": {
-                        "in_key": "out_key_read",
-                        "out_key": "out_key_map",
-                        "mapping_name": "mapping_name_val",
+                        ApplyMappingOp.Inputs.IN_KEY: "out_key_read",
+                        ApplyMappingOp.Inputs.OUT_KEY: "out_key_map",
+                        ApplyMappingOp.Inputs.MAPPING_NAME: "mapping_name_val",
                     },
                 },
                 {
                     "name": "write",
                     "op": "write_excel",
-                    "inputs": {"in_key": "out_key_map"},
+                    "inputs": {WriteExcelOp.Inputs.IN_KEY: "out_key_map"},
                 },
             ]
         }
@@ -128,9 +133,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                 "name": "inspect",
                 "op": "inspect_excel_bytes_v2",
                 "inputs": {
-                    "input_profile_name": "input_profile_name",
-                    "src_excel_bytes_key": "src_excel_bytes_key",
-                    "src_excel_filename": "src_excel_filename",
+                    InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
+                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES_KEY: "src_excel_bytes_key",
+                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "src_excel_filename",
                 },
             }
         ]
@@ -139,7 +144,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     inspect_info = inspect_run.exec(pipeline_config=inspect_config)
     assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
 
-    result_key = inspect_info.steps[0].outputs["result"]
+    result_key = inspect_info.steps[0].outputs[InspectExcelBytesV2Op.Outputs.RESULT]
     result = inspect_run.get_dict(result_key)
     assert result["detected_kind"] == "fileA"
     assert result["effective_date"] == "2026-02-10"
@@ -162,7 +167,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
             }
         ]
     }
@@ -173,9 +178,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
 
     write_step = info2.steps[-1]
-    assert "bytes" in write_step.outputs
+    assert WriteExcelOp.Outputs.BYTES in write_step.outputs
 
-    out_bytes_key = write_step.outputs["bytes"]
+    out_bytes_key = write_step.outputs[WriteExcelOp.Outputs.BYTES]
     out_bytes = run.get_bytes(out_bytes_key)
     assert len(out_bytes) > 0
 

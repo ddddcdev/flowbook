@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from extensions.steps.add import AddOp
+from extensions.steps.plan_from_two_numbers import PlanFromTwoNumbersOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
@@ -44,21 +46,21 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
     assert len(info1.steps) == 1
     planner_step = info1.steps[0]
     assert planner_step.name == "planner"
-    assert "plan" in planner_step.outputs
+    assert PlanFromTwoNumbersOp.Outputs.PLAN in planner_step.outputs
 
     # ✅ Load plan from artifact (traceable via StepRunInfo)
-    plan_key = planner_step.outputs["plan"]
+    plan_key = planner_step.outputs[PlanFromTwoNumbersOp.Outputs.PLAN]
     plan = run.get_dict(plan_key)
 
     assert isinstance(plan, dict)
     assert "steps" in plan
     assert plan["steps"][0]["op"] == "add"
-    assert plan["steps"][0]["inputs"] == {"x": "x", "y": "y"}
+    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"}
 
     # ✅ Verify plan execution produced expected output
     assert info2.status == "succeeded"
     assert len(info2.steps) == 1
     assert info2.steps[0].name == "add"
 
-    out_sum_key = info2.steps[0].outputs["sum"]
+    out_sum_key = info2.steps[0].outputs[AddOp.Outputs.SUM]
     assert run.get(out_sum_key) == 5

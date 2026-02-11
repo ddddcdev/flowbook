@@ -14,6 +14,7 @@ import uuid
 
 import pytest
 
+from extensions.steps.inspect import InspectFilenameKindOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
@@ -87,8 +88,8 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-                    "input_profile_name": "input_profile_name",
-                    "path": "path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "path",
                 },
             }
         ]
@@ -102,7 +103,7 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
     step_info = info.steps[0]
     assert step_info.status == "succeeded"
 
-    result_key = step_info.outputs["result"]
+    result_key = step_info.outputs[InspectFilenameKindOp.Outputs.RESULT]
     result = run_session.get_dict(result_key)
 
     # Validate result schema
@@ -132,8 +133,8 @@ def test_inspect_unknown_filename_no_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-                    "input_profile_name": "input_profile_name",
-                    "path": "path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "path",
                 },
             }
         ]
@@ -146,7 +147,7 @@ def test_inspect_unknown_filename_no_error():
     assert info.status == "succeeded", f"Run failed: {info.errors}"
     step_info = info.steps[0]
 
-    result_key = step_info.outputs["result"]
+    result_key = step_info.outputs[InspectFilenameKindOp.Outputs.RESULT]
     result = run_session.get_dict(result_key)
 
     # Key assertion: detected_kind is None for unknown kind
@@ -186,8 +187,8 @@ def test_inspect_missing_config_raises_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-                    "input_profile_name": "input_profile_name",
-                    "path": "path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "path",
                 },
             }
         ]
@@ -237,8 +238,8 @@ def test_inspect_missing_kind_rules_raises_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-                    "input_profile_name": "input_profile_name",
-                    "path": "path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "path",
                 },
             }
         ]
@@ -268,7 +269,7 @@ def test_inspect_missing_path_input_raises_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-                    "input_profile_name": "input_profile_name",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
                     # Note: path binding missing/unresolved
                 },
             }

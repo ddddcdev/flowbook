@@ -5,6 +5,9 @@ from uuid import uuid4
 import pandas as pd
 import pytest
 
+from extensions.steps.apply_mapping import ApplyMappingOp
+from extensions.steps.read_excel import ReadExcelOp
+from extensions.steps.write_excel import WriteExcelOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
@@ -49,26 +52,26 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
                 "name": "read",
                 "op": "read_excel",
                 "inputs": {
-                    "path": "excel_path",
-                    "sheet": "sheet_name",
-                    "header": "header_row",
-                    "out_key": "out_key_read",
+                    ReadExcelOp.Inputs.PATH: "excel_path",
+                    ReadExcelOp.Inputs.SHEET: "sheet_name",
+                    ReadExcelOp.Inputs.HEADER: "header_row",
+                    ReadExcelOp.Inputs.OUT_KEY: "out_key_read",
                 },
             },
             {
                 "name": "map",
                 "op": "apply_mapping",
                 "inputs": {
-                    "in_key": "out_key_read",
-                    "out_key": "out_key_map",
-                    "mapping_name": "mapping_name_val",
+                    ApplyMappingOp.Inputs.IN_KEY: "out_key_read",
+                    ApplyMappingOp.Inputs.OUT_KEY: "out_key_map",
+                    ApplyMappingOp.Inputs.MAPPING_NAME: "mapping_name_val",
                 },
             },
             {
                 "name": "write",
                 "op": "write_excel",
                 "inputs": {
-                    "in_key": "out_key_map",
+                    WriteExcelOp.Inputs.IN_KEY: "out_key_map",
                 },
             },
         ]
@@ -97,7 +100,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     assert len(info.steps) == 3
 
     # 6) Verify output bytes and content
-    out_bytes_key = info.steps[2].outputs["bytes"]
+    out_bytes_key = info.steps[2].outputs[WriteExcelOp.Outputs.BYTES]
     out_bytes = run.get_bytes(out_bytes_key)
     out_excel_path = tmp_path / "out.xlsx"
     out_excel_path.write_bytes(out_bytes)

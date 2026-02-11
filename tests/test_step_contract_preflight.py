@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import pytest
 
+from extensions.steps.plan_from_template import PlanFromTemplateOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.configs.memory_store import InMemoryConfigStore
 from flowbook.engine.engine import Engine
@@ -47,7 +48,7 @@ def test_preflight_missing_required_input_raises_with_step_and_keys() -> None:
 
     engine = Engine(store=store, registry=registry, config_store=config_store)
     run = engine.prepare()
-    run.put_input("template_name", "some_tmpl")
+    run.put_input(PlanFromTemplateOp.Inputs.TEMPLATE_NAME, "some_tmpl")
 
     config = {
         "steps": [
@@ -61,8 +62,9 @@ def test_preflight_missing_required_input_raises_with_step_and_keys() -> None:
     info = run.exec(pipeline_config=config)
     assert info.status == "failed"
     # Either preflight (op.Inputs) or binding validation catches it
-    assert "missing" in info.errors[0].lower() or "template_name" in info.errors[0]
-    assert "planner" in info.errors[0]
+    err = info.errors[0]
+    assert "missing" in err.lower() or PlanFromTemplateOp.Inputs.TEMPLATE_NAME in err
+    assert "planner" in err
 
 
 def test_preflight_surplus_input_raises_with_step_and_keys() -> None:
@@ -73,7 +75,7 @@ def test_preflight_surplus_input_raises_with_step_and_keys() -> None:
 
     engine = Engine(store=store, registry=registry, config_store=config_store)
     run = engine.prepare()
-    run.put_input("template_name", "tmpl_add")
+    run.put_input(PlanFromTemplateOp.Inputs.TEMPLATE_NAME, "tmpl_add")
     run.put_input("extra_thing", "x")
 
     config = {
@@ -81,7 +83,10 @@ def test_preflight_surplus_input_raises_with_step_and_keys() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {"template_name": "template_name", "surplus_key": "extra_thing"},
+                "inputs": {
+                    PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name",
+                    "surplus_key": "extra_thing",
+                },
             }
         ]
     }

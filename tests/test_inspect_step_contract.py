@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from extensions.steps.inspect import InspectOp
 from flowbook.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.engine.engine import Engine
 from flowbook.registry.extensions import register_steps
@@ -20,7 +21,10 @@ def test_inspect_step_writes_control_artifacts() -> None:
             {
                 "name": "inspect",
                 "op": "inspect",
-                "inputs": {"source_uri": "source_uri", "read_spec": "read_spec"},
+                "inputs": {
+                    InspectOp.Inputs.SOURCE_URI: "source_uri",
+                    InspectOp.Inputs.READ_SPEC: "read_spec",
+                },
             }
         ]
     }
@@ -35,7 +39,7 @@ def test_inspect_step_writes_control_artifacts() -> None:
     info = run.exec(pipeline_config=config)
     assert info.status == "succeeded"
 
-    inspect_key = info.steps[0].outputs["inspect_result"]
+    inspect_key = info.steps[0].outputs[InspectOp.Outputs.INSPECT_RESULT]
     r = run.get_dict(inspect_key)
     assert r["source_uri"] == "/tmp/dummy.xlsx"
     assert "warnings" in r

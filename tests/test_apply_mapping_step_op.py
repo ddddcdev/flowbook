@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from sqlalchemy import text
 
-from extensions.steps.apply_mapping import apply_mapping_op
+from extensions.steps.apply_mapping import ApplyMappingOp, apply_mapping_op
 from flowbook.artifacts.postgres_store import PostgresArtifactsStore
 from flowbook.configs.postgres_store import PostgresConfigStore
 from flowbook.runtime.default_store import DefaultRunStore
@@ -71,7 +71,11 @@ def test_apply_mapping_op_df_to_df() -> None:
         artifacts.put_df(in_key, df)
 
         apply_mapping_op(
-            {"in_key": in_key, "out_key": out_key, "mapping_name": mapping_name},
+            {
+                ApplyMappingOp.Inputs.IN_KEY: in_key,
+                ApplyMappingOp.Inputs.OUT_KEY: out_key,
+                ApplyMappingOp.Inputs.MAPPING_NAME: mapping_name,
+            },
             store,
         )
 
