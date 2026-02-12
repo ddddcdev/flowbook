@@ -10,8 +10,6 @@ MVP behavior:
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 
 from extensions.steps.inspect import InspectFilenameKindOp
@@ -57,7 +55,7 @@ def create_engine_and_session():
         meta={"env": "test"},
     )
 
-    run_session = engine.prepare(run_id=str(uuid.uuid4()))
+    run_session = engine.prepare()
     return run_session
 
 
@@ -177,7 +175,7 @@ def test_inspect_missing_config_raises_error():
         meta={"env": "test"},
     )
 
-    run_session = engine.prepare(run_id=str(uuid.uuid4()))
+    run_session = engine.prepare()
     run_session.put_input("input_profile_name", "missing_profile")
     run_session.put_input("path", "/data/fileA_test.xlsx")
 
@@ -228,7 +226,7 @@ def test_inspect_missing_kind_rules_raises_error():
         meta={"env": "test"},
     )
 
-    run_session = engine.prepare(run_id=str(uuid.uuid4()))
+    run_session = engine.prepare()
     run_session.put_input("input_profile_name", "incomplete")
     run_session.put_input("path", "/data/fileA_test.xlsx")
 
