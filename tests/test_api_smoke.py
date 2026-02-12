@@ -12,9 +12,12 @@ Verifies:
 
 from __future__ import annotations
 
+import os
+import uuid
 from io import BytesIO
 
 import openpyxl
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
@@ -55,7 +58,7 @@ def client() -> TestClient:
                 {"pattern": r"^fileA_.*\.xlsx$", "kind": "fileA"},
             ]
         },
-        config_id="smoke-source",
+        config_id=str(uuid.uuid4()),
     )
 
     # PlanTemplate for import: read excel bytes → df artifact
@@ -78,25 +81,25 @@ def client() -> TestClient:
                 ]
             }
         },
-        config_id="smoke-import",
+        config_id=str(uuid.uuid4()),
     )
 
-    # PlanTemplate for export: add two numbers (simplest op for smoke test)
+    # PlanTemplate for export: write DataFrame to Excel bytes
     engine.config_store.put_spec(
         PlanTemplate,
-        "export_add",
+        "export_excel",
         {
             "plan": {
                 "steps": [
                     {
-                        "name": "add",
-                        "op": "add",
-                        "inputs": {"x": "x", "y": "y"},
+                        "name": "write",
+                        "op": "write_excel",
+                        "inputs": {"in_key": "in_key"},
                     }
                 ]
             }
         },
-        config_id="smoke-export",
+        config_id=str(uuid.uuid4()),
     )
 
     return TestClient(app)
@@ -206,20 +209,19 @@ def test_import_unknown_template_returns_error(client: TestClient):
 # ---- export ----
 
 
-def test_export_with_bindings(client: TestClient):
+def test_export_excel_with_bindings(client: TestClient):
     engine = get_engine()
 
-    # Pre-populate artifacts that the export pipeline will consume
-    engine.store.put("artifact:test/x", 10)
-    engine.store.put("artifact:test/y", 20)
+    # Pre-populate a DataFrame artifact that the export pipeline will consume
+    df = pd.DataFrame({"col_a": [1, 2], "col_b": [3, 4]})
+    engine.store.put_df("artifact:test/df", df)
 
     r = client.post(
         "/export",
         json={
-            "template_name": "export_add",
+            "template_name": "export_excel",
             "bindings": {
-                "x": "artifact:test/x",
-                "y": "artifact:test/y",
+                "in_key": "artifact:test/df",
             },
         },
     )
@@ -228,6 +230,7 @@ def test_export_with_bindings(client: TestClient):
     body = r.json()
     assert body["status"] == "succeeded"
     assert "run_id" in body
+    assert len(body["artifacts_written"]) > 0
 
 
 # ---- artifacts ----
@@ -262,3 +265,28 @@ def test_artifacts_get_not_found(client: TestClient):
     assert r.status_code == 404
     detail = r.json()["detail"]
     assert "reason" in detail
+
+
+# ---- integration: same tests against Postgres ----
+
+_DB_URL = os.environ.get("FLOWBOOK_DATABASE_URL")
+_skip_no_db = pytest.mark.skipif(not _DB_URL, reason="FLOWBOOK_DATABASE_URL not set")
+
+
+@_skip_no_db
+@pytest.mark.integration
+class TestApiWithPostgres:
+    """Re-run key API tests with a real Postgres backend."""
+
+    def test_inspect_upload(self, client: TestClient):
+        test_inspect_upload(client)
+
+    def test_import_excel(self, client: TestClient):
+        test_import_excel(client)
+
+    def test_export_excel_with_bindings(self, client: TestClient):
+        test_export_excel_with_bindings(client)
+
+    def test_artifacts_roundtrip(self, client: TestClient):
+        test_artifacts_list(client)
+        test_artifacts_get(client)

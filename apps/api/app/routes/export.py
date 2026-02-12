@@ -31,9 +31,10 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
     session = engine.prepare()
 
     try:
-        # Bind existing artifact keys directly (full-path, no copy)
+        # Store artifact keys as JSON inputs so ops can dereference them
+        # (same pattern as import's src_excel_bytes_key).
         for name, artifact_key in req.bindings.items():
-            session.bind(name, artifact_key)
+            session.put_input(name, artifact_key)
 
         session.put_input("template_name", req.template_name)
 
