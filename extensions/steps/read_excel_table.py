@@ -15,8 +15,7 @@ class ReadExcelTableOp(BaseOp):
         SHEET = "sheet"
         HEADER = "header"
         REQUIRED_COLS = "required_cols"
-        OUT_KEY = "out_key"
-        REQUIRED = (PATH, SHEET, REQUIRED_COLS, OUT_KEY)
+        REQUIRED = (PATH, SHEET, REQUIRED_COLS)
         OPTIONAL = (HEADER,)
 
     class Outputs(OutputsBase):
@@ -27,14 +26,12 @@ class ReadExcelTableOp(BaseOp):
         sheet = inputs[self.Inputs.SHEET]
         header = inputs.get(self.Inputs.HEADER, 0)
         required_cols = inputs[self.Inputs.REQUIRED_COLS]
-        out_key = inputs[self.Inputs.OUT_KEY]
         df = read_excel_table_fn(
             path,
             sheet=sheet,
             header=header,
             required_cols=required_cols,
         )
-        store.put_df(out_key, df)
         return {self.Outputs.DF: df}
 
 
