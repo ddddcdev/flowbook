@@ -36,8 +36,7 @@ async def inspect(
         filename = file.filename or "unknown.xlsx"
 
         # Store bytes and register bindings
-        bytes_key = session.put_input_bytes("src_excel_bytes", contents)
-        session.put_input("src_excel_bytes_key", bytes_key)
+        session.put_input_bytes("src_excel_bytes", contents)
         session.put_input("src_excel_filename", filename)
         session.put_input("input_profile_name", input_profile_name)
 
@@ -48,7 +47,7 @@ async def inspect(
                     "op": "inspect_excel_bytes_v2",
                     "inputs": {
                         "input_profile_name": "input_profile_name",
-                        "src_excel_bytes_key": "src_excel_bytes_key",
+                        "src_excel_bytes": "src_excel_bytes",
                         "src_excel_filename": "src_excel_filename",
                     },
                 }

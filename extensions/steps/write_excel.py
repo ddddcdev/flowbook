@@ -11,16 +11,15 @@ from flowbook.runtime.store import RunStore
 
 class WriteExcelOp(BaseOp):
     class Inputs(InputsBase):
-        IN_KEY = "in_key"
-        REQUIRED = (IN_KEY,)
+        DF = "df"
+        REQUIRED = (DF,)
         OPTIONAL = ()
 
     class Outputs(OutputsBase):
         BYTES = "bytes"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        in_key = inputs[self.Inputs.IN_KEY]
-        df = store.get_df(in_key)
+        df = inputs[self.Inputs.DF]
         b = write_df_to_excel(df, sheet="out", index=False)
         return {self.Outputs.BYTES: b}
 

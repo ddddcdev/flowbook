@@ -63,8 +63,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
                 "name": "map",
                 "op": "apply_mapping",
                 "inputs": {
-                    ApplyMappingOp.Inputs.IN_KEY: "out_key_read",
-                    ApplyMappingOp.Inputs.OUT_KEY: "out_key_map",
+                    ApplyMappingOp.Inputs.DF: "read/df",
                     ApplyMappingOp.Inputs.MAPPING_NAME: "mapping_name_val",
                 },
             },
@@ -72,7 +71,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
                 "name": "write",
                 "op": "write_excel",
                 "inputs": {
-                    WriteExcelOp.Inputs.IN_KEY: "out_key_map",
+                    WriteExcelOp.Inputs.DF: "map/df",
                 },
             },
         ]
@@ -93,7 +92,6 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     run.put_input("header_row", 0)
     run.put_input("out_key_read", "artifact:df/in")
     run.put_input("mapping_name_val", mapping_name)
-    run.put_input("out_key_map", "artifact:df/mapped")
     info = run.exec(pipeline_config=pipeline_config)
 
     # 5) Verify execution succeeded

@@ -90,25 +90,23 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                     "name": "read",
                     "op": "read_excel_bytes",
                     "inputs": {
-                        ReadExcelBytesOp.Inputs.BYTES_KEY: "src_excel_bytes_key",
+                        ReadExcelBytesOp.Inputs.SRC_EXCEL_BYTES: "src_excel_bytes",
                         ReadExcelBytesOp.Inputs.SHEET: "sheet_name",
                         ReadExcelBytesOp.Inputs.HEADER: "header_row",
-                        ReadExcelBytesOp.Inputs.OUT_KEY: "out_key_read",
                     },
                 },
                 {
                     "name": "map",
                     "op": "apply_mapping",
                     "inputs": {
-                        ApplyMappingOp.Inputs.IN_KEY: "out_key_read",
-                        ApplyMappingOp.Inputs.OUT_KEY: "out_key_map",
+                        ApplyMappingOp.Inputs.DF: "read/df",
                         ApplyMappingOp.Inputs.MAPPING_NAME: "mapping_name_val",
                     },
                 },
                 {
                     "name": "write",
                     "op": "write_excel",
-                    "inputs": {WriteExcelOp.Inputs.IN_KEY: "out_key_map"},
+                    "inputs": {WriteExcelOp.Inputs.DF: "map/df"},
                 },
             ]
         }
@@ -133,7 +131,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     # ---- Inspect (bytes + filename) ----
     inspect_run = engine.prepare()
     inspect_run.store.put_bytes(bytes_artifact_key, src_bytes)
-    inspect_run.put_input("src_excel_bytes_key", bytes_artifact_key)
+    inspect_run.bind("src_excel_bytes", bytes_artifact_key)
     inspect_run.put_input("src_excel_filename", "fileA_real_input.xlsx")
     inspect_run.put_input("input_profile_name", "source")
 
@@ -144,7 +142,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                 "op": "inspect_excel_bytes_v2",
                 "inputs": {
                     InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
-                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES_KEY: "src_excel_bytes_key",
+                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES: "src_excel_bytes",
                     InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "src_excel_filename",
                 },
             }
@@ -164,12 +162,10 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     # ---- Plan + Execute ----
     run = engine.prepare()
     run.store.put_bytes(bytes_artifact_key, src_bytes)
-    run.put_input("src_excel_bytes_key", bytes_artifact_key)
+    run.bind("src_excel_bytes", bytes_artifact_key)
     run.put_input("sheet_name", "data")
     run.put_input("header_row", 0)
-    run.put_input("out_key_read", "artifact:df/in")
     run.put_input("mapping_name_val", "mvp_map")
-    run.put_input("out_key_map", "artifact:df/mapped")
     run.put_input("template_name", template_name)
 
     planner_config = {

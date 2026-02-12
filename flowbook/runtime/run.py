@@ -52,37 +52,16 @@ def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
             )
 
 
-def _validate_required_inputs(pipeline: Pipeline, ctx: RunContext) -> None:
+def _validate_step_inputs(step: Step, ctx: RunContext) -> None:
     """
-    Preflight validation: ensure all referenced input keys exist in bindings.
-
-    Fails fast if any step references a logical input key that is not in the
-    run input space (ctx.bindings).
-
-    Raises:
-        RuntimeError: If any required inputs are missing, with details about
-                     run_id, missing keys, and steps that referenced them.
+    Ensure all logical input keys for this step exist in bindings.
+    Bindings are updated as steps run (step outputs), so this is run per-step.
     """
-    referenced_keys = set()
-    steps_by_logical: dict[str, list[str]] = {}  # logical key -> step names that reference it
-
-    for step in pipeline.steps:
-        for logical_name in step.inputs.values():
-            referenced_keys.add(logical_name)
-            if logical_name not in steps_by_logical:
-                steps_by_logical[logical_name] = []
-            steps_by_logical[logical_name].append(step.name)
-
-    missing_keys = sorted(k for k in referenced_keys if k not in ctx.bindings)
-
-    if missing_keys:
-        missing_details = ", ".join(f"'{k}'" for k in missing_keys)
-        step_details = " | ".join(
-            f"'{k}' used by {{{', '.join(steps_by_logical[k])}}}" for k in missing_keys
-        )
+    missing = [logical for logical in step.inputs.values() if logical not in ctx.bindings]
+    if missing:
         raise RuntimeError(
-            f"missing required input keys in run_id='{ctx.run_id}': {missing_details} "
-            f"({step_details})"
+            f"missing required input keys in run_id='{ctx.run_id}': "
+            f"step '{step.name}' keys {sorted(missing)}"
         )
 
 
@@ -92,7 +71,7 @@ def _resolve_inputs(step: Step, ctx: RunContext) -> dict[str, object]:
         if logical not in ctx.bindings:
             raise KeyError(f"BindingNotFound: {logical}")
         artifact_key = ctx.bindings[logical]
-        resolved[param] = ctx.store.get(artifact_key)
+        resolved[param] = ctx.store.get_any(artifact_key)
     return resolved
 
 
@@ -111,9 +90,9 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
 
     try:
         _validate_step_contracts(pipeline, ctx)
-        _validate_required_inputs(pipeline, ctx)
 
         for step in pipeline.steps:
+            _validate_step_inputs(step, ctx)
             step_info = StepRunInfo(
                 name=step.name,
                 status="running",
@@ -151,6 +130,7 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 _persist_output(ctx.store, out_key, out_value)
                 out_map[out_name] = out_key
                 info.artifacts_written.append(out_key)
+                ctx.bindings[f"{step.name}/{out_name}"] = out_key
 
             step_info.outputs = out_map
             step_info.status = "succeeded"
