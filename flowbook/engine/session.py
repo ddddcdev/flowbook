@@ -1,3 +1,13 @@
+"""
+RunSession: high-level API for a single run.
+
+Scoping strategy (full-path):
+- All artifact keys stored in the base store include {run_id}/ prefix.
+- Session methods (put_input*, bind) construct or accept full keys.
+- No store wrapper (RunScopedStore) — the store is always the base store.
+- Config writers never see artifact keys; they only use logical names.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -22,22 +32,40 @@ class RunSession:
     meta: dict[str, Any]
 
     _bindings: dict[str, str] = field(default_factory=dict)
-    _executed: bool = False  # 1 session = 1 run を強制したいなら使う
+    _executed: bool = False
+
+    # ---- key helpers ----
+
+    def _scoped_key(self, path: str) -> str:
+        """Build a full artifact key scoped to this run."""
+        return f"{self.run_id}/{path}"
 
     # ---- inputs ----
+
     def put_input(self, name: str, value: JsonValue) -> str:
-        key = f"artifact:input/{name}"
+        key = self._scoped_key(f"input/{name}")
         self.store.put(key, value)
         self._bindings[name] = key
         return key
 
+    def put_input_bytes(self, name: str, data: bytes) -> str:
+        key = self._scoped_key(f"input/{name}")
+        self.store.put_bytes(key, data)
+        self._bindings[name] = key
+        return key
+
     def put_input_df(self, name: str, df: pd.DataFrame) -> str:
-        key = f"artifact:input/{name}"
+        key = self._scoped_key(f"input/{name}")
         self.store.put_df(key, df)
         self._bindings[name] = key
         return key
 
+    def bind(self, name: str, artifact_key: str) -> None:
+        """Register an existing full artifact key as a named binding."""
+        self._bindings[name] = artifact_key
+
     # ---- artifacts access ----
+
     def get(self, key: str) -> JsonValue:
         return self.store.get(key)
 
@@ -51,9 +79,12 @@ class RunSession:
         return self.store.get_df(key)
 
     def list(self, prefix: str | None = None) -> list[str]:
+        if prefix is None:
+            return self.store.list(prefix=self._scoped_key(""))
         return self.store.list(prefix=prefix)
 
     # ---- execution ----
+
     def exec(self, *, pipeline_config: dict[str, Any]) -> RunInfo:
         if self._executed:
             raise RuntimeError("RunSession already executed; create a new session")
