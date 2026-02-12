@@ -1,0 +1,95 @@
+"""
+Route: POST /import
+
+Upload an Excel file + template_name → run import pipeline → artifacts.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated, Any
+
+from fastapi import APIRouter, File, Form, UploadFile
+
+from apps.api.app.deps import get_engine
+from apps.api.app.errors import to_http_error
+from apps.api.app.schemas import RunResponse
+
+router = APIRouter(tags=["import"])
+
+
+def _run_info_to_response(info: Any) -> RunResponse:
+    return RunResponse(
+        run_id=info.run_id,
+        status=info.status,
+        artifacts_written=list(info.artifacts_written),
+        errors=list(info.errors),
+        steps=[
+            {
+                "name": s.name,
+                "status": s.status,
+                "outputs": dict(s.outputs),
+                "error": s.error,
+            }
+            for s in info.steps
+        ],
+    )
+
+
+@router.post("/import", response_model=RunResponse)
+async def import_file(
+    file: Annotated[UploadFile, File(...)],
+    template_name: Annotated[str, Form(...)],
+    input_profile_name: Annotated[str, Form()] = "source",
+    sheet_name: Annotated[str, Form()] = "data",
+    header_row: Annotated[int, Form()] = 0,
+) -> RunResponse:
+    """
+    Import an uploaded Excel file using a named pipeline template.
+
+    - **file**: Excel file (.xlsx)
+    - **template_name**: pipeline template to resolve from config store
+    - **input_profile_name**: config profile for input handling
+    - **sheet_name**: sheet to read (default: "data")
+    - **header_row**: header row index, 0-based (default: 0)
+    """
+    engine = get_engine()
+    session = engine.prepare()
+
+    try:
+        contents = await file.read()
+        filename = file.filename or "unknown.xlsx"
+
+        # Store file bytes and register bindings
+        bytes_key = session.put_input_bytes("src_excel_bytes", contents)
+        session.put_input("src_excel_bytes_key", bytes_key)
+        session.put_input("src_excel_filename", filename)
+        session.put_input("input_profile_name", input_profile_name)
+        session.put_input("template_name", template_name)
+
+        # Defaults for read_excel_bytes template
+        session.put_input("sheet_name", sheet_name)
+        session.put_input("header_row", header_row)
+        session.put_input(
+            "out_key_read", f"artifact:df/{session.run_id}/import"
+        )
+
+        planner_config = {
+            "steps": [
+                {
+                    "name": "planner",
+                    "op": "plan_from_template",
+                    "inputs": {
+                        "template_name": "template_name",
+                    },
+                }
+            ]
+        }
+
+        planner_info, exec_info = session.exec_with_plan_once(
+            planner_config=planner_config
+        )
+
+        return _run_info_to_response(exec_info)
+
+    except Exception as e:
+        raise to_http_error(e, run_id=session.run_id) from e

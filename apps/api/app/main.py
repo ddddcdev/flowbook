@@ -1,33 +1,29 @@
 """
-FastAPI entrypoint:
-- Thin HTTP adapter for inspect / build / run
-Rule:
-- No auth, persistence, or async jobs
-- adapters are the only integration point
+FastAPI sample app for flowbook.
+
+Thin HTTP surface that delegates to flowbook.engine.
+This is a reference implementation; project-specific APIs should
+copy and extend this app.
 """
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 
-from apps.api.app.deps import init_state_for_demo
 from apps.api.app.routes.artifacts import router as artifacts_router
-from apps.api.app.routes.build import router as build_router
+from apps.api.app.routes.export import router as export_router
+from apps.api.app.routes.import_ import router as import_router
 from apps.api.app.routes.inspect import router as inspect_router
-from apps.api.app.routes.run import router as run_router
+
+app = FastAPI(title="flowbook-api", version="0.1.0")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    init_state_for_demo()
-    yield
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
 
-
-app = FastAPI(lifespan=lifespan)
 
 app.include_router(inspect_router)
-app.include_router(build_router)
-app.include_router(run_router)
+app.include_router(import_router)
+app.include_router(export_router)
 app.include_router(artifacts_router)
