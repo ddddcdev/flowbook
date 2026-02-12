@@ -66,7 +66,8 @@ class InMemoryArtifactsStore(ArtifactsStore):
         return v
 
     # ---- internal helpers ----
-    def get_any(self, key: str) -> object:
+    def get_any(self, key: str) -> JsonValue | bytes | pd.DataFrame:
         if key not in self._data:
             raise ArtifactNotFound(key)
-        return self._data[key]
+        v = self._data[key]
+        return v  # type: ignore[return-value]

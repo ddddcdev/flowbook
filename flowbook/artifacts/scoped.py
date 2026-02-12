@@ -45,3 +45,6 @@ class RunScopedStore:
 
     def get_df(self, key: str) -> pd.DataFrame:
         return self.base.get_df(scope_key(self.run_id, key))
+
+    def get_any(self, key: str) -> JsonValue | bytes | pd.DataFrame:
+        return self.base.get_any(scope_key(self.run_id, key))
