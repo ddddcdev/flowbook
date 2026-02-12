@@ -184,6 +184,31 @@ class PostgresArtifactsStore(ArtifactsStore):
     def get_df(self, key: str) -> pd.DataFrame:
         return parquet_bytes_to_df(self.get_bytes(key))
 
+    def get_any(self, key: str) -> JsonValue | bytes | pd.DataFrame:
+        stmt = select(
+            artifacts.c.content_type,
+            artifacts.c.json,
+            artifacts.c.bytes,
+        ).where(artifacts.c.artifact_key == key)
+        with self.engine.begin() as conn:
+            row = conn.execute(stmt).one_or_none()
+        if row is None:
+            raise ArtifactNotFound(key)
+        content_type, json_val, bytes_val = row[0], row[1], row[2]
+        if content_type == "application/json":
+            if json_val is None:
+                raise ArtifactNotFound(key)
+            return json_val
+        if content_type == "application/octet-stream":
+            if bytes_val is None:
+                raise ArtifactNotFound(key)
+            return bytes_val
+        if content_type == "application/x-parquet":
+            if bytes_val is None:
+                raise ArtifactNotFound(key)
+            return parquet_bytes_to_df(bytes_val)
+        raise TypeError(f"unknown content_type for artifact: {key} ({content_type})")
+
     def delete_run(self, run_id: str) -> int:
         if not run_id:
             raise ValueError("run_id must be non-empty")

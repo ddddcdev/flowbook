@@ -38,3 +38,6 @@ class DefaultRunStore(RunStore):
 
     def get_df(self, key: str) -> pd.DataFrame:
         return self.artifacts.get_df(key)
+
+    def get_any(self, key: str) -> JsonValue | bytes | pd.DataFrame:
+        return self.artifacts.get_any(key)

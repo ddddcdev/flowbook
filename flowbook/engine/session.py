@@ -4,7 +4,7 @@ RunSession: high-level API for a single run.
 Scoping strategy (full-path):
 - All artifact keys stored in the base store include {run_id}/ prefix.
 - Session methods (put_input*, bind) construct or accept full keys.
-- No store wrapper (RunScopedStore) — the store is always the base store.
+- The store is always the base store (no wrapper).
 - Config writers never see artifact keys; they only use logical names.
 """
 

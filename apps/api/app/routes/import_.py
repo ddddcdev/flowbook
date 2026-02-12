@@ -57,21 +57,15 @@ async def import_file(
 
     try:
         contents = await file.read()
-        filename = file.filename or "unknown.xlsx"
 
         # Store file bytes and register bindings
-        bytes_key = session.put_input_bytes("src_excel_bytes", contents)
-        session.put_input("src_excel_bytes_key", bytes_key)
-        session.put_input("src_excel_filename", filename)
+        session.put_input_bytes("src_excel_bytes", contents)
         session.put_input("input_profile_name", input_profile_name)
         session.put_input("template_name", template_name)
 
         # Defaults for read_excel_bytes template
         session.put_input("sheet_name", sheet_name)
         session.put_input("header_row", header_row)
-        session.put_input(
-            "out_key_read", f"artifact:df/{session.run_id}/import"
-        )
 
         planner_config = {
             "steps": [

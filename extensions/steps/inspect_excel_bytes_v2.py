@@ -52,9 +52,9 @@ def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
 class InspectExcelBytesV2Op(BaseOp):
     class Inputs(InputsBase):
         INPUT_PROFILE_NAME = "input_profile_name"
-        SRC_EXCEL_BYTES_KEY = "src_excel_bytes_key"
+        SRC_EXCEL_BYTES = "src_excel_bytes"
         SRC_EXCEL_FILENAME = "src_excel_filename"
-        REQUIRED = (INPUT_PROFILE_NAME, SRC_EXCEL_BYTES_KEY, SRC_EXCEL_FILENAME)
+        REQUIRED = (INPUT_PROFILE_NAME, SRC_EXCEL_BYTES, SRC_EXCEL_FILENAME)
         OPTIONAL = ()
 
     class Outputs(OutputsBase):
@@ -62,7 +62,7 @@ class InspectExcelBytesV2Op(BaseOp):
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
-        bytes_key = inputs[self.Inputs.SRC_EXCEL_BYTES_KEY]
+        src = inputs[self.Inputs.SRC_EXCEL_BYTES]
         filename = inputs[self.Inputs.SRC_EXCEL_FILENAME]
 
         try:
@@ -92,7 +92,6 @@ class InspectExcelBytesV2Op(BaseOp):
         effective_date: str | None = None
 
         if sheet_name and cell:
-            src = store.get_bytes(bytes_key)
             wb = openpyxl.load_workbook(BytesIO(src), data_only=True)
             try:
                 ws = wb[sheet_name]

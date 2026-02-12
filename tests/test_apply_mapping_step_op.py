@@ -61,28 +61,22 @@ def test_apply_mapping_op_df_to_df() -> None:
         ]
     }
 
-    in_key = f"test/{uuid4().hex}/in"
-    out_key = f"test/{uuid4().hex}/out"
-
     df = pd.DataFrame({"a": [1, -1, 2], "b": [10, 20, 30], "x": [9, 9, 9]})
 
     try:
         configs.put_spec(Mapping, mapping_name, spec, config_id=config_id)
-        artifacts.put_df(in_key, df)
 
-        apply_mapping_op(
+        result = apply_mapping_op(
             {
-                ApplyMappingOp.Inputs.IN_KEY: in_key,
-                ApplyMappingOp.Inputs.OUT_KEY: out_key,
+                ApplyMappingOp.Inputs.DF: df,
                 ApplyMappingOp.Inputs.MAPPING_NAME: mapping_name,
             },
             store,
         )
 
-        out = artifacts.get_df(out_key)
+        out = result[ApplyMappingOp.Outputs.DF]
         assert list(out.columns) == ["A", "b"]
         assert out["A"].tolist() == [1, 2]
         assert out["b"].tolist() == [10, 30]
     finally:
-        _cleanup(artifacts, [in_key, out_key])
         _cleanup_config(configs, Mapping.KIND, mapping_name)

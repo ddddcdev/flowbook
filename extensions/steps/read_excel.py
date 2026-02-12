@@ -14,8 +14,7 @@ class ReadExcelOp(BaseOp):
         PATH = "path"
         SHEET = "sheet"
         HEADER = "header"
-        OUT_KEY = "out_key"
-        REQUIRED = (PATH, OUT_KEY)
+        REQUIRED = (PATH,)
         OPTIONAL = (SHEET, HEADER)
 
     class Outputs(OutputsBase):
@@ -25,9 +24,7 @@ class ReadExcelOp(BaseOp):
         path = inputs[self.Inputs.PATH]
         sheet = inputs.get(self.Inputs.SHEET, 0)
         header = inputs.get(self.Inputs.HEADER, 0)
-        out_key = inputs[self.Inputs.OUT_KEY]
         df = read_excel_to_df(path, sheet=sheet, header=header)
-        store.put_df(out_key, df)
         return {self.Outputs.DF: df}
 
 

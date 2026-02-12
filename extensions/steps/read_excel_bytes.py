@@ -13,25 +13,21 @@ from flowbook.runtime.store import RunStore
 
 class ReadExcelBytesOp(BaseOp):
     class Inputs(InputsBase):
-        BYTES_KEY = "bytes_key"
-        OUT_KEY = "out_key"
+        SRC_EXCEL_BYTES = "src_excel_bytes"
         SHEET = "sheet"
         HEADER = "header"
-        REQUIRED = (BYTES_KEY, OUT_KEY)
+        REQUIRED = (SRC_EXCEL_BYTES,)
         OPTIONAL = (SHEET, HEADER)
 
     class Outputs(OutputsBase):
         DF = "df"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        bytes_key = inputs[self.Inputs.BYTES_KEY]
+        src = inputs[self.Inputs.SRC_EXCEL_BYTES]
         sheet = inputs.get(self.Inputs.SHEET, 0)
         header = inputs.get(self.Inputs.HEADER, 0)
-        out_key = inputs[self.Inputs.OUT_KEY]
 
-        src = store.get_bytes(bytes_key)
         df = pd.read_excel(BytesIO(src), engine="openpyxl", sheet_name=sheet, header=header)
-        store.put_df(out_key, df)
         return {self.Outputs.DF: df}
 
 
