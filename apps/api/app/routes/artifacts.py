@@ -1,42 +1,35 @@
 """
-Route: /artifacts
-- List and fetch artifacts
-Rule:
-- Never return raw data via run_info
+Routes: GET /artifacts, GET /artifacts/{key}
+
+Operational endpoints for browsing run results.
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter
 
-from adapters.fastapi.contracts import ArtifactGetResponse, ArtifactsListResponse
-from adapters.fastapi.errors import to_http_error
-from apps.api.app.deps import STATE, ensure_initialized
+from apps.api.app.deps import get_engine
+from apps.api.app.errors import to_http_error
+from apps.api.app.schemas import ArtifactGetResponse, ArtifactsListResponse
 
-"""
-Route: /artifacts
-- List and fetch artifacts
-Rule:
-- Never return raw data via run_info
-"""
-
-router = APIRouter()
+router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
 
-@router.get("/artifacts", response_model=ArtifactsListResponse)
-def list_artifacts_route() -> ArtifactsListResponse:
-    ensure_initialized()
+@router.get("", response_model=ArtifactsListResponse)
+def list_artifacts(prefix: str | None = None) -> ArtifactsListResponse:
+    engine = get_engine()
     try:
-        return ArtifactsListResponse(keys=STATE.store.list())
+        keys = engine.store.list(prefix=prefix)
+        return ArtifactsListResponse(keys=keys)
     except Exception as e:
         raise to_http_error(e) from e
 
 
-@router.get("/artifacts/{key:path}", response_model=ArtifactGetResponse)
-def get_artifact_route(key: str) -> ArtifactGetResponse:
-    ensure_initialized()
+@router.get("/{key:path}", response_model=ArtifactGetResponse)
+def get_artifact(key: str) -> ArtifactGetResponse:
+    engine = get_engine()
     try:
-        val = STATE.store.get(key)
+        val = engine.store.get(key)
         return ArtifactGetResponse(key=key, value=val)
     except Exception as e:
         raise to_http_error(e) from e

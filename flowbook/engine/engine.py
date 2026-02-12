@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from flowbook.artifacts.scoped import RunScopedStore
 from flowbook.artifacts.store import ArtifactsStore
 from flowbook.configs.null_store import NullConfigStore
 from flowbook.configs.store import ConfigStore
@@ -22,9 +21,8 @@ class Engine:
 
     def prepare(self, run_id: str | None = None) -> RunSession:
         run_id = run_id or new_run_id()
-        scoped_artifacts = RunScopedStore(self.store, run_id)
         config_store = self.config_store or NullConfigStore()
-        run_store = DefaultRunStore(artifacts=scoped_artifacts, configs=config_store)
+        run_store = DefaultRunStore(artifacts=self.store, configs=config_store)
         return RunSession(
             run_id=run_id,
             store=run_store,

@@ -147,7 +147,7 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
             for out_name, out_value in step_output.items():
                 if out_name.startswith("_"):
                     continue
-                out_key = f"artifact:{ctx.run_id}/{step.name}/{out_name}"
+                out_key = f"{ctx.run_id}/{step.name}/{out_name}"
                 _persist_output(ctx.store, out_key, out_value)
                 out_map[out_name] = out_key
                 info.artifacts_written.append(out_key)

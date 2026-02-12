@@ -1,80 +1,60 @@
 """
-Dependencies:
-- Create and provide RunContext, Registry, and Artifacts
-Rule:
-- RunContext must be created here only
+Dependency injection for the FastAPI app.
+
+- FLOWBOOK_DATABASE_URL set → Postgres stores (production / field use)
+- FLOWBOOK_DATABASE_URL unset → in-memory stores (development / smoke test)
 """
 
 from __future__ import annotations
 
-import uuid
-from dataclasses import dataclass
-from typing import Any
+import os
+from functools import lru_cache
 
-from flowbook.artifacts.memory_store import InMemoryArtifactsStore
-from flowbook.configs.memory_store import InMemoryConfigStore
+from flowbook.engine.engine import Engine
+from flowbook.registry.extensions import register_steps
 from flowbook.registry.registry import Registry
-from flowbook.runtime.context import RunContext
-from flowbook.runtime.default_store import DefaultRunStore
-from flowbook.runtime.types import Pipeline
 
 
-@dataclass
-class AppState:
-    store: InMemoryArtifactsStore
-    config_store: InMemoryConfigStore
-    registry: Registry
-    pipelines: dict[str, Pipeline]
+@lru_cache(maxsize=1)
+def get_engine() -> Engine:
+    registry = Registry()
+    register_steps(registry)
 
+    database_url = os.environ.get("FLOWBOOK_DATABASE_URL")
 
-STATE = AppState(
-    store=InMemoryArtifactsStore(),
-    config_store=InMemoryConfigStore(),
-    registry=Registry(),
-    pipelines={},
-)
+    if database_url:
+        from flowbook.artifacts.postgres_store import (
+            PostgresArtifactsStore,
+        )
+        from flowbook.artifacts.postgres_store import (
+            metadata as artifacts_meta,
+        )
+        from flowbook.configs.postgres_store import (
+            PostgresConfigStore,
+        )
+        from flowbook.configs.postgres_store import (
+            metadata as configs_meta,
+        )
 
-_init_done = False
+        store = PostgresArtifactsStore(database_url=database_url)
+        config_store = PostgresConfigStore(database_url=database_url)
 
+        # Ensure tables exist (idempotent)
+        artifacts_meta.create_all(store.engine)
+        configs_meta.create_all(config_store.engine)
 
-def ensure_initialized() -> None:
-    global _init_done
-    if _init_done:
-        return
-    init_state_for_demo()
-    _init_done = True
+        return Engine(
+            store=store,
+            registry=registry,
+            config_store=config_store,
+        )
 
+    # Fallback: in-memory (no DATABASE_URL)
+    from flowbook.artifacts.memory_store import InMemoryArtifactsStore
+    from flowbook.configs.memory_store import InMemoryConfigStore
 
-def init_state_for_demo() -> None:
-    # Seed artifacts for smoke test / MTG demo
-    STATE.store.put("artifact:input/x", 2)
-    STATE.store.put("artifact:input/y", 3)
-
-    from extensions.steps.add import AddOp
-
-    STATE.registry.register("add", AddOp())
-
-
-def new_pipeline_id() -> str:
-    return str(uuid.uuid4())
-
-
-def new_run_id() -> str:
-    return str(uuid.uuid4())
-
-
-def create_run_context(run_id: str | None, meta: dict[str, Any] | None) -> RunContext:
-    """
-    Create a RunContext for a single run. Call once per run (e.g. when starting
-    POST /run or future POST /runs/{id}/execute). The same context is used for
-    the entire run; do not reuse across runs.
-    """
-    rid = run_id or new_run_id()
-    run_store = DefaultRunStore(artifacts=STATE.store, configs=STATE.config_store)
-    return RunContext(
-        run_id=rid,
-        store=run_store,
-        registry=STATE.registry,
-        bindings={},
-        meta=meta or {},
+    return Engine(
+        store=InMemoryArtifactsStore(),
+        registry=registry,
+        config_store=InMemoryConfigStore(),
     )
