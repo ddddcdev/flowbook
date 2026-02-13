@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-from flowbook.artifacts.store import ArtifactNotFound
-from flowbook.registry.registry import UnknownOp
+from flowbook import UnknownOp
+from flowbook.core.artifacts.store import ArtifactNotFound
 
 
 def to_http_error(e: Exception, *, run_id: str | None = None) -> HTTPException:

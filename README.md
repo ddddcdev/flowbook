@@ -1,5 +1,29 @@
 flowbook — a framework for flexible data flows.
 
+## Quickstart
+
+```sh
+pip install flowbook
+flowbook --version
+flowbook doctor
+```
+
+Core-only install has no heavy dependencies. For Excel, Postgres, and FastAPI extensions:
+
+```sh
+pip install "flowbook[full]"
+```
+
+Optional dev CLI (Typer/Rich):
+
+```sh
+pip install "flowbook[dev]"
+flowbook-dev --version
+flowbook-dev doctor
+```
+
+`flowbook doctor` prints Python/OS/flowbook version and suggests `pip install "flowbook[excel]"`, `"flowbook[postgres]"`, `"flowbook[fastapi]"`, or `"flowbook[full]"` for missing extensions.
+
 ## Concept
 
 - **Config-driven**: Which steps run, in what order, and how inputs are bound—all come from **config** (pipeline config, ConfigStore, plan templates). Change the flow without changing framework code.
@@ -23,6 +47,7 @@ flowbook — a framework for flexible data flows.
   poetry install
   pre-commit install
   ```
+  (The dev group includes full extras so tests can run; for a minimal env use `pip install flowbook` only.)
 - **Full test suite** (integration + e2e): Start Postgres (see below), then `npm run test` or `poetry run pytest`. To run only integration: `poetry run pytest -m integration`.
 
 ## License

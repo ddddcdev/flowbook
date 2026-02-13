@@ -57,9 +57,7 @@ async def inspect(
         info = session.exec(pipeline_config=config)
 
         if info.status != "succeeded":
-            raise ValueError(
-                f"inspect failed (run_id={info.run_id}): {info.errors}"
-            )
+            raise ValueError(f"inspect failed (run_id={info.run_id}): {info.errors}")
 
         result_key = info.steps[0].outputs["result"]
         profile = session.get_dict(result_key)
