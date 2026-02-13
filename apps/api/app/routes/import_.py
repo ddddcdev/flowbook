@@ -79,9 +79,7 @@ async def import_file(
             ]
         }
 
-        planner_info, exec_info = session.exec_with_plan_once(
-            planner_config=planner_config
-        )
+        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
 
         return _run_info_to_response(exec_info)
 

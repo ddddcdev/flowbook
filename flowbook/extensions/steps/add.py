@@ -1,0 +1,26 @@
+from __future__ import annotations
+
+from typing import Any
+
+from flowbook.core.registry.base_op import BaseOp
+from flowbook.core.registry.registry import Registry
+from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.runtime.store import RunStore
+
+
+class AddOp(BaseOp):
+    class Inputs(InputsBase):
+        X = "x"
+        Y = "y"
+        REQUIRED = (X, Y)
+        OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        SUM = "sum"
+
+    def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
+        return {self.Outputs.SUM: inputs[self.Inputs.X] + inputs[self.Inputs.Y]}
+
+
+def register(registry: Registry) -> None:
+    registry.register("add", AddOp())

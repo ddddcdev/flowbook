@@ -48,9 +48,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
             ]
         }
 
-        planner_info, exec_info = session.exec_with_plan_once(
-            planner_config=planner_config
-        )
+        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
 
         return RunResponse(
             run_id=exec_info.run_id,

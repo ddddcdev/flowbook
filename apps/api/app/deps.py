@@ -10,9 +10,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from flowbook.engine.engine import Engine
-from flowbook.registry.extensions import register_steps
-from flowbook.registry.registry import Registry
+from flowbook import Engine, Registry, register_steps
 
 
 @lru_cache(maxsize=1)
@@ -23,16 +21,16 @@ def get_engine() -> Engine:
     database_url = os.environ.get("FLOWBOOK_DATABASE_URL")
 
     if database_url:
-        from flowbook.artifacts.postgres_store import (
+        from flowbook.extensions.postgres.artifacts_store import (
             PostgresArtifactsStore,
         )
-        from flowbook.artifacts.postgres_store import (
+        from flowbook.extensions.postgres.artifacts_store import (
             metadata as artifacts_meta,
         )
-        from flowbook.configs.postgres_store import (
+        from flowbook.extensions.postgres.config_store import (
             PostgresConfigStore,
         )
-        from flowbook.configs.postgres_store import (
+        from flowbook.extensions.postgres.config_store import (
             metadata as configs_meta,
         )
 
@@ -50,8 +48,7 @@ def get_engine() -> Engine:
         )
 
     # Fallback: in-memory (no DATABASE_URL)
-    from flowbook.artifacts.memory_store import InMemoryArtifactsStore
-    from flowbook.configs.memory_store import InMemoryConfigStore
+    from flowbook import InMemoryArtifactsStore, InMemoryConfigStore
 
     return Engine(
         store=InMemoryArtifactsStore(),
