@@ -3,12 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 from flowbook.extensions.excel.io import read_excel_table as read_excel_table_fn
 
 
+@step("read_excel_table")
 class ReadExcelTableOp(BaseOp):
     class Inputs(InputsBase):
         PATH = "path"
@@ -35,5 +36,4 @@ class ReadExcelTableOp(BaseOp):
         return {self.Outputs.DF: df}
 
 
-def register(registry: Registry) -> None:
-    registry.register("read_excel_table", ReadExcelTableOp())
+register = register_from_steps()

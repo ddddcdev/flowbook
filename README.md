@@ -38,7 +38,7 @@ flowbook-dev doctor
 3. Optionally run a **planner** first (e.g. `plan_from_template`); it produces a plan config that you then execute in the same session.
 4. Steps read from the store (via resolved inputs) and write outputs back; later steps can depend on them. All orchestration is driven by config; new capabilities are new ops in your extensions.
 
-(Concrete quickstart and extension how-to will follow.)
+To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points).
 
 ## Development
 
