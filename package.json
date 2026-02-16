@@ -17,16 +17,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kojimat/flowbook.git"
+    "url": "git+https://github.com/ddddcdev/flowbook.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/kojimat/flowbook/issues"
+    "url": "https://github.com/ddddcdev/flowbook/issues"
   },
-  "homepage": "https://github.com/kojimat/flowbook#readme",
+  "homepage": "https://github.com/ddddcdev/flowbook#readme",
   "devDependencies": {
     "pyright": "^1.1.408"
   }
