@@ -10,8 +10,8 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from flowbook.core.configs.spec_types import InputProfile
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
@@ -49,6 +49,7 @@ def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
     return getattr(cell_obj, "value", None)
 
 
+@step("inspect_excel_bytes_v2")
 class InspectExcelBytesV2Op(BaseOp):
     class Inputs(InputsBase):
         INPUT_PROFILE_NAME = "input_profile_name"
@@ -120,5 +121,4 @@ class InspectExcelBytesV2Op(BaseOp):
         return {self.Outputs.RESULT: result}
 
 
-def register(registry: Registry) -> None:
-    registry.register("inspect_excel_bytes_v2", InspectExcelBytesV2Op())
+register = register_from_steps()

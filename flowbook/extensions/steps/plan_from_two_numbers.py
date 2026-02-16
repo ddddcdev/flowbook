@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
+@step("plan_from_two_numbers")
 class PlanFromTwoNumbersOp(BaseOp):
     """Planner: produces plan with add step. No inputs required for this policy."""
 
@@ -31,5 +32,4 @@ class PlanFromTwoNumbersOp(BaseOp):
         return {self.Outputs.PLAN: plan_config}
 
 
-def register(registry: Registry) -> None:
-    registry.register("plan_from_two_numbers", PlanFromTwoNumbersOp())
+register = register_from_steps()

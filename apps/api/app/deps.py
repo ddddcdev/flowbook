@@ -10,13 +10,13 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from flowbook import Engine, Registry, register_steps
+from flowbook import Engine, Registry, discover_steps
 
 
 @lru_cache(maxsize=1)
 def get_engine() -> Engine:
     registry = Registry()
-    register_steps(registry)
+    discover_steps(registry)
 
     database_url = os.environ.get("FLOWBOOK_DATABASE_URL")
 

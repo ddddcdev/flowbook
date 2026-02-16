@@ -1,8 +1,8 @@
 """
 Flowbook: pipeline runner and artifact store.
 
-Public API (a1 minimum): Engine, Registry, RunSession, register_steps, and stores.
-Use ``from flowbook import Engine, Registry, register_steps, ...`` for short imports.
+Public API (a1 minimum): Engine, Registry, RunSession, register_steps, discover_steps, and stores.
+Use ``from flowbook import Engine, Registry, discover_steps, register_steps, ...``.
 Everything else: ``flowbook.core.*``.
 """
 
@@ -14,8 +14,9 @@ from flowbook.core.configs.memory_store import InMemoryConfigStore
 from flowbook.core.configs.null_store import NullConfigStore
 from flowbook.core.engine.engine import Engine
 from flowbook.core.engine.session import RunSession
-from flowbook.core.registry.extensions import register_steps
+from flowbook.core.registry.extensions import discover_steps, register_steps
 from flowbook.core.registry.registry import Registry, UnknownOp
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.default_store import DefaultRunStore
 
 
@@ -35,6 +36,7 @@ __version__ = _version()
 __all__ = [
     "ArtifactsStore",
     "DefaultRunStore",
+    "discover_steps",
     "Engine",
     "InMemoryArtifactsStore",
     "InMemoryConfigStore",
@@ -42,6 +44,8 @@ __all__ = [
     "Registry",
     "RunSession",
     "UnknownOp",
+    "register_from_steps",
     "register_steps",
+    "step",
     "__version__",
 ]

@@ -4,12 +4,13 @@ from typing import Any
 
 from flowbook.core.configs.spec_types import Mapping
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 from flowbook.extensions.excel.mapping.apply import apply_mapping_ops
 
 
+@step("apply_mapping")
 class ApplyMappingOp(BaseOp):
     class Inputs(InputsBase):
         DF = "df"
@@ -34,7 +35,4 @@ class ApplyMappingOp(BaseOp):
 
 
 apply_mapping_op = ApplyMappingOp()
-
-
-def register(registry: Registry) -> None:
-    registry.register("apply_mapping", apply_mapping_op)
+register = register_from_steps()

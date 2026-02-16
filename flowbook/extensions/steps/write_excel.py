@@ -3,12 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 from flowbook.extensions.excel.io import write_df_to_excel
 
 
+@step("write_excel")
 class WriteExcelOp(BaseOp):
     class Inputs(InputsBase):
         DF = "df"
@@ -24,5 +25,4 @@ class WriteExcelOp(BaseOp):
         return {self.Outputs.BYTES: b}
 
 
-def register(registry: Registry) -> None:
-    registry.register("write_excel", WriteExcelOp())
+register = register_from_steps()

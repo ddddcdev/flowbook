@@ -6,11 +6,12 @@ from typing import Any
 
 from flowbook.core.configs.spec_types import InputProfile
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
+@step("inspect")
 class InspectOp(BaseOp):
     """Contract-first stub: fixed control keys, no file I/O yet."""
 
@@ -39,6 +40,7 @@ class InspectOp(BaseOp):
         }
 
 
+@step("inspect_filename_kind")
 class InspectFilenameKindOp(BaseOp):
     """Identifies input kind from filename pattern only."""
 
@@ -86,6 +88,4 @@ class InspectFilenameKindOp(BaseOp):
         return {self.Outputs.RESULT: result}
 
 
-def register(registry: Registry) -> None:
-    registry.register("inspect", InspectOp())
-    registry.register("inspect_filename_kind", InspectFilenameKindOp())
+register = register_from_steps()

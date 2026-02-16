@@ -6,11 +6,12 @@ from typing import Any
 import pandas as pd
 
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
+@step("read_excel_bytes")
 class ReadExcelBytesOp(BaseOp):
     class Inputs(InputsBase):
         SRC_EXCEL_BYTES = "src_excel_bytes"
@@ -31,5 +32,4 @@ class ReadExcelBytesOp(BaseOp):
         return {self.Outputs.DF: df}
 
 
-def register(registry: Registry) -> None:
-    registry.register("read_excel_bytes", ReadExcelBytesOp())
+register = register_from_steps()

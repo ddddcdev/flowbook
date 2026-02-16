@@ -4,11 +4,12 @@ from typing import Any
 
 from flowbook.core.configs.spec_types import PlanTemplate
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.registry import Registry
 from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
+@step("plan_from_template")
 class PlanFromTemplateOp(BaseOp):
     class Inputs(InputsBase):
         TEMPLATE_NAME = "template_name"
@@ -42,5 +43,4 @@ class PlanFromTemplateOp(BaseOp):
         return {self.Outputs.PLAN: plan}
 
 
-def register(registry: Registry) -> None:
-    registry.register("plan_from_template", PlanFromTemplateOp())
+register = register_from_steps()
