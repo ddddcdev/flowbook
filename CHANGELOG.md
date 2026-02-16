@@ -18,10 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Optional extras: `excel`, `postgres`, `fastapi`, `full` (all three), `dev` (typer, rich, httpx).
 - Dev CLI: `flowbook-dev` (Typer) with `--version` and `doctor`; requires `pip install "flowbook[dev]"`.
 - Console scripts: `flowbook`, `flowbook-dev`. Entry point: `flowbook.steps` → `flowbook.core.registry.extensions:register_steps`.
-
-### Changed
-
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.
 
-[0.1.0a1]: https://github.com/your-org/flowbook/releases/tag/v0.1.0a1
+[0.1.0a1]: https://github.com/d4cdev/flowbook/releases/tag/v0.1.0a1

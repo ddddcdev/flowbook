@@ -2,7 +2,7 @@
 name = "flowbook"
 version = "0.1.0a1"
 description = "Config-driven data flow framework with pluggable ops and extensions (Excel, Postgres, FastAPI)."
-authors = [{ name = "me", email = "me@example.com" }]
+authors = [{ name = "d4cdev", email = "info@d4c.dev" }]
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
