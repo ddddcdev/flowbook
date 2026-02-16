@@ -1,6 +1,7 @@
 from .base_op import BaseOp
 from .registry import Registry, UnknownOp
 from .spec import InputsBase, InputSpec, OutputsBase, OutputSpec
+from .step_decorator import register_from_steps, step
 
 __all__ = [
     "BaseOp",
@@ -10,4 +11,6 @@ __all__ = [
     "OutputSpec",
     "Registry",
     "UnknownOp",
+    "register_from_steps",
+    "step",
 ]

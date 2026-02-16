@@ -16,6 +16,7 @@ from flowbook.core.engine.engine import Engine
 from flowbook.core.engine.session import RunSession
 from flowbook.core.registry.extensions import discover_steps, register_steps
 from flowbook.core.registry.registry import Registry, UnknownOp
+from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.default_store import DefaultRunStore
 
 
@@ -43,6 +44,8 @@ __all__ = [
     "Registry",
     "RunSession",
     "UnknownOp",
+    "register_from_steps",
     "register_steps",
+    "step",
     "__version__",
 ]
