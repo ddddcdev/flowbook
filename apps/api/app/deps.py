@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
+from sqlalchemy import text
+
 from flowbook import Engine, Registry, discover_steps
 
 
@@ -37,7 +39,10 @@ def get_engine() -> Engine:
         store = PostgresArtifactsStore(database_url=database_url)
         config_store = PostgresConfigStore(database_url=database_url)
 
-        # Ensure tables exist (idempotent)
+        # Drop + create artifacts schema (DB not in production yet; ensures latest schema)
+        with store.engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS artifact_index CASCADE"))
+        artifacts_meta.drop_all(store.engine)
         artifacts_meta.create_all(store.engine)
         configs_meta.create_all(config_store.engine)
 

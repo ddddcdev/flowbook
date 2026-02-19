@@ -19,7 +19,7 @@ class InMemoryArtifactsStore(ArtifactsStore):
     _data: dict[str, object] = field(default_factory=dict)
 
     # ---- JSON only ----
-    def put(self, key: str, value: JsonValue) -> str:
+    def put(self, key: str, value: JsonValue, **kwargs: object) -> str:
         # JSON限定を"仕様"として固定
         try:
             json.dumps(value)
@@ -48,7 +48,7 @@ class InMemoryArtifactsStore(ArtifactsStore):
         return [k for k in keys if k.startswith(prefix)]
 
     # ---- bytes ----
-    def put_bytes(self, key: str, data: bytes) -> str:
+    def put_bytes(self, key: str, data: bytes, **kwargs: object) -> str:
         self._data[key] = bytes(data)
         return key
 
@@ -59,7 +59,7 @@ class InMemoryArtifactsStore(ArtifactsStore):
         return bytes(b)
 
     # ---- df (lazy pandas) ----
-    def put_df(self, key: str, df: Any) -> str:
+    def put_df(self, key: str, df: Any, **kwargs: object) -> str:
         pd = _pd()
         if not isinstance(df, pd.DataFrame):
             raise TypeError(f"put_df expects pandas.DataFrame; got {type(df).__name__}")

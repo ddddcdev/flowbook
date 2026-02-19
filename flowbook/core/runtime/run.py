@@ -10,6 +10,7 @@ run:
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import cast
 
 from flowbook.core.artifacts.store import JsonValue
@@ -76,17 +77,48 @@ def _resolve_inputs(step: Step, ctx: RunContext) -> dict[str, object]:
     return resolved
 
 
-def _persist_output(store: RunStore, out_key: str, value: JsonValue | bytes | object) -> None:
+def _content_type_for_value(value: JsonValue | bytes | object) -> str:
     if isinstance(value, bytes):
-        store.put_bytes(out_key, value)
+        return "application/octet-stream"
+    import pandas as pd
+
+    if isinstance(value, pd.DataFrame):
+        return "application/vnd.dataframe"
+    return "application/json"
+
+
+def _persist_output(
+    store: RunStore,
+    out_key: str,
+    value: JsonValue | bytes | object,
+    *,
+    run_id: str | None = None,
+    logical_address: str | None = None,
+    namespace_prefix: str | None = None,
+    created_at: object = None,
+    content_type: str | None = None,
+) -> None:
+    meta = {}
+    if run_id is not None:
+        meta["run_id"] = run_id
+    if logical_address is not None:
+        meta["logical_address"] = logical_address
+    if namespace_prefix is not None:
+        meta["namespace_prefix"] = namespace_prefix
+    if created_at is not None:
+        meta["created_at"] = created_at
+    if content_type is not None:
+        meta["content_type"] = content_type
+    if isinstance(value, bytes):
+        store.put_bytes(out_key, value, **meta)
         return
     # Lazy import to keep core import-safe (no pandas at import time).
     import pandas as pd
 
     if isinstance(value, pd.DataFrame):
-        store.put_df(out_key, value)
+        store.put_df(out_key, value, **meta)
         return
-    store.put(out_key, cast(JsonValue, value))
+    store.put(out_key, cast(JsonValue, value), **meta)
 
 
 def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
@@ -136,7 +168,33 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 if out_name.startswith("_"):
                     continue
                 out_key = f"{ctx.run_id}/{step.name}/{out_name}"
-                _persist_output(ctx.store, out_key, out_value)
+                logical_address = f"{step.name}/{out_name}"
+                namespace_prefix = (
+                    logical_address.split("/")[0]
+                    if "/" in logical_address
+                    else logical_address
+                )
+                created_at = datetime.now(timezone.utc)  # noqa: UP017
+                content_type = _content_type_for_value(out_value)
+                _persist_output(
+                    ctx.store,
+                    out_key,
+                    out_value,
+                    run_id=ctx.run_id,
+                    logical_address=logical_address,
+                    namespace_prefix=namespace_prefix,
+                    created_at=created_at,
+                    content_type=content_type,
+                )
+                if ctx.index is not None:
+                    ctx.index.record(
+                        run_id=ctx.run_id,
+                        artifact_key=out_key,
+                        logical_address=logical_address,
+                        namespace_prefix=namespace_prefix,
+                        created_at=created_at,
+                        content_type=content_type,
+                    )
                 out_map[out_name] = out_key
                 info.artifacts_written.append(out_key)
                 ctx.bindings[f"{step.name}/{out_name}"] = out_key

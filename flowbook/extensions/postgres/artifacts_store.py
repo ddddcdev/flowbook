@@ -16,7 +16,9 @@ from sqlalchemy import (
     create_engine,
     delete,
     select,
+    text,
 )
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from flowbook.core.artifacts.store import ArtifactNotFound, ArtifactsStore, JsonValue
@@ -27,11 +29,34 @@ artifacts = Table(
     "artifacts",
     metadata,
     Column("artifact_key", Text, primary_key=True),
+    Column("run_id", Text, nullable=True),
+    Column("logical_address", Text, nullable=True),
+    Column("namespace_prefix", Text, nullable=True),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=True),
     Column("content_type", Text, nullable=False),
     Column("codec", Text, nullable=False, server_default="none"),
     Column("bytes", LargeBinary, nullable=True),
     Column("json", JSON, nullable=True),
     Column("meta", JSON, nullable=False, server_default="{}"),
+)
+
+runs = Table(
+    "runs",
+    metadata,
+    Column("run_id", Text, primary_key=True),
+    Column("status", Text, nullable=False),
+    Column(
+        "created_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column(
+        "updated_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
 )
 
 
@@ -53,32 +78,43 @@ class PostgresArtifactsStore(ArtifactsStore):
     def __post_init__(self) -> None:
         self.engine = create_engine(self.database_url, future=True)
 
+    def _meta_values(self, **kwargs: Any) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if "run_id" in kwargs:
+            out["run_id"] = kwargs["run_id"]
+        if "logical_address" in kwargs:
+            out["logical_address"] = kwargs["logical_address"]
+        if "namespace_prefix" in kwargs:
+            out["namespace_prefix"] = kwargs["namespace_prefix"]
+        if "created_at" in kwargs:
+            out["created_at"] = kwargs["created_at"]
+        return out
+
     # ---- Protocol: JSON only ----
-    def put(self, key: str, value: JsonValue) -> str:
+    def put(self, key: str, value: JsonValue, **kwargs: Any) -> str:
         try:
             json.dumps(value)
         except TypeError as e:
             raise TypeError(f"put expects JSON-serializable value: key={key}") from e
 
+        meta_vals = self._meta_values(**kwargs)
+        vals = {
+            "artifact_key": key,
+            "content_type": "application/json",
+            "codec": "none",
+            "bytes": None,
+            "json": value,
+            "meta": {},
+            **meta_vals,
+        }
+        set_cols = {k: v for k, v in vals.items() if k != "artifact_key"}
+
         stmt = (
             pg_insert(artifacts)
-            .values(
-                artifact_key=key,
-                content_type="application/json",
-                codec="none",
-                bytes=None,
-                json=value,
-                meta={},
-            )
+            .values(**vals)
             .on_conflict_do_update(
                 index_elements=[artifacts.c.artifact_key],
-                set_={
-                    "content_type": "application/json",
-                    "codec": "none",
-                    "bytes": None,
-                    "json": value,
-                    "meta": {},
-                },
+                set_=set_cols,
             )
         )
         with self.engine.begin() as conn:
@@ -110,26 +146,24 @@ class PostgresArtifactsStore(ArtifactsStore):
         return [r[0] for r in rows]
 
     # ---- Protocol: bytes ----
-    def put_bytes(self, key: str, data: bytes) -> str:
+    def put_bytes(self, key: str, data: bytes, **kwargs: Any) -> str:
+        meta_vals = self._meta_values(**kwargs)
+        vals = {
+            "artifact_key": key,
+            "content_type": "application/octet-stream",
+            "codec": "none",
+            "bytes": data,
+            "json": None,
+            "meta": {},
+            **meta_vals,
+        }
+        set_cols = {k: v for k, v in vals.items() if k != "artifact_key"}
         stmt = (
             pg_insert(artifacts)
-            .values(
-                artifact_key=key,
-                content_type="application/octet-stream",
-                codec="none",
-                bytes=data,
-                json=None,
-                meta={},
-            )
+            .values(**vals)
             .on_conflict_do_update(
                 index_elements=[artifacts.c.artifact_key],
-                set_={
-                    "content_type": "application/octet-stream",
-                    "codec": "none",
-                    "bytes": data,
-                    "json": None,
-                    "meta": {},
-                },
+                set_=set_cols,
             )
         )
         with self.engine.begin() as conn:
@@ -145,7 +179,7 @@ class PostgresArtifactsStore(ArtifactsStore):
         return row[0]
 
     # ---- Protocol: df ----
-    def put_df(self, key: str, df: pd.DataFrame) -> str:
+    def put_df(self, key: str, df: pd.DataFrame, **kwargs: Any) -> str:
         b = df_to_parquet_bytes(df)
 
         meta = {
@@ -155,25 +189,23 @@ class PostgresArtifactsStore(ArtifactsStore):
             "schema": {str(c): str(df.dtypes[c]) for c in df.columns},
         }
 
+        meta_vals = self._meta_values(**kwargs)
+        vals = {
+            "artifact_key": key,
+            "content_type": "application/x-parquet",
+            "codec": "parquet",
+            "bytes": b,
+            "json": None,
+            "meta": meta,
+            **meta_vals,
+        }
+        set_cols = {k: v for k, v in vals.items() if k != "artifact_key"}
         stmt = (
             pg_insert(artifacts)
-            .values(
-                artifact_key=key,
-                content_type="application/x-parquet",
-                codec="parquet",
-                bytes=b,
-                json=None,
-                meta=meta,
-            )
+            .values(**vals)
             .on_conflict_do_update(
                 index_elements=[artifacts.c.artifact_key],
-                set_={
-                    "content_type": "application/x-parquet",
-                    "codec": "parquet",
-                    "bytes": b,
-                    "json": None,
-                    "meta": meta,
-                },
+                set_=set_cols,
             )
         )
         with self.engine.begin() as conn:
