@@ -43,9 +43,27 @@ def apply_mapping_ops(df: pd.DataFrame, ops: list[dict[str, Any]]) -> pd.DataFra
             if not isinstance(expr, str) or not expr.strip():
                 raise MappingSpecError("filter_rows requires expr")
             try:
-                out = out.query(expr)
+                out = out.query(expr, engine="python")
             except Exception as e:
                 raise MappingSpecError(f"filter_rows expr failed: {expr}") from e
+
+        elif t == "expr_df":
+            columns = op.get("columns")
+            if not isinstance(columns, list) or not columns:
+                raise MappingSpecError("expr_df requires non-empty columns list")
+            for col_spec in columns:
+                if not isinstance(col_spec, dict):
+                    raise MappingSpecError("expr_df columns entries must be dict with name, expr")
+                name = col_spec.get("name")
+                expr = col_spec.get("expr")
+                if not isinstance(name, str) or not name.strip():
+                    raise MappingSpecError("expr_df column requires name")
+                if not isinstance(expr, str) or not expr.strip():
+                    raise MappingSpecError("expr_df column requires expr")
+                try:
+                    out[name] = out.eval(expr, engine="python")
+                except Exception as e:
+                    raise MappingSpecError(f"expr_df expr failed: {name!r} {expr!r}") from e
 
         else:
             raise MappingSpecError(f"unknown op: {t}")

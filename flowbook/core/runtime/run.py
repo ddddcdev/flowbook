@@ -1,19 +1,22 @@
 """
 run:
 - Executes a Pipeline sequentially.
-- Step.inputs are logical names; resolution is done via RunContext.bindings:
-    logical -> artifact_key -> store.get -> value passed to op.
-- Ops MUST NOT assume artifact keys; they receive values.
-- Preflight: missing bindings, unregistered op, op.Inputs (required/surplus).
+- Step.inputs may contain refs (@<logical_address>), literals, or nested dict/list.
+  Refs are resolved via RunContext.bindings (logical -> artifact_key -> store.get_any).
+  Only strings starting with @ are refs; others are passed through.
+- Ops MUST NOT assume artifact keys; they receive resolved values.
+- Preflight: refs exist in bindings, unregistered op, op.Inputs (required/surplus).
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import cast
 
 from flowbook.core.artifacts.store import JsonValue
 from flowbook.core.registry.registry import UnknownOp
 from flowbook.core.runtime.context import RunContext
+from flowbook.core.runtime.resolve import collect_refs_in_inputs, resolve_value
 from flowbook.core.runtime.store import RunStore
 from flowbook.core.runtime.types import Pipeline, RunInfo, Step, StepRunInfo
 
@@ -54,10 +57,11 @@ def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
 
 def _validate_step_inputs(step: Step, ctx: RunContext) -> None:
     """
-    Ensure all logical input keys for this step exist in bindings.
-    Bindings are updated as steps run (step outputs), so this is run per-step.
+    Ensure all refs (strings starting with @) in step inputs exist in bindings.
+    Only ref logical addresses are validated; literals are not looked up.
     """
-    missing = [logical for logical in step.inputs.values() if logical not in ctx.bindings]
+    refs = collect_refs_in_inputs(step.inputs)
+    missing = [logical for logical in refs if logical not in ctx.bindings]
     if missing:
         raise RuntimeError(
             f"missing required input keys in run_id='{ctx.run_id}': "
@@ -66,26 +70,55 @@ def _validate_step_inputs(step: Step, ctx: RunContext) -> None:
 
 
 def _resolve_inputs(step: Step, ctx: RunContext) -> dict[str, object]:
+    """Resolve step inputs recursively: @ref -> bindings -> store.get_any; literals unchanged."""
     resolved: dict[str, object] = {}
-    for param, logical in step.inputs.items():
-        if logical not in ctx.bindings:
-            raise KeyError(f"BindingNotFound: {logical}")
-        artifact_key = ctx.bindings[logical]
-        resolved[param] = ctx.store.get_any(artifact_key)
+    for param, raw_value in step.inputs.items():
+        resolved[param] = resolve_value(raw_value, ctx)
     return resolved
 
 
-def _persist_output(store: RunStore, out_key: str, value: JsonValue | bytes | object) -> None:
+def _content_type_for_value(value: JsonValue | bytes | object) -> str:
     if isinstance(value, bytes):
-        store.put_bytes(out_key, value)
+        return "application/octet-stream"
+    import pandas as pd
+
+    if isinstance(value, pd.DataFrame):
+        return "application/vnd.dataframe"
+    return "application/json"
+
+
+def _persist_output(
+    store: RunStore,
+    out_key: str,
+    value: JsonValue | bytes | object,
+    *,
+    run_id: str | None = None,
+    logical_address: str | None = None,
+    namespace_prefix: str | None = None,
+    created_at: object = None,
+    content_type: str | None = None,
+) -> None:
+    meta = {}
+    if run_id is not None:
+        meta["run_id"] = run_id
+    if logical_address is not None:
+        meta["logical_address"] = logical_address
+    if namespace_prefix is not None:
+        meta["namespace_prefix"] = namespace_prefix
+    if created_at is not None:
+        meta["created_at"] = created_at
+    if content_type is not None:
+        meta["content_type"] = content_type
+    if isinstance(value, bytes):
+        store.put_bytes(out_key, value, **meta)
         return
     # Lazy import to keep core import-safe (no pandas at import time).
     import pandas as pd
 
     if isinstance(value, pd.DataFrame):
-        store.put_df(out_key, value)
+        store.put_df(out_key, value, **meta)
         return
-    store.put(out_key, cast(JsonValue, value))
+    store.put(out_key, cast(JsonValue, value), **meta)
 
 
 def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
@@ -113,6 +146,13 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 got = type(step_output).__name__
                 raise TypeError(f"Step '{step.name}' must return dict[str, Any]; got {got}")
 
+            # Aggregate op _warnings into run-level warnings (do not persist as artifact)
+            _warnings = step_output.get("_warnings")
+            if isinstance(_warnings, list):
+                for msg in _warnings:
+                    if isinstance(msg, str):
+                        info.warnings.append(msg)
+
             out_spec = step_op.Outputs
             if out_spec.allowed_keys():
                 public_keys = {k for k in step_output.keys() if not k.startswith("_")}
@@ -128,7 +168,33 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 if out_name.startswith("_"):
                     continue
                 out_key = f"{ctx.run_id}/{step.name}/{out_name}"
-                _persist_output(ctx.store, out_key, out_value)
+                logical_address = f"{step.name}/{out_name}"
+                namespace_prefix = (
+                    logical_address.split("/")[0]
+                    if "/" in logical_address
+                    else logical_address
+                )
+                created_at = datetime.now(timezone.utc)  # noqa: UP017
+                content_type = _content_type_for_value(out_value)
+                _persist_output(
+                    ctx.store,
+                    out_key,
+                    out_value,
+                    run_id=ctx.run_id,
+                    logical_address=logical_address,
+                    namespace_prefix=namespace_prefix,
+                    created_at=created_at,
+                    content_type=content_type,
+                )
+                if ctx.index is not None:
+                    ctx.index.record(
+                        run_id=ctx.run_id,
+                        artifact_key=out_key,
+                        logical_address=logical_address,
+                        namespace_prefix=namespace_prefix,
+                        created_at=created_at,
+                        content_type=content_type,
+                    )
                 out_map[out_name] = out_key
                 info.artifacts_written.append(out_key)
                 ctx.bindings[f"{step.name}/{out_name}"] = out_key

@@ -25,7 +25,7 @@ class PlanFromTwoNumbersOp(BaseOp):
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {"x": "x", "y": "y"},
+                    "inputs": {"x": "@x", "y": "@y"},
                 }
             ]
         }

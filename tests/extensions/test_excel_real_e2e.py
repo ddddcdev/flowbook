@@ -93,23 +93,23 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                     "name": "read",
                     "op": "read_excel_bytes",
                     "inputs": {
-                        ReadExcelBytesOp.Inputs.SRC_EXCEL_BYTES: "src_excel_bytes",
-                        ReadExcelBytesOp.Inputs.SHEET: "sheet_name",
-                        ReadExcelBytesOp.Inputs.HEADER: "header_row",
+                        ReadExcelBytesOp.Inputs.SRC_EXCEL_BYTES: "@src_excel_bytes",
+                        ReadExcelBytesOp.Inputs.SHEET: "@sheet_name",
+                        ReadExcelBytesOp.Inputs.HEADER: "@header_row",
                     },
                 },
                 {
                     "name": "map",
                     "op": "apply_mapping",
                     "inputs": {
-                        ApplyMappingOp.Inputs.DF: "read/df",
-                        ApplyMappingOp.Inputs.MAPPING_NAME: "mapping_name_val",
+                        ApplyMappingOp.Inputs.DF: "@read/df",
+                        ApplyMappingOp.Inputs.MAPPING_NAME: "@mapping_name_val",
                     },
                 },
                 {
                     "name": "write",
                     "op": "write_excel",
-                    "inputs": {WriteExcelOp.Inputs.DF: "map/df"},
+                    "inputs": {WriteExcelOp.Inputs.DF: "@map/df"},
                 },
             ]
         }
@@ -144,9 +144,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                 "name": "inspect",
                 "op": "inspect_excel_bytes_v2",
                 "inputs": {
-                    InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "input_profile_name",
-                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES: "src_excel_bytes",
-                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "src_excel_filename",
+                    InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES: "@src_excel_bytes",
+                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "@src_excel_filename",
                 },
             }
         ]
@@ -176,7 +176,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
             }
         ]
     }

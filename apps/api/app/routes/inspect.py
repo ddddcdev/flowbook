@@ -46,9 +46,9 @@ async def inspect(
                     "name": "inspect",
                     "op": "inspect_excel_bytes_v2",
                     "inputs": {
-                        "input_profile_name": "input_profile_name",
-                        "src_excel_bytes": "src_excel_bytes",
-                        "src_excel_filename": "src_excel_filename",
+                        "input_profile_name": "@input_profile_name",
+                        "src_excel_bytes": "@src_excel_bytes",
+                        "src_excel_filename": "@src_excel_filename",
                     },
                 }
             ]

@@ -42,7 +42,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
                     "name": "planner",
                     "op": "plan_from_template",
                     "inputs": {
-                        "template_name": "template_name",
+                        "template_name": "@template_name",
                     },
                 }
             ]

@@ -73,7 +73,7 @@ async def import_file(
                     "name": "planner",
                     "op": "plan_from_template",
                     "inputs": {
-                        "template_name": "template_name",
+                        "template_name": "@template_name",
                     },
                 }
             ]

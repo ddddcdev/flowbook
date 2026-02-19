@@ -8,6 +8,8 @@ Everything else: ``flowbook.core.*``.
 
 from __future__ import annotations
 
+from flowbook.core.artifacts.index import ArtifactIndex, IndexRow
+from flowbook.core.artifacts.memory_index import InMemoryArtifactIndex
 from flowbook.core.artifacts.memory_store import InMemoryArtifactsStore
 from flowbook.core.artifacts.store import ArtifactsStore
 from flowbook.core.configs.memory_store import InMemoryConfigStore
@@ -34,10 +36,13 @@ def _version() -> str:
 __version__ = _version()
 
 __all__ = [
+    "ArtifactIndex",
     "ArtifactsStore",
     "DefaultRunStore",
     "discover_steps",
     "Engine",
+    "IndexRow",
+    "InMemoryArtifactIndex",
     "InMemoryArtifactsStore",
     "InMemoryConfigStore",
     "NullConfigStore",

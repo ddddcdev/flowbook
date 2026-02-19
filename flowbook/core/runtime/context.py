@@ -9,10 +9,13 @@ RunContext:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from flowbook.core.registry.registry import Registry
 from flowbook.core.runtime.store import RunStore
+
+if TYPE_CHECKING:
+    from flowbook.core.artifacts.index import ArtifactIndex
 
 
 @dataclass(frozen=True)
@@ -22,3 +25,4 @@ class RunContext:
     registry: Registry
     bindings: dict[str, str]  # logical -> artifact key
     meta: dict[str, Any] | None = None
+    index: ArtifactIndex | None = None
