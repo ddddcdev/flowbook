@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Extensions under `flowbook.extensions`: Excel (io, mapping), Postgres (artifacts_store, config_store), steps, FastAPI shell.
 - CLI: `flowbook --version`, `flowbook doctor` (stdlib argparse). Doctor reports Python/OS/flowbook version and suggests extras for missing extensions.
 - Optional extras: `excel`, `postgres`, `fastapi`, `full` (all three), `dev` (typer, rich, httpx).
-- CLI: `flowbook` uses Typer (db, hands-on, etc.) when `flowbook[dev]` is installed; otherwise argparse (version, doctor).
+- CLI: `flowbook` uses Typer (db, hands-on, etc.) when `flowbook[dev]` is installed; otherwise argparse (version, doctor). CLI extensions via `flowbook.cli` entry point group.
 - Console scripts: `flowbook`. Entry point: `flowbook.steps` → `flowbook.core.registry.extensions:register_steps`.
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.

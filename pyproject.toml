@@ -43,6 +43,9 @@ flowbook = "flowbook.cli:main"
 [project.entry-points."flowbook.steps"]
 flowbook = "flowbook.core.registry.extensions:register_steps"
 
+[project.entry-points."flowbook.cli"]
+flowbook = "flowbook.extensions.cli.cli:register_cli"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

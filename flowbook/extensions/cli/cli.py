@@ -8,7 +8,11 @@ import json
 import os
 import re
 import sys
+from typing import TYPE_CHECKING
 from urllib.parse import quote
+
+if TYPE_CHECKING:
+    from typer import Typer
 
 try:
     import typer
@@ -18,49 +22,13 @@ except ImportError:
     Context = None  # type: ignore[assignment]
 
 
-def _sanitize_filename(key: str) -> str:
-    """Derive a safe filename from artifact key (no path, no bad chars)."""
-    base = key.replace("/", "_").replace("\\", "_")
-    base = re.sub(r'[<>:"|?*]', "_", base)
-    return base or "artifact"
-
-
-def main() -> None:
+def register_cli(app: Typer) -> None:
+    """Register flowbook's built-in CLI commands. Called via flowbook.cli entry point."""
     if typer is None:
-        print(
-            'flowbook extended CLI requires pip install "flowbook[dev]"',
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    assert typer is not None
-    assert Context is not None
-
-    import flowbook
-
+        return
     t = typer
-    app = t.Typer(
-        name="flowbook",
-        help="flowbook: db, hands-on, fixture, streamlit, artifacts.",
-    )
 
-    @app.callback(invoke_without_command=True)
-    def global_callback(
-        ctx: Context,  # pyright: ignore[reportInvalidTypeForm]
-        version: bool = t.Option(False, "--version", "-v", help="Show version"),
-    ) -> None:
-        if version:
-            print(flowbook.__version__)
-            raise t.Exit()
-        if ctx.invoked_subcommand is None:
-            t.echo(ctx.get_help())
-
-    @app.command()
-    def doctor() -> None:
-        """Check environment and suggest missing extras."""
-        from flowbook.cli import _run_doctor
-
-        code = _run_doctor()
-        raise t.Exit(code)
+    default_base = os.environ.get("FLOWBOOK_API_URL", "http://127.0.0.1:8000")
 
     # ---- db ----
     db_app = t.Typer(help="DB operations: reset, seed configs, seed defaults, seed artifact.")
@@ -106,8 +74,6 @@ def main() -> None:
     app.add_typer(db_app, name="db")
 
     # ---- hands-on ----
-    default_base = os.environ.get("FLOWBOOK_API_URL", "http://127.0.0.1:8000")
-
     @app.command("hands-on")
     def hands_on(
         base_url: str = t.Option(
@@ -179,6 +145,13 @@ def main() -> None:
         raise t.Exit(code)
 
     # ---- artifacts (API) ----
+    _add_artifacts_commands(app, default_base)
+
+
+def _add_artifacts_commands(app: Typer, default_base: str) -> None:
+    if typer is None:
+        return
+    t = typer
     artifacts_app = t.Typer(help="List, get, or preview artifacts from the flowbook API.")
 
     @artifacts_app.command("list")
@@ -304,6 +277,53 @@ def main() -> None:
 
     app.add_typer(artifacts_app, name="artifacts")
 
+
+def _sanitize_filename(key: str) -> str:
+    """Derive a safe filename from artifact key (no path, no bad chars)."""
+    base = key.replace("/", "_").replace("\\", "_")
+    base = re.sub(r'[<>:"|?*]', "_", base)
+    return base or "artifact"
+
+
+def main() -> None:
+    if typer is None:
+        print(
+            'flowbook extended CLI requires pip install "flowbook[dev]"',
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    assert typer is not None
+    assert Context is not None
+
+    import flowbook
+    from flowbook.extensions.cli.extensions import discover_cli_extensions
+
+    t = typer
+    app = t.Typer(
+        name="flowbook",
+        help="flowbook: db, hands-on, fixture, streamlit, artifacts.",
+    )
+
+    @app.callback(invoke_without_command=True)
+    def global_callback(
+        ctx: Context,  # pyright: ignore[reportInvalidTypeForm]
+        version: bool = t.Option(False, "--version", "-v", help="Show version"),
+    ) -> None:
+        if version:
+            print(flowbook.__version__)
+            raise t.Exit()
+        if ctx.invoked_subcommand is None:
+            t.echo(ctx.get_help())
+
+    @app.command()
+    def doctor() -> None:
+        """Check environment and suggest missing extras."""
+        from flowbook.cli import _run_doctor
+
+        code = _run_doctor()
+        raise t.Exit(code)
+
+    discover_cli_extensions(app)
     app()
 
 
