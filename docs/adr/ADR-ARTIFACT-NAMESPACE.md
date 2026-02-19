@@ -18,7 +18,7 @@ Tenant-scoped and batch-scoped runs need a way to group artifacts without puttin
 
 ### Namespace prefix
 
-- For **artifact index** and "latest" queries, **namespace_prefix** is derived from the logical address:
+- For **artifact index** and "latest" queries (stored per-artifact in Postgres, or in a separate index for InMemory), **namespace_prefix** is derived from the logical address:
   - If the address contains `/`, the first segment is the namespace prefix (e.g. `tenantA` from `tenantA/batch42/map/df`).
   - If there is no `/`, the whole address is the prefix.
 - This allows indexing and querying by tenant (or top-level segment) without storing run_id in the address.

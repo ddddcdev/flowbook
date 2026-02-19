@@ -6,7 +6,7 @@ Accepted. An optional artifact index layer records each persisted output for que
 
 ## Context
 
-Physical keys are `{run_id}/{path}`. Listing by prefix cannot efficiently answer "latest artifacts for tenant X" when tenant is encoded in the logical address. A separate index is needed.
+Physical keys are `{run_id}/{path}`. Listing by prefix cannot efficiently answer "latest artifacts for tenant X" when tenant is encoded in the logical address. Index metadata (run_id, logical_address, namespace_prefix, created_at) is required per artifact.
 
 ## Decision
 
@@ -28,7 +28,7 @@ Physical keys are `{run_id}/{path}`. Listing by prefix cannot efficiently answer
 ### Implementations
 
 - **InMemory**: For tests and single-process; list + sort; latest_per_logical via distinct-on-logical_address in memory.
-- **Postgres**: Table `artifact_index`; list_index by prefix + order; latest_per_logical via window (ROW_NUMBER PARTITION BY logical_address ORDER BY created_at DESC).
+- **Postgres**: No separate index table. The `artifacts` table stores run_id, logical_address, namespace_prefix, created_at, content_type with each row. PostgresArtifactIndex reads from `artifacts`; `record()` is a no-op (metadata is written by PostgresArtifactsStore.put/put_bytes/put_df).
 
 ## Consequences
 
