@@ -1,10 +1,11 @@
 """
 run:
 - Executes a Pipeline sequentially.
-- Step.inputs are logical names; resolution is done via RunContext.bindings:
-    logical -> artifact_key -> store.get -> value passed to op.
-- Ops MUST NOT assume artifact keys; they receive values.
-- Preflight: missing bindings, unregistered op, op.Inputs (required/surplus).
+- Step.inputs may contain refs (@<logical_address>), literals, or nested dict/list.
+  Refs are resolved via RunContext.bindings (logical -> artifact_key -> store.get_any).
+  Only strings starting with @ are refs; others are passed through.
+- Ops MUST NOT assume artifact keys; they receive resolved values.
+- Preflight: refs exist in bindings, unregistered op, op.Inputs (required/surplus).
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from typing import cast
 from flowbook.core.artifacts.store import JsonValue
 from flowbook.core.registry.registry import UnknownOp
 from flowbook.core.runtime.context import RunContext
+from flowbook.core.runtime.resolve import collect_refs_in_inputs, resolve_value
 from flowbook.core.runtime.store import RunStore
 from flowbook.core.runtime.types import Pipeline, RunInfo, Step, StepRunInfo
 
@@ -54,10 +56,11 @@ def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
 
 def _validate_step_inputs(step: Step, ctx: RunContext) -> None:
     """
-    Ensure all logical input keys for this step exist in bindings.
-    Bindings are updated as steps run (step outputs), so this is run per-step.
+    Ensure all refs (strings starting with @) in step inputs exist in bindings.
+    Only ref logical addresses are validated; literals are not looked up.
     """
-    missing = [logical for logical in step.inputs.values() if logical not in ctx.bindings]
+    refs = collect_refs_in_inputs(step.inputs)
+    missing = [logical for logical in refs if logical not in ctx.bindings]
     if missing:
         raise RuntimeError(
             f"missing required input keys in run_id='{ctx.run_id}': "
@@ -66,12 +69,10 @@ def _validate_step_inputs(step: Step, ctx: RunContext) -> None:
 
 
 def _resolve_inputs(step: Step, ctx: RunContext) -> dict[str, object]:
+    """Resolve step inputs recursively: @ref -> bindings -> store.get_any; literals unchanged."""
     resolved: dict[str, object] = {}
-    for param, logical in step.inputs.items():
-        if logical not in ctx.bindings:
-            raise KeyError(f"BindingNotFound: {logical}")
-        artifact_key = ctx.bindings[logical]
-        resolved[param] = ctx.store.get_any(artifact_key)
+    for param, raw_value in step.inputs.items():
+        resolved[param] = resolve_value(raw_value, ctx)
     return resolved
 
 

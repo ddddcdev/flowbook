@@ -19,8 +19,8 @@ def test_inspect_step_writes_control_artifacts() -> None:
                 "name": "inspect",
                 "op": "inspect",
                 "inputs": {
-                    InspectOp.Inputs.SOURCE_URI: "source_uri",
-                    InspectOp.Inputs.READ_SPEC: "read_spec",
+                    InspectOp.Inputs.SOURCE_URI: "@source_uri",
+                    InspectOp.Inputs.READ_SPEC: "@read_spec",
                 },
             }
         ]

@@ -70,9 +70,9 @@ def client() -> TestClient:
                         "name": "read",
                         "op": "read_excel_bytes",
                         "inputs": {
-                            "src_excel_bytes": "src_excel_bytes",
-                            "sheet": "sheet_name",
-                            "header": "header_row",
+                            "src_excel_bytes": "@src_excel_bytes",
+                            "sheet": "@sheet_name",
+                            "header": "@header_row",
                         },
                     }
                 ]
@@ -91,7 +91,7 @@ def client() -> TestClient:
                     {
                         "name": "write",
                         "op": "write_excel",
-                        "inputs": {"df": "in_key"},
+                        "inputs": {"df": "@in_key"},
                     }
                 ]
             }

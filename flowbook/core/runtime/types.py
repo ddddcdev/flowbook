@@ -9,13 +9,14 @@ Rule:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(frozen=True)
 class Step:
     name: str
     op: str
-    inputs: dict[str, str]  # param -> logical name
+    inputs: dict[str, Any]  # param -> value (ref string @..., literal, or nested dict/list)
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,7 @@ class Pipeline:
 class StepRunInfo:
     name: str
     status: str
-    inputs: dict[str, str]
+    inputs: dict[str, Any]
     outputs: dict[str, str] = field(default_factory=dict)
     error: str | None = None
 

@@ -40,7 +40,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"},
+                    "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},
                 }
             ]
         }
@@ -69,7 +69,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
             }
         ]
     }
@@ -96,7 +96,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     assert len(plan["steps"]) == 1
     assert plan["steps"][0]["name"] == "add"
     assert plan["steps"][0]["op"] == "add"
-    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"}
+    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"}
 
     # ✅ Verify plan execution succeeded
     assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
@@ -170,7 +170,7 @@ def test_plan_from_template_template_not_found() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
             }
         ]
     }
@@ -213,7 +213,7 @@ def test_plan_from_template_missing_plan_key() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
             }
         ]
     }
@@ -256,7 +256,7 @@ def test_plan_from_template_plan_not_dict() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
             }
         ]
     }
@@ -291,7 +291,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"},  # requires x, y
+                    "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},  # requires x, y
                 }
             ]
         }
@@ -316,7 +316,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "template_name"},
+                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
             }
         ]
     }

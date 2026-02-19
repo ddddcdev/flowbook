@@ -25,7 +25,7 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
             {
                 "name": "planner",
                 "op": "plan_from_two_numbers",
-                "inputs": {"x": "x", "y": "y"},
+                "inputs": {"x": "@x", "y": "@y"},
             }
         ]
     }
@@ -52,7 +52,7 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
     assert isinstance(plan, dict)
     assert "steps" in plan
     assert plan["steps"][0]["op"] == "add"
-    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "x", AddOp.Inputs.Y: "y"}
+    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"}
 
     # ✅ Verify plan execution produced expected output
     assert info2.status == "succeeded"
