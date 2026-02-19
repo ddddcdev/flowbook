@@ -1,5 +1,5 @@
 """
-Dev CLI (Typer/Rich). Requires the dev extra: pip install "flowbook[dev]".
+flowbook extended CLI (Typer/Rich). Loaded by flowbook when flowbook[dev] is installed.
 """
 
 from __future__ import annotations
@@ -28,19 +28,19 @@ def _sanitize_filename(key: str) -> str:
 def main() -> None:
     if typer is None:
         print(
-            'flowbook-dev requires the dev extra. Install with: pip install "flowbook[dev]"',
+            'flowbook extended CLI requires pip install "flowbook[dev]"',
             file=sys.stderr,
         )
         sys.exit(1)
-    assert typer is not None  # narrow for type checker
+    assert typer is not None
     assert Context is not None
 
     import flowbook
 
     t = typer
     app = t.Typer(
-        name="flowbook-dev",
-        help="Development CLI for flowbook (Typer/Rich).",
+        name="flowbook",
+        help="flowbook: db, hands-on, fixture, streamlit, artifacts.",
     )
 
     @app.callback(invoke_without_command=True)
@@ -62,9 +62,123 @@ def main() -> None:
         code = _run_doctor()
         raise t.Exit(code)
 
-    # ---- artifacts (API) ----
+    # ---- db ----
+    db_app = t.Typer(help="DB operations: reset, seed configs, seed defaults, seed artifact.")
+
+    @db_app.command("reset")
+    def db_reset(
+        config_dir: str = t.Option(
+            "configs", "--config-dir", "-C", help="Config directory to seed from"
+        ),
+    ) -> None:
+        """Truncate artifacts and configs, then seed from config dir. Needs FLOWBOOK_DB_RESET=1."""
+        from flowbook.extensions.cli.db import reset_db
+
+        code = reset_db(config_dir)
+        raise t.Exit(code)
+
+    @db_app.command("seed")
+    def db_seed(
+        config_dir: str = t.Option("configs", "--config-dir", "-C", help="Config directory"),
+    ) -> None:
+        """Seed Postgres config store from JSON files in config dir."""
+        from flowbook.extensions.cli.db import seed_configs_from_dir
+
+        code = seed_configs_from_dir(config_dir)
+        raise t.Exit(code)
+
+    @db_app.command("seed-default")
+    def db_seed_default() -> None:
+        """Seed hardcoded InputProfile and PlanTemplates for API smoke test."""
+        from flowbook.extensions.cli.db import seed_config_for_api
+
+        code = seed_config_for_api()
+        raise t.Exit(code)
+
+    @db_app.command("seed-artifact")
+    def db_seed_artifact() -> None:
+        """Seed one smoke-test artifact for flowbook artifacts list."""
+        from flowbook.extensions.cli.db import seed_one_artifact
+
+        code = seed_one_artifact()
+        raise t.Exit(code)
+
+    app.add_typer(db_app, name="db")
+
+    # ---- hands-on ----
     default_base = os.environ.get("FLOWBOOK_API_URL", "http://127.0.0.1:8000")
 
+    @app.command("hands-on")
+    def hands_on(
+        base_url: str = t.Option(
+            default_base,
+            "--base-url",
+            envvar="FLOWBOOK_API_URL",
+            help="API base URL",
+        ),
+        fixture: str = t.Option(
+            "tests/fixtures/excel/test_detect_region_input.xlsx",
+            "--fixture",
+            "-f",
+            help="Fixture Excel path",
+        ),
+        config_dir: str = t.Option(
+            "configs", "--config-dir", "-C", help="Config directory for init"
+        ),
+        no_interactive: bool = t.Option(False, "--no-interactive", help="Skip prompts"),
+    ) -> None:
+        """Run hands-on flow: Health -> Inspect -> Import -> Artifacts -> Export -> Download."""
+        from flowbook.extensions.cli.hands_on import run as run_hands_on
+
+        code = run_hands_on(
+            base_url=base_url,
+            fixture_path=fixture,
+            config_dir=config_dir,
+            interactive=not no_interactive,
+        )
+        raise t.Exit(code)
+
+    # ---- fixture ----
+    fixture_app = t.Typer(help="Fixture generation for hands-on / e2e.")
+
+    @fixture_app.command("generate")
+    def fixture_generate(
+        output: str = t.Option(
+            "tests/fixtures/excel",
+            "--output",
+            "-o",
+            help="Output directory for generated fixture",
+        ),
+    ) -> None:
+        """Generate test_detect_region_input.xlsx for hands-on / e2e."""
+        from flowbook.extensions.cli.fixture import generate as gen_fixture
+
+        try:
+            out_path = gen_fixture(output)
+            t.echo(f"Wrote {out_path}")
+        except ImportError as e:
+            t.echo(str(e), err=True)
+            raise t.Exit(1) from e
+
+    app.add_typer(fixture_app, name="fixture")
+
+    # ---- streamlit ----
+    _streamlit_extra = t.Argument(default=None, help="Extra args passed to streamlit run")
+
+    @app.command("streamlit")
+    def streamlit_cmd(
+        venv_dir: str = t.Option(
+            ".venv-ui", "--venv", help="Venv for Streamlit (created if missing)"
+        ),
+        extra: list[str] = _streamlit_extra,
+    ) -> None:
+        """Run Streamlit UI in a separate venv (pandas version compatibility)."""
+        from flowbook.extensions.cli.streamlit_runner import run as run_streamlit
+
+        code = run_streamlit(venv_dir=venv_dir, extra_args=extra or [])
+        raise t.Exit(code)
+
+    # ---- artifacts (API) ----
     artifacts_app = t.Typer(help="List, get, or preview artifacts from the flowbook API.")
 
     @artifacts_app.command("list")

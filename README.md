@@ -14,12 +14,15 @@ Core-only install has no heavy dependencies. For Excel, Postgres, and FastAPI ex
 pip install "flowbook[full]"
 ```
 
-Optional dev CLI (Typer/Rich):
+Dev CLI (Typer/Rich) for local development and demos:
 
 ```sh
 pip install "flowbook[dev]"
-flowbook-dev --version
-flowbook-dev doctor
+flowbook --version
+flowbook doctor
+flowbook db reset    # DB reset + seed (needs flowbook[dev])
+flowbook hands-on   # API hands-on flow
+flowbook streamlit  # Streamlit UI
 ```
 
 `flowbook doctor` prints Python/OS/flowbook version and suggests `pip install "flowbook[excel]"`, `"flowbook[postgres]"`, `"flowbook[fastapi]"`, or `"flowbook[full]"` for missing extensions.
@@ -79,12 +82,10 @@ API docs: <http://localhost:8000/docs>
 
 ### Streamlit UI
 
-Streamlit requires pandas<3, while flowbook uses pandas 3. Use a separate venv:
+Streamlit runs in a separate venv (pandas version compatibility):
 
 ```sh
-python -m venv .venv-ui
-.venv-ui/bin/pip install -e . streamlit requests
-.venv-ui/bin/streamlit run flowbook/extensions/ui/app.py
+flowbook streamlit
 ```
 
 Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
@@ -94,15 +95,19 @@ Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export
 **Safety**: Requires `FLOWBOOK_DB_RESET=1`. Refuses non-localhost DSNs.
 
 ```sh
-FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 poetry run python scripts/reset_db.py
+FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
 ```
 
-This truncates artifacts and configs, then seeds from `configs/` via `seed_configs_from_dir.py`.
+Truncates artifacts and configs, then seeds from `configs/` (default `--config-dir configs`).
 
-### Hands-on script
+### Hands-on flow
 
 ```sh
-./scripts/hands_on.sh
+flowbook hands-on
 ```
 
-Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download. Requires API up and a fixture (default: `tests/fixtures/excel/test_detect_region_input.xlsx`). Generate fixture: `poetry run python scripts/generate_fixture_xlsx.py`.
+Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download (interactive). Requires API up and a fixture. Generate fixture:
+
+```sh
+flowbook fixture generate -o tests/fixtures/excel
+```

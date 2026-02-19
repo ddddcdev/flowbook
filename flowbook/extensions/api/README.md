@@ -45,7 +45,7 @@ API docs (auto-generated): <http://localhost:8000/docs>
 
    ```bash
    FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
-     poetry run python scripts/seed_one_artifact.py
+     flowbook db seed-artifact
    # Seeded artifact: smoke-test/artifact
    ```
 
@@ -59,6 +59,6 @@ API docs (auto-generated): <http://localhost:8000/docs>
 3. **List artifacts**:
 
    ```bash
-   poetry run flowbook-dev artifacts list
+   flowbook artifacts list
    # Should show a table with smoke-test/artifact
    ```

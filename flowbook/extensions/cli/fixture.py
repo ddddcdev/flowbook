@@ -1,23 +1,26 @@
-#!/usr/bin/env python3
-"""Generate test_detect_region_input.xlsx (dirty layout: table not at A1, blank rows/cols).
-
-Run from repo root. Overwrites tests/fixtures/excel/test_detect_region_input.xlsx.
-"""
+"""Fixture generation for hands-on / e2e tests."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import openpyxl
 
+def generate(output_dir: str | Path) -> Path:
+    """Generate test_detect_region_input.xlsx. Returns output path."""
+    try:
+        import openpyxl
+    except ImportError:
+        raise ImportError(
+            "fixture generate requires openpyxl. Install with: pip install flowbook[excel]"
+        ) from None
 
-def main() -> int:
-    repo_root = Path(__file__).resolve().parent.parent
-    out_path = repo_root / "tests" / "fixtures" / "excel" / "test_detect_region_input.xlsx"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "test_detect_region_input.xlsx"
 
     wb = openpyxl.Workbook()
     meta = wb.active
+    assert meta is not None
     meta.title = "meta"
     meta["A1"] = "Date"
     meta["B2"] = "2025-01-15"
@@ -61,9 +64,4 @@ def main() -> int:
     ws["H10"] = "2024-06-01"
 
     wb.save(out_path)
-    print(f"Wrote {out_path}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    return out_path

@@ -1,5 +1,5 @@
 """
-Smoke tests for flowbook-dev CLI: version, doctor, artifacts --help and list error path.
+Smoke tests for flowbook CLI (version, doctor, artifacts). Requires flowbook[dev].
 """
 
 from __future__ import annotations
@@ -13,9 +13,9 @@ import pytest
 pytestmark = pytest.mark.smoke
 
 
-def test_dev_cli_version_exits_zero() -> None:
+def test_flowbook_version_exits_zero() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "flowbook.extensions.dev_cli", "--version"],
+        [sys.executable, "-m", "flowbook.cli", "--version"],
         capture_output=True,
         text=True,
     )
@@ -23,9 +23,9 @@ def test_dev_cli_version_exits_zero() -> None:
     assert re.match(r"^\d+(\.\d+){0,2}([a-z]+\d+)?\s*$", result.stdout.strip())
 
 
-def test_dev_cli_doctor_runs() -> None:
+def test_flowbook_doctor_runs() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "flowbook.extensions.dev_cli", "doctor"],
+        [sys.executable, "-m", "flowbook.cli", "doctor"],
         capture_output=True,
         text=True,
     )
@@ -34,9 +34,9 @@ def test_dev_cli_doctor_runs() -> None:
     assert "flowbook:" in result.stdout
 
 
-def test_dev_cli_artifacts_help() -> None:
+def test_flowbook_artifacts_help() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "flowbook.extensions.dev_cli", "artifacts", "--help"],
+        [sys.executable, "-m", "flowbook.cli", "artifacts", "--help"],
         capture_output=True,
         text=True,
     )
@@ -46,13 +46,13 @@ def test_dev_cli_artifacts_help() -> None:
     assert "head" in result.stdout
 
 
-def test_dev_cli_artifacts_list_unreachable_exits_nonzero() -> None:
+def test_flowbook_artifacts_list_unreachable_exits_nonzero() -> None:
     # No server on this port; CLI should exit 1 and print error
     result = subprocess.run(
         [
             sys.executable,
             "-m",
-            "flowbook.extensions.dev_cli",
+            "flowbook.cli",
             "artifacts",
             "list",
             "--base-url",

@@ -13,4 +13,4 @@ Directory layout:
 - configs/templates/*.json
 - configs/routing/*.json
 
-Seed with: `FLOWBOOK_DATABASE_URL=... poetry run python scripts/seed_configs_from_dir.py --dir configs`
+Seed with: `FLOWBOOK_DATABASE_URL=... flowbook db seed --config-dir configs`
