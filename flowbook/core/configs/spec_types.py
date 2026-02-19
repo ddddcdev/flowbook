@@ -76,6 +76,15 @@ class PlanTemplate(ConfigSpecKind):
         plan: dict[str, Any]
 
 
+class LookupTable(ConfigSpecKind):
+    KIND: str = "lookup_table"
+
+    class Spec(TypedDict):
+        """Spec for kind='lookup_table'. artifact_key points to stored DataFrame."""
+
+        artifact_key: str
+
+
 class Routing(ConfigSpecKind):
     KIND: str = "routing"
 
