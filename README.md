@@ -63,3 +63,44 @@ docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down
 docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d
 docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres logs -f
 ```
+
+## Dev / Demo
+
+API and Streamlit UI run from the repo for development and demos.
+
+### API
+
+```sh
+FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
+  poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+```
+
+API docs: <http://localhost:8000/docs>
+
+### Streamlit UI
+
+```sh
+pip install "flowbook[ui]"  # if not already (streamlit, requests)
+poetry run streamlit run flowbook/extensions/ui/app.py
+```
+
+Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
+Note: `flowbook[ui]` may have pandas version constraints; if resolution fails, install streamlit and requests manually.
+
+### DB reset (dev only)
+
+**Safety**: Requires `FLOWBOOK_DB_RESET=1`. Refuses non-localhost DSNs.
+
+```sh
+FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 poetry run python scripts/reset_db.py
+```
+
+This truncates artifacts and configs, then seeds from `configs/` via `seed_configs_from_dir.py`.
+
+### Hands-on script
+
+```sh
+./scripts/hands_on.sh
+```
+
+Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download. Requires API up and a fixture (default: `tests/fixtures/excel/test_detect_region_input.xlsx`). Generate fixture: `poetry run python scripts/generate_fixture_xlsx.py`.
