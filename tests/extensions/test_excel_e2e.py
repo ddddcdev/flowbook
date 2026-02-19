@@ -51,21 +51,21 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     # 3) Setup pipeline config (no planner, direct execution)
     pipeline_config = {
         "steps": [
-                {
-                    "name": "read",
-                    "op": "read_excel",
-                    "inputs": {
-                        ReadExcelOp.Inputs.PATH: "@excel_path",
-                        ReadExcelOp.Inputs.SHEET: "@sheet_name",
-                        ReadExcelOp.Inputs.HEADER: "@header_row",
-                    },
+            {
+                "name": "read",
+                "op": "read_excel",
+                "inputs": {
+                    ReadExcelOp.Inputs.PATH: "@excel_path",
+                    ReadExcelOp.Inputs.SHEET: "@sheet_name",
+                    ReadExcelOp.Inputs.HEADER: "@header_row",
                 },
+            },
             {
                 "name": "map",
                 "op": "apply_mapping",
                 "inputs": {
                     ApplyMappingOp.Inputs.DF: "@read/df",
-                        ApplyMappingOp.Inputs.MAPPING_NAME: "@mapping_name_val",
+                    ApplyMappingOp.Inputs.MAPPING_NAME: "@mapping_name_val",
                 },
             },
             {

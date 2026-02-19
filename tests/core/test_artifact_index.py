@@ -52,11 +52,13 @@ def test_run_with_index_records_outputs() -> None:
         bindings={},
         index=index,
     )
-    pipeline = build({
-        "steps": [
-            {"name": "add", "op": "add", "inputs": {"x": "@x", "y": "@y"}},
-        ]
-    })
+    pipeline = build(
+        {
+            "steps": [
+                {"name": "add", "op": "add", "inputs": {"x": "@x", "y": "@y"}},
+            ]
+        }
+    )
     ctx.bindings["x"] = "run1/input/x"
     ctx.bindings["y"] = "run1/input/y"
     store.put("run1/input/x", 2)

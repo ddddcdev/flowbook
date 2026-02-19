@@ -14,12 +14,15 @@ Core-only install has no heavy dependencies. For Excel, Postgres, and FastAPI ex
 pip install "flowbook[full]"
 ```
 
-Optional dev CLI (Typer/Rich):
+Dev CLI (Typer/Rich) for local development and demos:
 
 ```sh
 pip install "flowbook[dev]"
-flowbook-dev --version
-flowbook-dev doctor
+flowbook --version
+flowbook doctor
+flowbook db reset    # DB reset + seed (needs flowbook[dev])
+flowbook hands-on   # API hands-on flow
+flowbook streamlit  # Streamlit UI
 ```
 
 `flowbook doctor` prints Python/OS/flowbook version and suggests `pip install "flowbook[excel]"`, `"flowbook[postgres]"`, `"flowbook[fastapi]"`, or `"flowbook[full]"` for missing extensions.
@@ -38,7 +41,7 @@ flowbook-dev doctor
 3. Optionally run a **planner** first (e.g. `plan_from_template`); it produces a plan config that you then execute in the same session.
 4. Steps read from the store (via resolved inputs) and write outputs back; later steps can depend on them. All orchestration is driven by config; new capabilities are new ops in your extensions.
 
-To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points).
+To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points). To add CLI commands: see [Adding custom CLI](docs/adding-custom-cli.md).
 
 ## Development
 
@@ -62,4 +65,49 @@ Apache License 2.0
 docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v
 docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d
 docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres logs -f
+```
+
+## Dev / Demo
+
+API and Streamlit UI run from the repo for development and demos.
+
+### API
+
+```sh
+FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
+  poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+```
+
+API docs: <http://localhost:8000/docs>
+
+### Streamlit UI
+
+Streamlit runs in a separate venv (pandas version compatibility):
+
+```sh
+flowbook streamlit
+```
+
+Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
+
+### DB reset (dev only)
+
+**Safety**: Requires `FLOWBOOK_DB_RESET=1`. Refuses non-localhost DSNs.
+
+```sh
+FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
+```
+
+Truncates artifacts and configs, then seeds from `configs/` (default `--config-dir configs`).
+
+### Hands-on flow
+
+```sh
+flowbook hands-on
+```
+
+Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download (interactive). Requires API up and a fixture. Generate fixture:
+
+```sh
+flowbook fixture generate -o tests/fixtures/excel
 ```

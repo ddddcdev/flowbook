@@ -21,9 +21,9 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.api.app.deps import get_engine
-from apps.api.app.main import app
 from flowbook.core.configs.spec_types import InputProfile, PlanTemplate
+from flowbook.extensions.api.app import app
+from flowbook.extensions.api.deps import get_engine
 
 pytestmark = pytest.mark.smoke
 

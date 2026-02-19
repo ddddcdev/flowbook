@@ -1,5 +1,5 @@
 """
-Minimal CLI (stdlib argparse only): --version and doctor.
+flowbook CLI: argparse when flowbook[dev] absent; Typer when extensions/cli + typer available.
 """
 
 from __future__ import annotations
@@ -8,8 +8,26 @@ import argparse
 import sys
 
 
+def _try_extended_cli() -> bool:
+    """Use Typer-based CLI from extensions when available. Returns False if fallback to argparse."""
+    try:
+        import typer
+    except ImportError:
+        return False
+    try:
+        from flowbook.extensions.cli.cli import main as ext_main
+
+        ext_main()
+    except ImportError:
+        return False
+    except typer.Exit as e:
+        sys.exit(e.exit_code)
+    return False  # unreachable when delegation succeeds
+
+
 def _flowbook_version() -> str:
     import flowbook
+
     return flowbook.__version__
 
 
@@ -68,6 +86,8 @@ def _run_doctor() -> int:
 
 
 def main() -> int:
+    if _try_extended_cli():
+        return 0  # unreachable; ext_main exits
     parser = argparse.ArgumentParser(prog="flowbook")
     parser.add_argument(
         "--version",

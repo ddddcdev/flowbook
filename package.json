@@ -11,7 +11,7 @@
     "lint": "poetry run ruff check .",
     "fmt": "poetry run ruff format .",
     "test": "poetry run pytest -q",
-    "test:ci": "poetry run pytest -q -m \"not integration and not e2e\"",
+    "test:ci": "FLOWBOOK_DATABASE_URL= poetry run pytest -q -m \"not integration and not e2e\"",
     "ci": "npm run lint && npm run typecheck && npm run test:ci",
     "ci:fix": "npm run fmt && npm run lint && npm run typecheck && npm run test:ci"
   },

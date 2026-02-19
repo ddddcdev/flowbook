@@ -170,9 +170,7 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 out_key = f"{ctx.run_id}/{step.name}/{out_name}"
                 logical_address = f"{step.name}/{out_name}"
                 namespace_prefix = (
-                    logical_address.split("/")[0]
-                    if "/" in logical_address
-                    else logical_address
+                    logical_address.split("/")[0] if "/" in logical_address else logical_address
                 )
                 created_at = datetime.now(timezone.utc)  # noqa: UP017
                 content_type = _content_type_for_value(out_value)

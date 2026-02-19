@@ -1,5 +1,5 @@
 """
-Routes: GET /artifacts, GET /artifacts/{key}, GET /artifacts/{key}/raw
+Routes: GET /artifacts, GET /artifacts/{key}, GET /artifacts/{key}/raw, as_excel.
 
 Operational endpoints for browsing run results.
 """
@@ -12,11 +12,21 @@ from typing import Any
 
 from fastapi import APIRouter, Response
 
-from apps.api.app.deps import get_engine
-from apps.api.app.errors import to_http_error
-from apps.api.app.schemas import ArtifactGetResponse, ArtifactsListResponse
+from flowbook.extensions.api.deps import get_engine
+from flowbook.extensions.api.errors import to_http_error
+from flowbook.extensions.api.schemas import (
+    ArtifactEntry,
+    ArtifactGetResponse,
+    ArtifactsListResponse,
+)
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
+
+
+def _key_parts(key: str) -> tuple[str, str]:
+    """Return (run_id, step_output). run_id is first path segment."""
+    parts = key.split("/", 1)
+    return (parts[0], parts[1]) if len(parts) == 2 else (key, "")
 
 
 @router.get("", response_model=ArtifactsListResponse)
@@ -24,7 +34,15 @@ def list_artifacts(prefix: str | None = None) -> ArtifactsListResponse:
     engine = get_engine()
     try:
         keys = engine.store.list(prefix=prefix)
-        return ArtifactsListResponse(keys=keys)
+        entries = [
+            ArtifactEntry(
+                key=k,
+                run_id=_key_parts(k)[0],
+                step_output=_key_parts(k)[1],
+            )
+            for k in keys
+        ]
+        return ArtifactsListResponse(keys=keys, entries=entries)
     except Exception as e:
         raise to_http_error(e) from e
 
@@ -60,6 +78,28 @@ def get_artifact_raw(key: str) -> Response:
     try:
         val = engine.store.get_any(key)
         return _raw_response(key, val)
+    except Exception as e:
+        raise to_http_error(e) from e
+
+
+@router.get("/{key:path}/as_excel")
+def get_artifact_as_excel(key: str) -> Response:
+    """Return DataFrame artifact as xlsx. Use for import (read/df) download."""
+    import pandas as pd
+
+    engine = get_engine()
+    try:
+        val = engine.store.get_any(key)
+        if not isinstance(val, pd.DataFrame):
+            raise ValueError(f"Artifact {key} is not a DataFrame; use /raw for other types")
+        buf = io.BytesIO()
+        val.to_excel(buf, sheet_name="out", index=False, engine="openpyxl")
+        buf.seek(0)
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=imported.xlsx"},
+        )
     except Exception as e:
         raise to_http_error(e) from e
 

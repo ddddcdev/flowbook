@@ -1,7 +1,7 @@
 """
 Route: POST /import
 
-Upload an Excel file + template_name → run import pipeline → artifacts.
+Upload an Excel file + template_name -> run import pipeline -> artifacts.
 """
 
 from __future__ import annotations
@@ -10,9 +10,9 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, UploadFile
 
-from apps.api.app.deps import get_engine
-from apps.api.app.errors import to_http_error
-from apps.api.app.schemas import RunResponse
+from flowbook.extensions.api.deps import get_engine
+from flowbook.extensions.api.errors import to_http_error
+from flowbook.extensions.api.schemas import RunResponse
 
 router = APIRouter(tags=["import"])
 
@@ -42,15 +42,19 @@ async def import_file(
     input_profile_name: Annotated[str, Form()] = "source",
     sheet_name: Annotated[str, Form()] = "data",
     header_row: Annotated[int, Form()] = 0,
+    header_col: Annotated[int, Form()] = 0,
+    region_profile_name: Annotated[str, Form()] = "detail_region",
+    mapping_name: Annotated[str, Form()] = "detect_region_test",
 ) -> RunResponse:
     """
     Import an uploaded Excel file using a named pipeline template.
 
     - **file**: Excel file (.xlsx)
-    - **template_name**: pipeline template to resolve from config store
+    - **template_name**: pipeline template (e.g. import_excel or import_excel_region)
     - **input_profile_name**: config profile for input handling
     - **sheet_name**: sheet to read (default: "data")
     - **header_row**: header row index, 0-based (default: 0)
+    - **region_profile_name**: for import_excel_region template (default: "detail_region")
     """
     engine = get_engine()
     session = engine.prepare()
@@ -66,6 +70,10 @@ async def import_file(
         # Defaults for read_excel_bytes template
         session.put_input("sheet_name", sheet_name)
         session.put_input("header_row", header_row)
+        session.put_input("header_col", header_col)
+        # For read_excel_detect_region template
+        session.put_input("region_profile_name", region_profile_name)
+        session.put_input("mapping_name", mapping_name)
 
         planner_config = {
             "steps": [

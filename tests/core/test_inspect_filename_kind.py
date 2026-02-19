@@ -89,8 +89,8 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "@path",
                 },
             }
         ]
@@ -134,8 +134,8 @@ def test_inspect_unknown_filename_no_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "@path",
                 },
             }
         ]
@@ -188,8 +188,8 @@ def test_inspect_missing_config_raises_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "@path",
                 },
             }
         ]
@@ -239,8 +239,8 @@ def test_inspect_missing_kind_rules_raises_error():
                 "name": "inspect",
                 "op": "inspect_filename_kind",
                 "inputs": {
-InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                    InspectFilenameKindOp.Inputs.PATH: "@path",
                 },
             }
         ]

@@ -41,20 +41,22 @@ def test_merge_df() -> None:
     store_data = {"k_left": left, "k_right": right}
     bindings = {"load_left/df": "k_left", "load_right/df": "k_right"}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build({
-        "steps": [
-            {
-                "name": "join",
-                "op": "merge_df",
-                "inputs": {
-                    "left": "@load_left/df",
-                    "right": "@load_right/df",
-                    "on": "id",
-                    "how": "inner",
-                },
-            }
-        ]
-    })
+    pipeline = build(
+        {
+            "steps": [
+                {
+                    "name": "join",
+                    "op": "merge_df",
+                    "inputs": {
+                        "left": "@load_left/df",
+                        "right": "@load_right/df",
+                        "on": "id",
+                        "how": "inner",
+                    },
+                }
+            ]
+        }
+    )
     info = run(pipeline, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[MergeDfOp.Outputs.DF]
@@ -70,15 +72,17 @@ def test_aggregate_df() -> None:
     bindings = {"src/df": "k_src"}
     store_data = {"k_src": df}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build({
-        "steps": [
-            {
-                "name": "agg",
-                "op": "aggregate_df",
-                "inputs": {"df": "@src/df", "group_by": ["g"], "agg": {"v": "sum"}},
-            }
-        ]
-    })
+    pipeline = build(
+        {
+            "steps": [
+                {
+                    "name": "agg",
+                    "op": "aggregate_df",
+                    "inputs": {"df": "@src/df", "group_by": ["g"], "agg": {"v": "sum"}},
+                }
+            ]
+        }
+    )
     info = run(pipeline, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[AggregateDfOp.Outputs.DF]
@@ -93,15 +97,17 @@ def test_concat_df() -> None:
     bindings = {"a/df": "k_a", "b/df": "k_b"}
     store_data = {"k_a": a, "k_b": b}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build({
-        "steps": [
-            {
-                "name": "stack",
-                "op": "concat_df",
-                "inputs": {"dfs": ["@a/df", "@b/df"], "ignore_index": True},
-            }
-        ]
-    })
+    pipeline = build(
+        {
+            "steps": [
+                {
+                    "name": "stack",
+                    "op": "concat_df",
+                    "inputs": {"dfs": ["@a/df", "@b/df"], "ignore_index": True},
+                }
+            ]
+        }
+    )
     info = run(pipeline, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[ConcatDfOp.Outputs.DF]
@@ -114,21 +120,23 @@ def test_check_warn_aggregates_warnings() -> None:
     bindings = {"main/df": "k_main"}
     store_data = {"k_main": df}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build({
-        "steps": [
-            {
-                "name": "chk",
-                "op": "check_warn",
-                "inputs": {
-                    "df": "@main/df",
-                    "checks": [
-                        {"expr": "a == 0", "message": "found zero in a"},
-                        {"expr": "b > 25", "message": "b too high"},
-                    ],
-                },
-            }
-        ]
-    })
+    pipeline = build(
+        {
+            "steps": [
+                {
+                    "name": "chk",
+                    "op": "check_warn",
+                    "inputs": {
+                        "df": "@main/df",
+                        "checks": [
+                            {"expr": "a == 0", "message": "found zero in a"},
+                            {"expr": "b > 25", "message": "b too high"},
+                        ],
+                    },
+                }
+            ]
+        }
+    )
     info = run(pipeline, ctx)
     assert info.status == "succeeded"
     assert "found zero in a" in info.warnings

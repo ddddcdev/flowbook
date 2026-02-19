@@ -25,9 +25,7 @@ class _MockStore:
         return self._data[key]
 
 
-def _ctx(
-    bindings: dict[str, str], store_data: dict[str, Any] | None = None
-) -> RunContext:
+def _ctx(bindings: dict[str, str], store_data: dict[str, Any] | None = None) -> RunContext:
     data = store_data if store_data is not None else {k: f"val_{k}" for k in bindings.values()}
     store: RunStore = _MockStore(data)  # type: ignore[assignment]
     from flowbook.core.registry.registry import Registry

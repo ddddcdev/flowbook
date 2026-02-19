@@ -55,10 +55,35 @@ class ExportRequest(BaseModel):
 # ---- /artifacts ----
 
 
+class ArtifactEntry(BaseModel):
+    key: str
+    run_id: str
+    step_output: str
+
+
 class ArtifactsListResponse(BaseModel):
     keys: list[str]
+    entries: list[ArtifactEntry] = []
 
 
 class ArtifactGetResponse(BaseModel):
     key: str
     value: Any
+
+
+# ---- /configs ----
+
+
+class ConfigEntry(BaseModel):
+    kind: str
+    name: str
+
+
+class ConfigsListResponse(BaseModel):
+    configs: list[ConfigEntry] = []
+
+
+class ConfigGetResponse(BaseModel):
+    kind: str
+    name: str
+    spec: dict[str, Any]
