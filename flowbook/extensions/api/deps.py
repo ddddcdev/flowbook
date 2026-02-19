@@ -1,8 +1,8 @@
 """
 Dependency injection for the FastAPI app.
 
-- FLOWBOOK_DATABASE_URL set → Postgres stores (production / field use)
-- FLOWBOOK_DATABASE_URL unset → in-memory stores (development / smoke test)
+- FLOWBOOK_DATABASE_URL set -> Postgres stores (production / field use)
+- FLOWBOOK_DATABASE_URL unset -> in-memory stores (development / smoke test)
 """
 
 from __future__ import annotations

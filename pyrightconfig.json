@@ -1,5 +1,6 @@
 {
-  "include": ["flowbook", "tests", "apps", "extensions"],
+  "include": ["flowbook", "tests"],
+  "exclude": ["flowbook/extensions/ui"],
   "pythonVersion": "3.11",
   "typeCheckingMode": "standard",
   "reportMissingTypeStubs": "none",

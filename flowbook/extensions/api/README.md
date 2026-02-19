@@ -13,7 +13,7 @@ Option A — use a `.env` file (recommended). Install the plugin once, then `.en
 poetry self add poetry-dotenv-plugin
 cp .env.example .env
 # Then start (plugin loads .env automatically)
-poetry run uvicorn apps.api.app.main:app --reload --port 8000
+poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
 ```
 
 Option B — set in the shell:
@@ -21,13 +21,13 @@ Option B — set in the shell:
 ```bash
 # Requires: docker compose -f infra/compose.postgres.yml up -d
 FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
-  poetry run uvicorn apps.api.app.main:app --reload --port 8000
+  poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
 ```
 
 ### Without Postgres (development / smoke test)
 
 ```bash
-poetry run uvicorn apps.api.app.main:app --reload --port 8000
+poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
 ```
 
 Health check:
@@ -53,7 +53,7 @@ API docs (auto-generated): <http://localhost:8000/docs>
 
    ```bash
    FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
-     poetry run uvicorn apps.api.app.main:app --reload --port 8000
+     poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
    ```
 
 3. **List artifacts**:

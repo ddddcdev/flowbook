@@ -1,7 +1,7 @@
 """
 Route: POST /inspect
 
-Upload an Excel file → run inspect pipeline → return profile.
+Upload an Excel file -> run inspect pipeline -> return profile.
 """
 
 from __future__ import annotations
@@ -10,9 +10,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, UploadFile
 
-from apps.api.app.deps import get_engine
-from apps.api.app.errors import to_http_error
-from apps.api.app.schemas import InspectResponse
+from flowbook.extensions.api.deps import get_engine
+from flowbook.extensions.api.errors import to_http_error
+from flowbook.extensions.api.schemas import InspectResponse
 
 router = APIRouter(tags=["inspect"])
 
