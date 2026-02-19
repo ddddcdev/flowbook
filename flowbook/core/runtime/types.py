@@ -40,3 +40,4 @@ class RunInfo:
     steps: list[StepRunInfo] = field(default_factory=list)
     artifacts_written: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)

@@ -114,6 +114,13 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
                 got = type(step_output).__name__
                 raise TypeError(f"Step '{step.name}' must return dict[str, Any]; got {got}")
 
+            # Aggregate op _warnings into run-level warnings (do not persist as artifact)
+            _warnings = step_output.get("_warnings")
+            if isinstance(_warnings, list):
+                for msg in _warnings:
+                    if isinstance(msg, str):
+                        info.warnings.append(msg)
+
             out_spec = step_op.Outputs
             if out_spec.allowed_keys():
                 public_keys = {k for k in step_output.keys() if not k.startswith("_")}
