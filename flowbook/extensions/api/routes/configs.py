@@ -41,9 +41,7 @@ def list_configs() -> ConfigsListResponse:
             # InMemoryConfigStore
             pairs = list(getattr(store, "_specs", {}).keys())
             pairs.sort()
-        return ConfigsListResponse(
-            configs=[ConfigEntry(kind=k, name=n) for k, n in pairs]
-        )
+        return ConfigsListResponse(configs=[ConfigEntry(kind=k, name=n) for k, n in pairs])
     except Exception as e:
         raise to_http_error(e) from e
 

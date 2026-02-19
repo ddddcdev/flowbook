@@ -96,17 +96,11 @@ def _read_region(
 
     rows_data: list[list[Any]] = []
     for row_1 in range(header_row_1 + 1, header_row_1 + 1 + DEFAULT_MAX_SCAN_ROWS):
-        row_vals = [
-            ws.cell(row=row_1, column=c).value
-            for c in range(min_col, max_col + 1)
-        ]
+        row_vals = [ws.cell(row=row_1, column=c).value for c in range(min_col, max_col + 1)]
         if all(v is None or (isinstance(v, str) and not v.strip()) for v in row_vals):
             break
         # Map to columns by header order
-        values = [
-            ws.cell(row=row_1, column=hint_to_col_1[name]).value
-            for name in col_names
-        ]
+        values = [ws.cell(row=row_1, column=hint_to_col_1[name]).value for name in col_names]
         rows_data.append(values)
 
     return pd.DataFrame(rows_data, columns=col_names)

@@ -42,9 +42,7 @@ class PostgresArtifactIndex(ArtifactIndex):
         order: Literal["desc", "asc"] = "desc",
     ) -> list[IndexRow]:
         order_clause = (
-            artifacts.c.created_at.desc()
-            if order == "desc"
-            else artifacts.c.created_at.asc()
+            artifacts.c.created_at.desc() if order == "desc" else artifacts.c.created_at.asc()
         )
         stmt = (
             select(

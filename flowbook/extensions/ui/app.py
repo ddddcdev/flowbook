@@ -102,11 +102,13 @@ def main() -> None:
                     r.raise_for_status()
                     data = r.json()
                     st.success(f"Run ID: `{data['run_id']}`")
-                    st.json({
-                        "status": data["status"],
-                        "artifacts_written": data["artifacts_written"],
-                        "errors": data.get("errors", []),
-                    })
+                    st.json(
+                        {
+                            "status": data["status"],
+                            "artifacts_written": data["artifacts_written"],
+                            "errors": data.get("errors", []),
+                        }
+                    )
                     read_df_keys = [
                         k for k in data.get("artifacts_written", []) if k.endswith("/read/df")
                     ]
