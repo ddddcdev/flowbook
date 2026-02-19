@@ -36,9 +36,6 @@ full = [
 ]
 # Dev CLI (Typer/Rich). Install with: pip install "flowbook[dev]"
 dev = ["typer>=0.12.0", "rich>=13.0.0", "httpx>=0.28.0"]
-# Streamlit UI. Install with: pip install "flowbook[ui]"
-# Note: streamlit requires pandas<3; use separate venv if flowbook[full] conflicts.
-ui = ["streamlit>=1.40.0", "requests>=2.31.0"]
 
 [project.scripts]
 flowbook = "flowbook.cli:main"

@@ -79,13 +79,15 @@ API docs: <http://localhost:8000/docs>
 
 ### Streamlit UI
 
+Streamlit requires pandas<3, while flowbook uses pandas 3. Use a separate venv:
+
 ```sh
-pip install "flowbook[ui]"  # if not already (streamlit, requests)
-poetry run streamlit run flowbook/extensions/ui/app.py
+python -m venv .venv-ui
+.venv-ui/bin/pip install -e . streamlit requests
+.venv-ui/bin/streamlit run flowbook/extensions/ui/app.py
 ```
 
 Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
-Note: `flowbook[ui]` may have pandas version constraints; if resolution fails, install streamlit and requests manually.
 
 ### DB reset (dev only)
 
