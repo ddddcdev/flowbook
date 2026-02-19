@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.0a2] - 2026-02-19
+
+### Added
+
+- **Runtime**: Ref DSL (`@ref`, `@ref.path`) and resolver for step inputs; step `_warnings` aggregated into `RunInfo.warnings`.
+- **Steps**: Generic DataFrame ops—`merge_df`, `aggregate_df`, `concat_df`, `lookup_table`, `conditional_update`, `check_warn`; `load_artifact_df`, `read_excel_detect_region` (region-based Excel import).
+- **Mapping**: `filter_rows` extended with `engine=python`; `expr_df` op.
+- **Postgres**: `runs` table; artifact index merged into `artifacts` table.
+- **Extensions/API**: Moved to `flowbook.extensions.api`; `/configs` list endpoint; `/export` Form params; `/artifacts/{key}/as_excel`; import params for template, sheet, region.
+- **Extensions/UI**: Streamlit demo app (`flowbook streamlit`). Uses separate venv for pandas compatibility.
+- **CLI**: Single `flowbook` command; Typer (db, hands-on, fixture, streamlit, artifacts) when `flowbook[dev]` installed. `flowbook.cli` entry point for third-party subcommands. See [Adding custom CLI](docs/adding-custom-cli.md). `flowbook verify` (pypi, wheel) for release checks, available only when run from repo.
+- **Configs**: `configs/` layout (input_profiles, mappings, templates, routing) with JSON seeding.
+
+### Changed
+
+- **CLI**: `flowbook-dev` removed. Scripts (reset_db, seed, hands_on, fixture, streamlit) moved into `flowbook.extensions.cli`; invoked via `flowbook db`, `flowbook hands-on`, etc.
+- **API**: Layout changed from `apps/api/` to `flowbook/extensions/api/`.
+
+### Removed
+
+- `scripts/` directory (reset_db.py, seed_*.py, hands_on.sh, run_streamlit.sh, verify_*.sh); replaced by `flowbook` subcommands.
+
+### Fixed
+
+- Streamlit/pandas version conflict: removed `ui` extra; `flowbook streamlit` creates `.venv-ui` and runs there.
+
+### Documentation
+
+- ADRs and ref/path grammar spec. Run instructions, reset_db safety (FLOWBOOK_DB_RESET=1).
+
 ## [0.1.0a1] - 2026-02-13
 
 ### Added
@@ -16,9 +46,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Extensions under `flowbook.extensions`: Excel (io, mapping), Postgres (artifacts_store, config_store), steps, FastAPI shell.
 - CLI: `flowbook --version`, `flowbook doctor` (stdlib argparse). Doctor reports Python/OS/flowbook version and suggests extras for missing extensions.
 - Optional extras: `excel`, `postgres`, `fastapi`, `full` (all three), `dev` (typer, rich, httpx).
-- CLI: `flowbook` uses Typer (db, hands-on, etc.) when `flowbook[dev]` is installed; otherwise argparse (version, doctor). CLI extensions via `flowbook.cli` entry point group.
-- Console scripts: `flowbook`. Entry point: `flowbook.steps` → `flowbook.core.registry.extensions:register_steps`.
+- Dev CLI: `flowbook-dev` (Typer) with `--version` and `doctor`; requires `pip install "flowbook[dev]"`.
+- Console scripts: `flowbook`, `flowbook-dev`. Entry point: `flowbook.steps` → `flowbook.core.registry.extensions:register_steps`.
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.
 
+[0.1.0a2]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a2
 [0.1.0a1]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a1

@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
@@ -276,6 +277,56 @@ def _add_artifacts_commands(app: Typer, default_base: str) -> None:
             t.echo("binary; use get")
 
     app.add_typer(artifacts_app, name="artifacts")
+
+    # ---- verify (release; only when running from flowbook repo) ----
+    if _is_flowbook_repo():
+        verify_app = t.Typer(help="Release verification: PyPI install, wheel install.")
+
+        @verify_app.command("pypi")
+        def verify_pypi_cmd(
+            version: str = t.Argument(
+                None, help="Version to install (e.g. 0.1.0a2). Default: current __version__"
+            ),
+            full: bool = t.Option(False, "--full", help="Also test flowbook[full]"),
+        ) -> None:
+            """Install flowbook from PyPI into temp venv, run --version and doctor."""
+            from flowbook.extensions.cli.verify import verify_pypi
+
+            code = verify_pypi(version or "", full)
+            raise t.Exit(code)
+
+        @verify_app.command("wheel")
+        def verify_wheel_cmd(
+            wheel_dir: str = t.Option(
+                "dist", "--wheel-dir", "-w", help="Directory with wheel (default: dist)"
+            ),
+            venv_dir: str = t.Option(
+                ".venv-wheel-verify", "--venv", "-e", help="Temporary venv path"
+            ),
+        ) -> None:
+            """Build wheel (if needed), install into temp venv, run --version and doctor."""
+            from flowbook.extensions.cli.verify import verify_wheel
+
+            code = verify_wheel(wheel_dir, venv_dir)
+            raise t.Exit(code)
+
+        app.add_typer(verify_app, name="verify")
+
+
+def _is_flowbook_repo() -> bool:
+    """True when flowbook is run from the development repo (editable install)."""
+    import flowbook
+
+    pkg_dir = Path(flowbook.__file__).resolve().parent
+    repo_root = pkg_dir.parent
+    pyproject = repo_root / "pyproject.toml"
+    if not pyproject.exists():
+        return False
+    try:
+        text = pyproject.read_text()
+        return 'name = "flowbook"' in text or "name = 'flowbook'" in text
+    except OSError:
+        return False
 
 
 def _sanitize_filename(key: str) -> str:
