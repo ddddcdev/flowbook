@@ -30,13 +30,18 @@ Accepted.
 - **Entity execution result**: entity_runs records status + executed config. config_json stays.
 - **History and current state**: config.name, status, created_at give "what ran" and "when/how it ended".
 
+### Store support
+
+- **PostgresArtifactsStore**: Full support for runs, entity_runs, artifacts. Use for production and multi-run workflows.
+- **InMemoryArtifactsStore**: Single-run execution only. Does not support runs or entity_runs. Use for development and smoke tests only.
+
 ### Future: latest_entity_runs
 
 - **May add**: `latest_entity_runs` table or view.
-- **Role**: Per (run_id, entity_key), the "latest" row — for convenience when entity_runs gains history (e.g. exec_seq) or for a cleaner query abstraction.
-- **Status**: Optional. Not implemented. Add only if needed.
+- **Role**: Per entity_key, the "latest" row (updated_at max) — for convenience when querying latest run per entity.
+- **Status**: API-only (query over entity_runs). No new table.
 
 ## Consequences
 
 - Status and artifact lookup work via entity_runs and artifacts.
-- No latest_entity_runs for now; add later if we introduce exec history or want a dedicated latest view.
+- latest_entity_runs: API returns rows with max(updated_at) per entity_key; no new table.

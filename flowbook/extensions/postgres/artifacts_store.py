@@ -103,6 +103,30 @@ def parquet_bytes_to_df(b: bytes) -> pd.DataFrame:
     return pd.read_parquet(buf, engine="pyarrow")
 
 
+def _run_row_to_dict(row: Any) -> dict[str, Any]:
+    """Convert runs Row to JSON-serializable dict."""
+    return {
+        "run_id": row.run_id,
+        "status": row.status,
+        "config_json": row.config_json,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+def _entity_run_row_to_dict(row: Any) -> dict[str, Any]:
+    """Convert entity_runs Row to JSON-serializable dict."""
+    return {
+        "run_id": row.run_id,
+        "entity_key": row.entity_key,
+        "artifact_path": row.artifact_path,
+        "status": row.status,
+        "config_json": row.config_json,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
 def _list_where_from_prefix(prefix: str | None) -> list:
     """Build WHERE clause from prefix. Returns list of conditions.
     Prefix matches keys where run_id/entity_key/path starts with prefix.
@@ -193,6 +217,59 @@ class PostgresArtifactsStore(ArtifactsStore):
         with self.engine.begin() as conn:
             rows = conn.execute(stmt).all()
         return [build_artifact_key(r[0], r[1], r[2]) for r in rows]
+
+    def list_with_meta(self, prefix: str | None = None) -> list[dict[str, Any]]:
+        """List artifacts with metadata (content_type, meta, created_at). Postgres only."""
+        conditions = _list_where_from_prefix(prefix)
+        stmt = select(
+            artifacts.c.run_id,
+            artifacts.c.entity_key,
+            artifacts.c.artifact_path,
+            artifacts.c.content_type,
+            artifacts.c.meta,
+            artifacts.c.created_at,
+        )
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.order_by(artifacts.c.run_id, artifacts.c.entity_key, artifacts.c.artifact_path)
+        with self.engine.begin() as conn:
+            rows = conn.execute(stmt).all()
+        result = []
+        for r in rows:
+            key = build_artifact_key(r[0], r[1], r[2])
+            created_at = r[5]
+            result.append({
+                "key": key,
+                "content_type": r[3],
+                "meta": r[4] or {},
+                "created_at": created_at.isoformat() if created_at else None,
+            })
+        return result
+
+    def get_artifact_meta(self, key: str) -> dict[str, Any] | None:
+        """Get artifact metadata without loading content. Returns None if not found."""
+        run_id, entity_key, path = parse_artifact_key(key)
+        stmt = select(
+            artifacts.c.content_type,
+            artifacts.c.meta,
+            artifacts.c.created_at,
+        ).where(
+            and_(
+                artifacts.c.run_id == run_id,
+                artifacts.c.entity_key == entity_key,
+                artifacts.c.artifact_path == path,
+            )
+        )
+        with self.engine.begin() as conn:
+            row = conn.execute(stmt).one_or_none()
+        if row is None:
+            return None
+        return {
+            "key": key,
+            "content_type": row[0],
+            "meta": row[1] or {},
+            "created_at": row[2].isoformat() if row[2] else None,
+        }
 
     # ---- Protocol: bytes ----
     def put_bytes(self, key: str, data: bytes, **kwargs: Any) -> str:
@@ -340,6 +417,27 @@ class PostgresArtifactsStore(ArtifactsStore):
         with self.engine.begin() as conn:
             conn.execute(stmt)
 
+    # ---- runs read API ----
+
+    def list_runs(self, run_id: str | None = None) -> list[dict[str, Any]]:
+        """List runs with optional run_id filter."""
+        stmt = select(runs)
+        if run_id is not None:
+            stmt = stmt.where(runs.c.run_id == run_id)
+        stmt = stmt.order_by(runs.c.updated_at.desc())
+        with self.engine.begin() as conn:
+            rows = conn.execute(stmt).all()
+        return [_run_row_to_dict(row) for row in rows]
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
+        """Get single run by run_id. Returns None if not found."""
+        stmt = select(runs).where(runs.c.run_id == run_id)
+        with self.engine.begin() as conn:
+            row = conn.execute(stmt).one_or_none()
+        if row is None:
+            return None
+        return _run_row_to_dict(row)
+
     def upsert_entity(self, entity_key: str) -> None:
         """Upsert entities row. Ensures entity exists when first used."""
         stmt = (
@@ -389,3 +487,83 @@ class PostgresArtifactsStore(ArtifactsStore):
         )
         with self.engine.begin() as conn:
             conn.execute(stmt)
+
+    # ---- entity_runs read API ----
+
+    def list_entity_runs(
+        self,
+        run_id: str | None = None,
+        entity_key: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List entity_runs with optional run_id and entity_key filters.
+
+        - run_id: entity_runs within a run.
+        - entity_key: history of runs for that entity across runs.
+        """
+        stmt = select(entity_runs)
+        conditions = []
+        if run_id is not None:
+            conditions.append(entity_runs.c.run_id == run_id)
+        if entity_key is not None:
+            conditions.append(entity_runs.c.entity_key == entity_key)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.order_by(entity_runs.c.updated_at.desc())
+
+        with self.engine.begin() as conn:
+            rows = conn.execute(stmt).all()
+
+        return [_entity_run_row_to_dict(row) for row in rows]
+
+    def get_entity_run(self, run_id: str, entity_key: str) -> dict[str, Any] | None:
+        """Get single entity_run by (run_id, entity_key). Returns None if not found."""
+        stmt = select(entity_runs).where(
+            and_(
+                entity_runs.c.run_id == run_id,
+                entity_runs.c.entity_key == entity_key,
+            )
+        )
+        with self.engine.begin() as conn:
+            row = conn.execute(stmt).one_or_none()
+        if row is None:
+            return None
+        return _entity_run_row_to_dict(row)
+
+    def list_latest_entity_runs(
+        self,
+        entity_key: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List latest entity_run per entity_key (updated_at max). No new table."""
+        cols_str = "run_id, entity_key, artifact_path, status, config_json, created_at, updated_at"
+        raw_sql = (
+            f"SELECT {cols_str} FROM ("
+            f"SELECT DISTINCT ON (entity_key) {cols_str} "
+            "FROM entity_runs"
+            + (" WHERE entity_key = :entity_key" if entity_key else "")
+            + " ORDER BY entity_key, updated_at DESC"
+            ") sub"
+        )
+        with self.engine.begin() as conn:
+            if entity_key:
+                rows = conn.execute(text(raw_sql), {"entity_key": entity_key}).all()
+            else:
+                rows = conn.execute(text(raw_sql)).all()
+
+        cols = [
+            "run_id", "entity_key", "artifact_path", "status",
+            "config_json", "created_at", "updated_at",
+        ]
+        result = []
+        for row in rows:
+            d = dict(zip(cols, row, strict=True))
+            for k in ("created_at", "updated_at"):
+                v = d.get(k)
+                if v is not None and hasattr(v, "isoformat"):
+                    d[k] = v.isoformat()
+            result.append(d)
+        return result
+
+    def get_latest_entity_run(self, entity_key: str) -> dict[str, Any] | None:
+        """Get latest entity_run for entity_key (updated_at max). Returns None if not found."""
+        rows = self.list_latest_entity_runs(entity_key=entity_key)
+        return rows[0] if rows else None

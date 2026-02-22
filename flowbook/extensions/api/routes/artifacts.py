@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import io
 import json
-from typing import Any
+from typing import Any, cast
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Query, Response
 
+from flowbook.core.artifacts.store import ArtifactNotFound
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
 from flowbook.extensions.api.schemas import (
@@ -33,15 +34,32 @@ def _key_parts(key: str) -> tuple[str, str]:
 def list_artifacts(prefix: str | None = None) -> ArtifactsListResponse:
     engine = get_engine()
     try:
-        keys = engine.store.list(prefix=prefix)
-        entries = [
-            ArtifactEntry(
-                key=k,
-                run_id=_key_parts(k)[0],
-                step_output=_key_parts(k)[1],
-            )
-            for k in keys
-        ]
+        store = engine.store
+        list_with_meta = getattr(store, "list_with_meta", None)
+        if callable(list_with_meta):
+            items = cast(list[dict[str, Any]], list_with_meta(prefix=prefix))
+            keys = [i["key"] for i in items]
+            entries = [
+                ArtifactEntry(
+                    key=i["key"],
+                    run_id=_key_parts(i["key"])[0],
+                    step_output=_key_parts(i["key"])[1],
+                    content_type=i.get("content_type"),
+                    meta=i.get("meta"),
+                    created_at=i.get("created_at"),
+                )
+                for i in items
+            ]
+        else:
+            keys = store.list(prefix=prefix)
+            entries = [
+                ArtifactEntry(
+                    key=k,
+                    run_id=_key_parts(k)[0],
+                    step_output=_key_parts(k)[1],
+                )
+                for k in keys
+            ]
         return ArtifactsListResponse(keys=keys, entries=entries)
     except Exception as e:
         raise to_http_error(e) from e
@@ -105,9 +123,19 @@ def get_artifact_as_excel(key: str) -> Response:
 
 
 @router.get("/{key:path}", response_model=ArtifactGetResponse)
-def get_artifact(key: str) -> ArtifactGetResponse:
+def get_artifact(
+    key: str,
+    meta_only: bool = Query(False, description="Return metadata only"),
+) -> ArtifactGetResponse:
     engine = get_engine()
     try:
+        store = engine.store
+        get_artifact_meta = getattr(store, "get_artifact_meta", None)
+        if meta_only and callable(get_artifact_meta):
+            meta = get_artifact_meta(key)
+            if meta is None:
+                raise ArtifactNotFound(key)
+            return ArtifactGetResponse(key=key, value=meta)
         val = engine.store.get(key)
         return ArtifactGetResponse(key=key, value=val)
     except Exception as e:

@@ -267,6 +267,33 @@ def test_artifacts_get_not_found(client: TestClient):
     assert "reason" in detail
 
 
+def test_runs_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for runs."""
+    r = client.get("/runs")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
+
+
+def test_entity_runs_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for entity_runs."""
+    r = client.get("/entity_runs")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
+
+
+def test_entity_runs_get_404_with_in_memory_store(client: TestClient):
+    """In-memory store returns 404 for entity_run get."""
+    r = client.get("/entity_runs/run1/entity1")
+    assert r.status_code == 404
+
+
+def test_latest_entity_runs_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for latest_entity_runs."""
+    r = client.get("/latest_entity_runs")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
+
+
 # ---- integration: same tests against Postgres ----
 
 _DB_URL = os.environ.get("FLOWBOOK_DATABASE_URL")
