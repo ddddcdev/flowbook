@@ -1,7 +1,7 @@
 """
 Route: POST /export (JSON), POST /export (Form)
 
-Execute an export pipeline on existing artifacts (no file upload).
+Execute an export plan on existing artifacts (no file upload).
 - JSON: template_name + bindings (logical name -> artifact key)
 - Form: source_artifact_key + mapping_name (uses export_excel_region template)
 """
@@ -40,9 +40,9 @@ def _run_info_to_response(info: Any) -> RunResponse:
 @router.post("/export", response_model=RunResponse)
 def export_artifacts(req: ExportRequest) -> RunResponse:
     """
-    Run an export pipeline over existing artifacts.
+    Run an export plan over existing artifacts.
 
-    - **template_name**: pipeline template to resolve from config store
+    - **template_name**: plan template to resolve from config store
     - **bindings**: map of logical name -> full artifact key
     """
     engine = get_engine()
@@ -67,7 +67,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
             ],
         }
 
-        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
+        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
 
         return RunResponse(
             run_id=exec_info.run_id,
@@ -100,7 +100,7 @@ async def export_from_artifact(
     mapping_name: Annotated[str, Form()] = "detect_region_test",
 ) -> RunResponse:
     """
-    Run export pipeline on an existing import: load DataFrame at source_artifact_key,
+    Run export plan on an existing import: load DataFrame at source_artifact_key,
     apply mapping, write xlsx. Uses export_excel_region template.
     """
     engine = get_engine()
@@ -132,7 +132,7 @@ async def export_from_artifact(
                 }
             ],
         }
-        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
+        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
         return _run_info_to_response(exec_info)
     except Exception as e:
         raise to_http_error(e, run_id=session.run_id) from e

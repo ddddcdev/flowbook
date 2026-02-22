@@ -90,18 +90,18 @@ class RunSession:
 
     # ---- execution ----
 
-    def _exec_entity(
+    def _exec(
         self,
-        pipeline_config: dict[str, Any],
+        plan_config: dict[str, Any],
         entity_key: str,
     ) -> RunInfo:
-        """Execute pipeline, record config to entity_runs only. Internal."""
+        """Execute plan, record config to entity_runs only. Internal."""
         if self._executed:
             raise RuntimeError("RunSession already executed; create a new session")
         self._executed = True
 
-        entity_config_json = json.dumps(pipeline_config) if pipeline_config else None
-        pipeline = build(pipeline_config)
+        entity_config_json = json.dumps(plan_config) if plan_config else None
+        plan = build(plan_config)
         run_ctx = RunContext(
             run_id=self.run_id,
             entity_key=entity_key,
@@ -112,22 +112,23 @@ class RunSession:
             run_config_json=None,
             entity_config_json=entity_config_json,
         )
-        return run(pipeline, run_ctx)
+        return run(plan, run_ctx)
 
-    def exec(self, *, pipeline_config: dict[str, Any]) -> RunInfo:
-        """Execute pipeline. Records config to runs (entry) and entity_runs (executed)."""
-        self._record_run_config(pipeline_config)
-        return self._exec_entity(
-            pipeline_config=pipeline_config, entity_key=self.entity_key
+    def exec_plan(self, *, plan_config: dict[str, Any]) -> RunInfo:
+        """Execute plan. Records config to runs (entry) and entity_runs (executed)."""
+        self._record_run_config(plan_config)
+        return self._exec(
+            plan_config=plan_config, entity_key=self.entity_key
         )
 
-    def exec_with_plan_once(
+    def exec_with_planner_once(
         self, *, planner_config: dict[str, Any]
     ) -> tuple[RunInfo, RunInfo]:
-        """Run planner then plan. Records planner_config to runs; each exec to entity_runs."""
+        """Run planner once, then execute resulting plan.
+        Records planner_config to runs; each exec to entity_runs."""
         self._record_run_config(planner_config)
-        planner_info = self._exec_entity(
-            pipeline_config=planner_config, entity_key=self.entity_key
+        planner_info = self._exec(
+            plan_config=planner_config, entity_key=self.entity_key
         )
         if planner_info.status != "succeeded":
             raise RuntimeError(f"planner run failed (run_id={self.run_id}): {planner_info.errors}")
@@ -153,8 +154,8 @@ class RunSession:
         if name and "name" not in plan_config:
             plan_config = {**plan_config, "name": name}
         self._executed = False
-        exec_info = self._exec_entity(
-            pipeline_config=plan_config, entity_key=self.entity_key
+        exec_info = self._exec(
+            plan_config=plan_config, entity_key=self.entity_key
         )
         if exec_info.status != "succeeded":
             raise RuntimeError(f"plan execution failed (run_id={self.run_id}): {exec_info.errors}")
@@ -162,7 +163,8 @@ class RunSession:
         return planner_info, exec_info
 
     def _record_run_config(self, config: dict[str, Any]) -> None:
-        """Record config to runs table (planner/entry). Called by exec and exec_with_plan_once."""
+        """Record config to runs table (planner/entry).
+        Called by exec_plan and exec_with_planner_once."""
         artifacts = getattr(self.store, "artifacts", self.store)
         upsert_run = getattr(artifacts, "upsert_run", None)
         if not callable(upsert_run):

@@ -1,7 +1,7 @@
 """
 Route: POST /inspect
 
-Upload an Excel file -> run inspect pipeline -> return profile.
+Upload an Excel file -> run inspect plan -> return profile.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ async def inspect(
             ],
         }
 
-        info = session.exec(pipeline_config=config)
+        info = session.exec_plan(plan_config=config)
 
         if info.status != "succeeded":
             raise ValueError(f"inspect failed (run_id={info.run_id}): {info.errors}")

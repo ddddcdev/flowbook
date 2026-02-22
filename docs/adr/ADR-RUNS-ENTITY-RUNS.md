@@ -8,7 +8,7 @@ Accepted.
 
 - **run**: Execution session (run_id). Entry point. config_json holds planner/entry config.
 - **entity**: Logical scope (entity_key). Groups artifacts.
-- **entity_runs**: Per (run_id, entity_key). status, config_json (executed pipeline).
+- **entity_runs**: Per (run_id, entity_key). status, config_json (executed plan).
 - **Purpose**: (1) Entity status and artifact lookup. (2) Entity execution result (status + executed config).
 
 ## Decision
@@ -21,7 +21,7 @@ Accepted.
 
 ### Scope
 
-- **Planner repeated execution**: Not considered. exec_with_plan_once runs planner once then plan once; entity_runs is upserted twice (last write wins). Sufficient for current use.
+- **Planner repeated execution**: Not considered. exec_with_planner_once runs planner once then plan once; entity_runs is upserted twice (last write wins). Sufficient for current use.
 - **1 run = 1 entity** in practice. Multiple entities per run are supported but not heavily used.
 
 ### Purpose

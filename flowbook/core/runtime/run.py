@@ -1,6 +1,6 @@
 """
 run:
-- Executes a Pipeline sequentially.
+- Executes a Plan sequentially.
 - Step.inputs may contain refs (@<logical_address>), literals, or nested dict/list.
   Refs are resolved via RunContext.bindings (logical -> artifact_key -> store.get_any).
   Only strings starting with @ are refs; others are passed through.
@@ -19,16 +19,16 @@ from flowbook.core.registry.registry import UnknownOp
 from flowbook.core.runtime.context import RunContext
 from flowbook.core.runtime.resolve import collect_refs_in_inputs, resolve_value
 from flowbook.core.runtime.store import RunStore
-from flowbook.core.runtime.types import Pipeline, RunInfo, Step, StepRunInfo
+from flowbook.core.runtime.types import Plan, RunInfo, Step, StepRunInfo
 
 
-def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
+def _validate_step_contracts(plan: Plan, ctx: RunContext) -> None:
     """
     Preflight: every step has a registered op; if op has Inputs with non-empty allowed_keys,
     step inputs satisfy required and have no surplus keys.
     Raises RuntimeError with run_id, step name, and missing/surplus keys.
     """
-    for step in pipeline.steps:
+    for step in plan.steps:
         try:
             op = ctx.registry.get(step.op)
         except UnknownOp as e:
@@ -132,7 +132,7 @@ def _upsert_entity_run(
         )
 
 
-def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
+def run(plan: Plan, ctx: RunContext) -> RunInfo:
     info = RunInfo(run_id=ctx.run_id, status="running")
     _upsert_entity_run(
         ctx.store,
@@ -144,9 +144,9 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
     )
 
     try:
-        _validate_step_contracts(pipeline, ctx)
+        _validate_step_contracts(plan, ctx)
 
-        for step in pipeline.steps:
+        for step in plan.steps:
             _validate_step_inputs(step, ctx)
             step_info = StepRunInfo(
                 name=step.name,

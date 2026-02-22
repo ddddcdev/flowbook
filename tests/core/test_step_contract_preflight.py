@@ -33,7 +33,7 @@ def test_preflight_unregistered_op_raises_with_run_id_and_step_name() -> None:
             {"name": "s1", "op": "nonexistent_op", "inputs": {}},
         ]
     }
-    info = run.exec(pipeline_config=config)
+    info = run.exec_plan(plan_config=config)
     assert info.status == "failed"
     assert run.run_id
     assert "unregistered op" in info.errors[0]
@@ -61,7 +61,7 @@ def test_preflight_missing_required_input_raises_with_step_and_keys() -> None:
             }
         ]
     }
-    info = run.exec(pipeline_config=config)
+    info = run.exec_plan(plan_config=config)
     assert info.status == "failed"
     # Either preflight (op.Inputs) or binding validation catches it
     err = info.errors[0]
@@ -92,7 +92,7 @@ def test_preflight_surplus_input_raises_with_step_and_keys() -> None:
             }
         ]
     }
-    info = run.exec(pipeline_config=config)
+    info = run.exec_plan(plan_config=config)
     assert info.status == "failed"
     assert "surplus" in info.errors[0].lower()
     assert "planner" in info.errors[0]

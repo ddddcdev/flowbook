@@ -1,7 +1,7 @@
 """
 Route: POST /import
 
-Upload an Excel file + template_name -> run import pipeline -> artifacts.
+Upload an Excel file + template_name -> run import plan -> artifacts.
 """
 
 from __future__ import annotations
@@ -48,10 +48,10 @@ async def import_file(
     mapping_name: Annotated[str, Form()] = "detect_region_test",
 ) -> RunResponse:
     """
-    Import an uploaded Excel file using a named pipeline template.
+    Import an uploaded Excel file using a named plan template.
 
     - **file**: Excel file (.xlsx)
-    - **template_name**: pipeline template (e.g. import_excel or import_excel_region)
+    - **template_name**: plan template (e.g. import_excel or import_excel_region)
     - **input_profile_name**: config profile for input handling
     - **sheet_name**: sheet to read (default: "data")
     - **header_row**: header row index, 0-based (default: 0)
@@ -89,7 +89,7 @@ async def import_file(
             ],
         }
 
-        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
+        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
 
         return _run_info_to_response(exec_info)
 

@@ -14,7 +14,7 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
     Day10 pattern:
     1) Planner step produces a plan config dict as output (not global PLAN)
     2) Plan is persisted and artifact key recorded in StepRunInfo.outputs["plan"]
-    3) exec_with_plan_once reads plan from that artifact and executes it
+    3) exec_with_planner_once reads plan from that artifact and executes it
     """
     store = InMemoryArtifactsStore()
     registry = Registry()
@@ -36,7 +36,7 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
     run.put_input("x", 2)
     run.put_input("y", 3)
 
-    info1, info2 = run.exec_with_plan_once(planner_config=planner_config)
+    info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
 
     # ✅ Verify planner step produced plan output
     assert info1.status == "succeeded"

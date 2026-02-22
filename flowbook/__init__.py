@@ -1,5 +1,5 @@
 """
-Flowbook: pipeline runner and artifact store.
+Flowbook: plan runner and artifact store.
 
 Public API (a1 minimum): Engine, Registry, RunSession, register_steps, discover_steps, and stores.
 Use ``from flowbook import Engine, Registry, discover_steps, register_steps, ...``.

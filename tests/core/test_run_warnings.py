@@ -43,12 +43,12 @@ def test_run_aggregates_step_warnings_into_run_info() -> None:
     registry = Registry()
     registry.register("warn_op", _WarnOp())
 
-    pipeline_config = {
+    plan_config = {
         "steps": [
             {"name": "w", "op": "warn_op", "inputs": {}},
         ]
     }
-    pipeline = build(pipeline_config)
+    plan = build(plan_config)
     ctx = RunContext(
         run_id="r1",
         entity_key="default",
@@ -57,7 +57,7 @@ def test_run_aggregates_step_warnings_into_run_info() -> None:
         bindings={},
     )
 
-    info = run(pipeline, ctx)
+    info = run(plan, ctx)
 
     assert info.status == "succeeded"
     assert info.warnings == ["warning one", "warning two"]

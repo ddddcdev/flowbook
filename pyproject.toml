@@ -75,7 +75,7 @@ twine = "^6.2.0"
 markers = [
     "unit: unit tests (no DB, no real files, fast)",
     "integration: integration tests (DB or multi-component)",
-    "e2e: end-to-end tests (real files or full pipeline)",
+    "e2e: end-to-end tests (real files or full plan)",
     "smoke: smoke tests (API or engine entry point)",
 ]
 

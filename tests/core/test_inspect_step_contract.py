@@ -33,7 +33,7 @@ def test_inspect_step_writes_control_artifacts() -> None:
     run.put_input("source_uri", "/tmp/dummy.xlsx")
     run.put_input("read_spec", {"sheet": 0})
 
-    info = run.exec(pipeline_config=config)
+    info = run.exec_plan(plan_config=config)
     assert info.status == "succeeded"
 
     inspect_key = info.steps[0].outputs[InspectOp.Outputs.INSPECT_RESULT]

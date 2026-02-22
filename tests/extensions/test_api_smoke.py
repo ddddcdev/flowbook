@@ -4,8 +4,8 @@ Smoke test for the FastAPI sample app.
 Verifies:
 - /health returns 200
 - POST /inspect with an Excel file returns a profile
-- POST /import with a file + template executes a pipeline
-- POST /export with bindings executes an export pipeline
+- POST /import with a file + template executes a plan
+- POST /export with bindings executes an export plan
 - GET /artifacts lists keys; GET /artifacts/{key} retrieves value
 - Failure responses include run_id + reason
 """
@@ -211,7 +211,7 @@ def test_import_unknown_template_returns_error(client: TestClient):
 def test_export_excel_with_bindings(client: TestClient):
     engine = get_engine()
 
-    # Pre-populate a DataFrame artifact that the export pipeline will consume
+    # Pre-populate a DataFrame artifact that the export plan will consume
     df = pd.DataFrame({"col_a": [1, 2], "col_b": [3, 4]})
     engine.store.put_df("artifact/test/df", df)
 

@@ -1,6 +1,6 @@
 """
 Runtime types:
-- Thin definitions for pipeline, step_spec, run_info
+- Thin definitions for plan, step_spec, run_info
 Rule:
 - No semantics
 - No implementation details
@@ -20,7 +20,7 @@ class Step:
 
 
 @dataclass(frozen=True)
-class Pipeline:
+class Plan:
     steps: list[Step]
 
 

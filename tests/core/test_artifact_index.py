@@ -53,7 +53,7 @@ def test_run_with_index_records_outputs() -> None:
         bindings={},
         index=index,
     )
-    pipeline = build(
+    plan = build(
         {
             "steps": [
                 {"name": "add", "op": "add", "inputs": {"x": "@x", "y": "@y"}},
@@ -65,7 +65,7 @@ def test_run_with_index_records_outputs() -> None:
     store.put("run1//input/x", 2)
     store.put("run1//input/y", 3)
 
-    info = run(pipeline, ctx)
+    info = run(plan, ctx)
 
     assert info.status == "succeeded"
     rows = index.list_index("add", limit=10)

@@ -71,7 +71,7 @@ class PlanTemplate(ConfigSpecKind):
     KIND: str = "plan_template"
 
     class Spec(TypedDict):
-        """Spec for kind='plan_template'. plan is a pipeline config."""
+        """Spec for kind='plan_template'. plan is a plan config."""
 
         plan: dict[str, Any]
 
