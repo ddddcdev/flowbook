@@ -1,7 +1,7 @@
 """
 Route: POST /import
 
-Upload an Excel file + template_name -> run import pipeline -> artifacts.
+Upload an Excel file + template_name -> run import plan -> artifacts.
 """
 
 from __future__ import annotations
@@ -39,6 +39,7 @@ def _run_info_to_response(info: Any) -> RunResponse:
 async def import_file(
     file: Annotated[UploadFile, File(...)],
     template_name: Annotated[str, Form(...)],
+    entity_key: Annotated[str, Form()] = "default",
     input_profile_name: Annotated[str, Form()] = "source",
     sheet_name: Annotated[str, Form()] = "data",
     header_row: Annotated[int, Form()] = 0,
@@ -47,17 +48,17 @@ async def import_file(
     mapping_name: Annotated[str, Form()] = "detect_region_test",
 ) -> RunResponse:
     """
-    Import an uploaded Excel file using a named pipeline template.
+    Import an uploaded Excel file using a named plan template.
 
     - **file**: Excel file (.xlsx)
-    - **template_name**: pipeline template (e.g. import_excel or import_excel_region)
+    - **template_name**: plan template (e.g. import_excel or import_excel_region)
     - **input_profile_name**: config profile for input handling
     - **sheet_name**: sheet to read (default: "data")
     - **header_row**: header row index, 0-based (default: 0)
     - **region_profile_name**: for import_excel_region template (default: "detail_region")
     """
     engine = get_engine()
-    session = engine.prepare()
+    session = engine.prepare(entity_key=entity_key)
 
     try:
         contents = await file.read()
@@ -74,8 +75,12 @@ async def import_file(
         # For read_excel_detect_region template
         session.put_input("region_profile_name", region_profile_name)
         session.put_input("mapping_name", mapping_name)
+        # Download filename for read/df: entity_key-based
+        safe_key = entity_key.replace("/", "_").replace("\\", "_")
+        session.put_input("import_output_filename", f"{safe_key}_imported.xlsx")
 
         planner_config = {
+            "name": "import",
             "steps": [
                 {
                     "name": "planner",
@@ -84,10 +89,10 @@ async def import_file(
                         "template_name": "@template_name",
                     },
                 }
-            ]
+            ],
         }
 
-        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
+        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
 
         return _run_info_to_response(exec_info)
 

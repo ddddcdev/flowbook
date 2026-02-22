@@ -39,3 +39,24 @@ class DefaultRunStore(RunStore):
 
     def get_any(self, key: str) -> Any:
         return self.artifacts.get_any(key)
+
+    def upsert_entity_run(
+        self,
+        run_id: str,
+        entity_key: str,
+        status: str,
+        artifact_path: str | None = None,
+        run_config_json: str | None = None,
+        entity_config_json: str | None = None,
+    ) -> None:
+        """Upsert entity_runs if underlying artifacts store supports it."""
+        upsert = getattr(self.artifacts, "upsert_entity_run", None)
+        if callable(upsert):
+            upsert(
+                run_id,
+                entity_key,
+                status,
+                artifact_path=artifact_path,
+                run_config_json=run_config_json,
+                entity_config_json=entity_config_json,
+            )

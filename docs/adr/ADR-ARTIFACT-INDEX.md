@@ -2,35 +2,32 @@
 
 ## Status
 
-Accepted. An optional artifact index layer records each persisted output for querying by namespace.
+Accepted (updated). Uses **entity_key** instead of namespace_prefix. Artifacts use composite PK (run_id, entity_key, path).
 
 ## Context
 
-Physical keys are `{run_id}/{path}`. Listing by prefix cannot efficiently answer "latest artifacts for tenant X" when tenant is encoded in the logical address. Index metadata (run_id, logical_address, namespace_prefix, created_at) is required per artifact.
+Artifact keys follow `{run_id}/{entity_key}/{path}`. The **entity_key** is an opaque string (exact-match only) passed via step definition or exec. Index queries use entity_key.
 
 ## Decision
 
 ### Index layer
 
-- **Protocol**: `ArtifactIndex` with `record(...)`, `list_index(namespace_prefix, limit, order)`, `latest_per_logical(namespace_prefix, limit)`.
-- **IndexRow**: run_id, artifact_key, logical_address, namespace_prefix, created_at, content_type.
+- **Protocol**: `ArtifactIndex` with `record(...)`, `list_index(entity_key, limit, order)`, `latest_per_logical(entity_key, limit)`.
+- **IndexRow**: run_id, artifact_key, logical_address, entity_key, created_at, content_type.
 - **When**: On every output persist (if `RunContext.index` is set), the runner calls `index.record(...)`.
-- **namespace_prefix**: Derived from logical_address (first segment, or whole address if no `/`).
+- **entity_key**: Passed explicitly from prepare/exec; not derived from logical address.
 
-### run_id
+### Artifacts table (Postgres)
 
-- run_id is **not** part of the logical address. It is stored only in the index row and in the physical artifact_key.
-
-### Usage
-
-- "Latest" retrieval does not require `@key:...` in config. The caller queries the index (e.g. `latest_per_logical(tenant_id)`), then binds the returned artifact keys for the run (existing `bind(name, artifact_key)` pattern).
+- **Composite PK**: (run_id, entity_key, path). No artifact_key column.
+- **Key format**: `{run_id}/{entity_key}/{path}`. Inputs use entity_key="" for run-level.
 
 ### Implementations
 
-- **InMemory**: For tests and single-process; list + sort; latest_per_logical via distinct-on-logical_address in memory.
-- **Postgres**: No separate index table. The `artifacts` table stores run_id, logical_address, namespace_prefix, created_at, content_type with each row. PostgresArtifactIndex reads from `artifacts`; `record()` is a no-op (metadata is written by PostgresArtifactsStore.put/put_bytes/put_df).
+- **InMemory**: list + sort; latest_per_logical via distinct-on-logical_address in memory.
+- **Postgres**: Reads from `artifacts` (run_id, entity_key, path). Builds artifact_key when returning IndexRow. `record()` is a no-op.
 
 ## Consequences
 
-- API or runners can offer "latest artifacts for tenant" by calling the index then preparing bindings for execution.
+- API or runners query by entity_key for "latest artifacts for entity X".
 - Index is optional; runs without an index behave as before (no recording).

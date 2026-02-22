@@ -2,7 +2,8 @@
 Dependency injection for the FastAPI app.
 
 - FLOWBOOK_DATABASE_URL set -> Postgres stores (production / field use)
-- FLOWBOOK_DATABASE_URL unset -> in-memory stores (development / smoke test)
+- FLOWBOOK_DATABASE_URL unset -> in-memory stores (development / smoke test).
+  In-memory store: single-run execution only; runs and entity_runs not supported.
 """
 
 from __future__ import annotations
@@ -52,7 +53,7 @@ def get_engine() -> Engine:
             config_store=config_store,
         )
 
-    # Fallback: in-memory (no DATABASE_URL)
+    # Fallback: in-memory (no DATABASE_URL). Single-run only; no runs/entity_runs.
     from flowbook import InMemoryArtifactsStore, InMemoryConfigStore
 
     return Engine(

@@ -82,7 +82,7 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
     run_session.put_input("input_profile_name", "source")
     run_session.put_input("path", path)
 
-    # Pipeline config
+    # Plan config
     config = {
         "steps": [
             {
@@ -97,7 +97,7 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
     }
 
     # --- Act
-    info = run_session.exec(pipeline_config=config)
+    info = run_session.exec_plan(plan_config=config)
 
     # --- Assert
     assert info.status == "succeeded", f"Run failed: {info.errors}"
@@ -127,7 +127,7 @@ def test_inspect_unknown_filename_no_error():
     run_session.put_input("input_profile_name", "source")
     run_session.put_input("path", path)
 
-    # Pipeline config
+    # Plan config
     config = {
         "steps": [
             {
@@ -142,7 +142,7 @@ def test_inspect_unknown_filename_no_error():
     }
 
     # --- Act
-    info = run_session.exec(pipeline_config=config)
+    info = run_session.exec_plan(plan_config=config)
 
     # --- Assert (should succeed, but detected_kind is None)
     assert info.status == "succeeded", f"Run failed: {info.errors}"
@@ -181,7 +181,7 @@ def test_inspect_missing_config_raises_error():
     run_session.put_input("input_profile_name", "missing_profile")
     run_session.put_input("path", "/data/fileA_test.xlsx")
 
-    # Pipeline config
+    # Plan config
     config = {
         "steps": [
             {
@@ -196,7 +196,7 @@ def test_inspect_missing_config_raises_error():
     }
 
     # --- Act
-    info = run_session.exec(pipeline_config=config)
+    info = run_session.exec_plan(plan_config=config)
 
     # --- Assert: run should fail
     assert info.status == "failed"
@@ -232,7 +232,7 @@ def test_inspect_missing_kind_rules_raises_error():
     run_session.put_input("input_profile_name", "incomplete")
     run_session.put_input("path", "/data/fileA_test.xlsx")
 
-    # Pipeline config
+    # Plan config
     config = {
         "steps": [
             {
@@ -247,7 +247,7 @@ def test_inspect_missing_kind_rules_raises_error():
     }
 
     # --- Act
-    info = run_session.exec(pipeline_config=config)
+    info = run_session.exec_plan(plan_config=config)
 
     # --- Assert: run should fail
     assert info.status == "failed"
@@ -263,7 +263,7 @@ def test_inspect_missing_path_input_raises_error():
     # Only provide input_profile_name, NOT path
     run_session.put_input("input_profile_name", "source")
 
-    # Pipeline config
+    # Plan config
     config = {
         "steps": [
             {
@@ -278,7 +278,7 @@ def test_inspect_missing_path_input_raises_error():
     }
 
     # --- Act
-    info = run_session.exec(pipeline_config=config)
+    info = run_session.exec_plan(plan_config=config)
 
     # --- Assert: run should fail
     assert info.status == "failed"

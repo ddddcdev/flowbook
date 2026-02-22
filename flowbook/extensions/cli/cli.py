@@ -94,7 +94,7 @@ def register_cli(app: Typer) -> None:
         ),
         no_interactive: bool = t.Option(False, "--no-interactive", help="Skip prompts"),
     ) -> None:
-        """Run hands-on flow: Health -> Inspect -> Import -> Artifacts -> Export -> Download."""
+        """Run hands-on: Health -> Inspect -> Import -> Verify -> Export -> Verify -> Download."""
         from flowbook.extensions.cli.hands_on import run as run_hands_on
 
         code = run_hands_on(

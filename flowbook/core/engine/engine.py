@@ -19,12 +19,22 @@ class Engine:
     config_store: ConfigStore | None = None
     meta: dict[str, Any] | None = None
 
-    def prepare(self, run_id: str | None = None) -> RunSession:
+    def prepare(
+        self,
+        run_id: str | None = None,
+        entity_key: str = "default",
+        entity_keys: list[str] | None = None,
+    ) -> RunSession:
         run_id = run_id or new_run_id()
+        # Ensure runs row exists (for Postgres) so runs table is populated
+        upsert_run = getattr(self.store, "upsert_run", None)
+        if callable(upsert_run):
+            upsert_run(run_id, "running")
         config_store = self.config_store or NullConfigStore()
         run_store = DefaultRunStore(artifacts=self.store, configs=config_store)
         return RunSession(
             run_id=run_id,
+            entity_key=entity_key,
             store=run_store,
             registry=self.registry,
             meta=self.meta or {},

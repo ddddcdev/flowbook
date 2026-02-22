@@ -28,5 +28,5 @@ filter_rows and expr_df need to evaluate expressions over DataFrame columns (e.g
 
 ## Consequences
 
-- filter_rows and expr_df are suitable for pipeline configs authored by trusted operators or generated under constraints.
+- filter_rows and expr_df are suitable for plan configs authored by trusted operators or generated under constraints.
 - For user-supplied expressions, additional validation or a stricter DSL should be considered and documented here.

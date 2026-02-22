@@ -88,6 +88,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
 
     template_spec = {
         "plan": {
+            "name": "excel_e2e",
             "steps": [
                 {
                     "name": "read",
@@ -129,7 +130,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     )
 
     src_bytes = Path("tests/fixtures/excel/real_input.xlsx").read_bytes()
-    bytes_artifact_key = "artifact:bytes/src_excel"
+    bytes_artifact_key = "artifact/bytes/src_excel"
 
     # ---- Inspect (bytes + filename) ----
     inspect_run = engine.prepare()
@@ -152,7 +153,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         ]
     }
 
-    inspect_info = inspect_run.exec(pipeline_config=inspect_config)
+    inspect_info = inspect_run.exec_plan(plan_config=inspect_config)
     assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
 
     result_key = inspect_info.steps[0].outputs[InspectExcelBytesV2Op.Outputs.RESULT]
@@ -181,7 +182,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         ]
     }
 
-    info1, info2 = run.exec_with_plan_once(planner_config=planner_config)
+    info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
 
     assert info1.status == "succeeded", f"planner failed: {info1.errors}"
     assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"

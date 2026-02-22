@@ -4,8 +4,8 @@ Smoke test for the FastAPI sample app.
 Verifies:
 - /health returns 200
 - POST /inspect with an Excel file returns a profile
-- POST /import with a file + template executes a pipeline
-- POST /export with bindings executes an export pipeline
+- POST /import with a file + template executes a plan
+- POST /export with bindings executes an export plan
 - GET /artifacts lists keys; GET /artifacts/{key} retrieves value
 - Failure responses include run_id + reason
 """
@@ -65,6 +65,7 @@ def client() -> TestClient:
         "import_excel",
         {
             "plan": {
+                "name": "import_excel",
                 "steps": [
                     {
                         "name": "read",
@@ -87,6 +88,7 @@ def client() -> TestClient:
         "export_excel",
         {
             "plan": {
+                "name": "export_excel",
                 "steps": [
                     {
                         "name": "write",
@@ -209,16 +211,16 @@ def test_import_unknown_template_returns_error(client: TestClient):
 def test_export_excel_with_bindings(client: TestClient):
     engine = get_engine()
 
-    # Pre-populate a DataFrame artifact that the export pipeline will consume
+    # Pre-populate a DataFrame artifact that the export plan will consume
     df = pd.DataFrame({"col_a": [1, 2], "col_b": [3, 4]})
-    engine.store.put_df("artifact:test/df", df)
+    engine.store.put_df("artifact/test/df", df)
 
     r = client.post(
         "/export",
         json={
             "template_name": "export_excel",
             "bindings": {
-                "in_key": "artifact:test/df",
+                "in_key": "artifact/test/df",
             },
         },
     )
@@ -235,33 +237,61 @@ def test_export_excel_with_bindings(client: TestClient):
 
 def test_artifacts_list(client: TestClient):
     engine = get_engine()
-    engine.store.put("artifact:smoke/a", 1)
+    engine.store.put("artifact/smoke/a", 1)
 
-    r = client.get("/artifacts", params={"prefix": "artifact:smoke/"})
+    r = client.get("/artifacts", params={"prefix": "artifact/smoke/"})
 
     assert r.status_code == 200
     body = r.json()
-    assert "artifact:smoke/a" in body["keys"]
+    assert "artifact/smoke/a" in body["keys"]
 
 
 def test_artifacts_get(client: TestClient):
     engine = get_engine()
-    engine.store.put("artifact:smoke/val", 42)
+    engine.store.put("artifact/smoke/val", 42)
 
-    r = client.get("/artifacts/artifact:smoke/val")
+    r = client.get("/artifacts/artifact/smoke/val")
 
     assert r.status_code == 200
     body = r.json()
-    assert body["key"] == "artifact:smoke/val"
+    assert body["key"] == "artifact/smoke/val"
     assert body["value"] == 42
 
 
 def test_artifacts_get_not_found(client: TestClient):
-    r = client.get("/artifacts/nonexistent_key")
+    # Use valid key format (run_id/entity_key/path) for non-existent artifact
+    r = client.get("/artifacts/run1/unit1/nonexistent_path")
 
     assert r.status_code == 404
     detail = r.json()["detail"]
     assert "reason" in detail
+
+
+def test_runs_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for runs."""
+    r = client.get("/runs")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
+
+
+def test_entity_runs_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for entity_runs."""
+    r = client.get("/entity_runs")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
+
+
+def test_entity_runs_get_404_with_in_memory_store(client: TestClient):
+    """In-memory store returns 404 for entity_run get."""
+    r = client.get("/entity_runs/run1/entity1")
+    assert r.status_code == 404
+
+
+def test_latest_entity_runs_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for latest_entity_runs."""
+    r = client.get("/latest_entity_runs")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
 
 
 # ---- integration: same tests against Postgres ----

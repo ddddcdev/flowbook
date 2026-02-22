@@ -36,6 +36,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     # ---- Put template in config store ----
     template_spec = {
         "plan": {
+            "name": "tmpl_add",
             "steps": [
                 {
                     "name": "add",
@@ -75,7 +76,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     }
 
     # ---- Execute: planner + plan ----
-    info1, info2 = run.exec_with_plan_once(planner_config=planner_config)
+    info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
 
     # ✅ Verify planner step succeeded and produced plan output
     assert info1.status == "succeeded", f"planner failed: {info1.errors}"
@@ -141,7 +142,7 @@ def test_plan_from_template_missing_template_name() -> None:
     }
 
     try:
-        run.exec_with_plan_once(planner_config=planner_config)
+        run.exec_with_planner_once(planner_config=planner_config)
         raise AssertionError("should raise error for missing template_name")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
@@ -176,7 +177,7 @@ def test_plan_from_template_template_not_found() -> None:
     }
 
     try:
-        run.exec_with_plan_once(planner_config=planner_config)
+        run.exec_with_planner_once(planner_config=planner_config)
         raise AssertionError("should raise error for missing template")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
@@ -219,7 +220,7 @@ def test_plan_from_template_missing_plan_key() -> None:
     }
 
     try:
-        run.exec_with_plan_once(planner_config=planner_config)
+        run.exec_with_planner_once(planner_config=planner_config)
         raise AssertionError("should raise error for missing plan key")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
@@ -262,7 +263,7 @@ def test_plan_from_template_plan_not_dict() -> None:
     }
 
     try:
-        run.exec_with_plan_once(planner_config=planner_config)
+        run.exec_with_planner_once(planner_config=planner_config)
         raise AssertionError("should raise error for non-dict plan")
     except RuntimeError as e:
         assert "planner run failed" in str(e)
@@ -287,6 +288,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
     # Put template requiring x and y
     template_spec = {
         "plan": {
+            "name": "tmpl_add",
             "steps": [
                 {
                     "name": "add",
@@ -322,7 +324,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
     }
 
     try:
-        run.exec_with_plan_once(planner_config=planner_config)
+        run.exec_with_planner_once(planner_config=planner_config)
         raise AssertionError("should fail at plan execution preflight due to missing x, y")
     except RuntimeError as e:
         error_str = str(e)

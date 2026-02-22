@@ -46,7 +46,7 @@ API docs (auto-generated): <http://localhost:8000/docs>
    ```bash
    FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
      flowbook db seed-artifact
-   # Seeded artifact: smoke-test/artifact
+   # Seeded artifact: seed/demo/excel/result
    ```
 
 2. **Start the API** with the same URL (in another terminal):
@@ -60,5 +60,5 @@ API docs (auto-generated): <http://localhost:8000/docs>
 
    ```bash
    flowbook artifacts list
-   # Should show a table with smoke-test/artifact
+   # Should show a table with seed/demo/excel/result
    ```

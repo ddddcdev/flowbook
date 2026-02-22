@@ -13,8 +13,9 @@ from flowbook.extensions.excel.io import write_df_to_excel
 class WriteExcelOp(BaseOp):
     class Inputs(InputsBase):
         DF = "df"
+        OUTPUT_FILENAME = "output_filename"
         REQUIRED = (DF,)
-        OPTIONAL = ()
+        OPTIONAL = (OUTPUT_FILENAME,)
 
     class Outputs(OutputsBase):
         BYTES = "bytes"
@@ -22,7 +23,11 @@ class WriteExcelOp(BaseOp):
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         df = inputs[self.Inputs.DF]
         b = write_df_to_excel(df, sheet="out", index=False)
-        return {self.Outputs.BYTES: b}
+        result: dict[str, Any] = {self.Outputs.BYTES: b}
+        if output_filename := inputs.get(self.Inputs.OUTPUT_FILENAME):
+            if isinstance(output_filename, str):
+                result["_meta"] = {"filename": output_filename}
+        return result
 
 
 register = register_from_steps()

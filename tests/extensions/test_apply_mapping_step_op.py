@@ -27,10 +27,16 @@ def _cleanup(store: PostgresArtifactsStore, keys: list[str]) -> None:
     if not keys:
         return
     with store.engine.begin() as conn:
-        conn.execute(
-            text("DELETE FROM artifacts WHERE artifact_key = ANY(:keys)"),
-            {"keys": keys},
-        )
+        for k in keys:
+            parts = k.split("/", 2)
+            if len(parts) == 3:
+                conn.execute(
+                    text(
+                        "DELETE FROM artifacts "
+                        "WHERE run_id = :r AND entity_key = :e AND artifact_path = :p"
+                    ),
+                    {"r": parts[0], "e": parts[1], "p": parts[2]},
+                )
 
 
 def _cleanup_config(cfg: PostgresConfigStore, kind: str, name: str) -> None:

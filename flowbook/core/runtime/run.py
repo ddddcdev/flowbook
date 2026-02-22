@@ -1,6 +1,6 @@
 """
 run:
-- Executes a Pipeline sequentially.
+- Executes a Plan sequentially.
 - Step.inputs may contain refs (@<logical_address>), literals, or nested dict/list.
   Refs are resolved via RunContext.bindings (logical -> artifact_key -> store.get_any).
   Only strings starting with @ are refs; others are passed through.
@@ -13,21 +13,22 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import cast
 
+from flowbook.core.artifacts.key_utils import build_artifact_key
 from flowbook.core.artifacts.store import JsonValue
 from flowbook.core.registry.registry import UnknownOp
 from flowbook.core.runtime.context import RunContext
 from flowbook.core.runtime.resolve import collect_refs_in_inputs, resolve_value
 from flowbook.core.runtime.store import RunStore
-from flowbook.core.runtime.types import Pipeline, RunInfo, Step, StepRunInfo
+from flowbook.core.runtime.types import Plan, RunInfo, Step, StepRunInfo
 
 
-def _validate_step_contracts(pipeline: Pipeline, ctx: RunContext) -> None:
+def _validate_step_contracts(plan: Plan, ctx: RunContext) -> None:
     """
     Preflight: every step has a registered op; if op has Inputs with non-empty allowed_keys,
     step inputs satisfy required and have no surplus keys.
     Raises RuntimeError with run_id, step name, and missing/surplus keys.
     """
-    for step in pipeline.steps:
+    for step in plan.steps:
         try:
             op = ctx.registry.get(step.op)
         except UnknownOp as e:
@@ -92,42 +93,63 @@ def _persist_output(
     out_key: str,
     value: JsonValue | bytes | object,
     *,
-    run_id: str | None = None,
-    logical_address: str | None = None,
-    namespace_prefix: str | None = None,
     created_at: object = None,
-    content_type: str | None = None,
+    meta: dict | None = None,
 ) -> None:
-    meta = {}
-    if run_id is not None:
-        meta["run_id"] = run_id
-    if logical_address is not None:
-        meta["logical_address"] = logical_address
-    if namespace_prefix is not None:
-        meta["namespace_prefix"] = namespace_prefix
+    kwargs: dict = {}
     if created_at is not None:
-        meta["created_at"] = created_at
-    if content_type is not None:
-        meta["content_type"] = content_type
+        kwargs["created_at"] = created_at
+    if meta:
+        kwargs["meta"] = dict(meta)
     if isinstance(value, bytes):
-        store.put_bytes(out_key, value, **meta)
+        store.put_bytes(out_key, value, **kwargs)
         return
     # Lazy import to keep core import-safe (no pandas at import time).
     import pandas as pd
 
     if isinstance(value, pd.DataFrame):
-        store.put_df(out_key, value, **meta)
+        store.put_df(out_key, value, **kwargs)
         return
-    store.put(out_key, cast(JsonValue, value), **meta)
+    store.put(out_key, cast(JsonValue, value), **kwargs)
 
 
-def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
+def _upsert_entity_run(
+    store: RunStore,
+    run_id: str,
+    entity_key: str,
+    status: str,
+    artifact_path: str | None = None,
+    run_config_json: str | None = None,
+    entity_config_json: str | None = None,
+) -> None:
+    """Upsert entity_runs if store supports it. artifact_path=primary step output path."""
+    upsert = getattr(store, "upsert_entity_run", None)
+    if callable(upsert):
+        upsert(
+            run_id,
+            entity_key,
+            status,
+            artifact_path=artifact_path,
+            run_config_json=run_config_json,
+            entity_config_json=entity_config_json,
+        )
+
+
+def run(plan: Plan, ctx: RunContext) -> RunInfo:
     info = RunInfo(run_id=ctx.run_id, status="running")
+    _upsert_entity_run(
+        ctx.store,
+        ctx.run_id,
+        ctx.entity_key,
+        "running",
+        run_config_json=ctx.run_config_json,
+        entity_config_json=ctx.entity_config_json,
+    )
 
     try:
-        _validate_step_contracts(pipeline, ctx)
+        _validate_step_contracts(plan, ctx)
 
-        for step in pipeline.steps:
+        for step in plan.steps:
             _validate_step_inputs(step, ctx)
             step_info = StepRunInfo(
                 name=step.name,
@@ -164,32 +186,29 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
 
             # Persist outputs to artifacts (all returned keys, except those starting with '_')
             out_map: dict[str, str] = {}
+            step_meta = step_output.get("_meta")
+            step_meta_dict = step_meta if isinstance(step_meta, dict) else None
             for out_name, out_value in step_output.items():
                 if out_name.startswith("_"):
                     continue
-                out_key = f"{ctx.run_id}/{step.name}/{out_name}"
-                logical_address = f"{step.name}/{out_name}"
-                namespace_prefix = (
-                    logical_address.split("/")[0] if "/" in logical_address else logical_address
-                )
+                path = f"{step.name}/{out_name}"
+                out_key = build_artifact_key(ctx.run_id, ctx.entity_key, path)
+                logical_address = path
                 created_at = datetime.now(timezone.utc)  # noqa: UP017
                 content_type = _content_type_for_value(out_value)
                 _persist_output(
                     ctx.store,
                     out_key,
                     out_value,
-                    run_id=ctx.run_id,
-                    logical_address=logical_address,
-                    namespace_prefix=namespace_prefix,
                     created_at=created_at,
-                    content_type=content_type,
+                    meta=step_meta_dict,
                 )
                 if ctx.index is not None:
                     ctx.index.record(
                         run_id=ctx.run_id,
                         artifact_key=out_key,
                         logical_address=logical_address,
-                        namespace_prefix=namespace_prefix,
+                        entity_key=ctx.entity_key,
                         created_at=created_at,
                         content_type=content_type,
                     )
@@ -200,6 +219,22 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
             step_info.outputs = out_map
             step_info.status = "succeeded"
 
+        primary_artifact_path = None
+        if info.steps:
+            last_step = info.steps[-1]
+            if last_step.outputs:
+                first_out = next(iter(last_step.outputs.keys()))
+                primary_artifact_path = f"{last_step.name}/{first_out}"
+
+        _upsert_entity_run(
+            ctx.store,
+            ctx.run_id,
+            ctx.entity_key,
+            "succeeded",
+            artifact_path=primary_artifact_path,
+            run_config_json=ctx.run_config_json,
+            entity_config_json=ctx.entity_config_json,
+        )
         info.status = "succeeded"
         return info
 
@@ -210,4 +245,19 @@ def run(pipeline: Pipeline, ctx: RunContext) -> RunInfo:
         if info.steps:
             info.steps[-1].status = "failed"
             info.steps[-1].error = msg
+        primary_artifact_path = None
+        if info.steps:
+            last_step = info.steps[-1]
+            if last_step.outputs:
+                first_out = next(iter(last_step.outputs.keys()))
+                primary_artifact_path = f"{last_step.name}/{first_out}"
+        _upsert_entity_run(
+            ctx.store,
+            ctx.run_id,
+            ctx.entity_key,
+            "failed",
+            artifact_path=primary_artifact_path,
+            run_config_json=ctx.run_config_json,
+            entity_config_json=ctx.entity_config_json,
+        )
         return info

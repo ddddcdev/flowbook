@@ -59,6 +59,9 @@ class ArtifactEntry(BaseModel):
     key: str
     run_id: str
     step_output: str
+    content_type: str | None = None
+    meta: dict[str, Any] | None = None
+    created_at: str | None = None
 
 
 class ArtifactsListResponse(BaseModel):
@@ -87,3 +90,67 @@ class ConfigGetResponse(BaseModel):
     kind: str
     name: str
     spec: dict[str, Any]
+
+
+# ---- /runs ----
+
+
+class RunEntry(BaseModel):
+    run_id: str
+    status: str
+    config_json: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class RunsListResponse(BaseModel):
+    entries: list[RunEntry] = []
+
+
+class RunGetResponse(BaseModel):
+    run_id: str
+    status: str
+    config_json: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+# ---- /entity_runs, /latest_entity_runs ----
+
+
+class EntityRunEntry(BaseModel):
+    run_id: str
+    entity_key: str
+    status: str
+    artifact_path: str | None = None
+    config_json: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class EntityRunsListResponse(BaseModel):
+    entries: list[EntityRunEntry] = []
+
+
+class EntityRunGetResponse(BaseModel):
+    run_id: str
+    entity_key: str
+    status: str
+    artifact_path: str | None = None
+    config_json: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class LatestEntityRunsListResponse(BaseModel):
+    entries: list[EntityRunEntry] = []
+
+
+class LatestEntityRunGetResponse(BaseModel):
+    run_id: str
+    entity_key: str
+    status: str
+    artifact_path: str | None = None
+    config_json: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None

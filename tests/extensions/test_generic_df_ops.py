@@ -32,7 +32,13 @@ def _store_and_ctx(
     store = DefaultRunStore(artifacts=artifacts, configs=config_store)
     registry = Registry()
     register_steps(registry)
-    return store, RunContext(run_id="r1", store=store, registry=registry, bindings=bindings)
+    return store, RunContext(
+        run_id="r1",
+        entity_key="default",
+        store=store,
+        registry=registry,
+        bindings=bindings,
+    )
 
 
 def test_merge_df() -> None:
@@ -41,7 +47,7 @@ def test_merge_df() -> None:
     store_data = {"k_left": left, "k_right": right}
     bindings = {"load_left/df": "k_left", "load_right/df": "k_right"}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build(
+    plan = build(
         {
             "steps": [
                 {
@@ -57,7 +63,7 @@ def test_merge_df() -> None:
             ]
         }
     )
-    info = run(pipeline, ctx)
+    info = run(plan, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[MergeDfOp.Outputs.DF]
     out = store.get_df(out_key)
@@ -72,7 +78,7 @@ def test_aggregate_df() -> None:
     bindings = {"src/df": "k_src"}
     store_data = {"k_src": df}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build(
+    plan = build(
         {
             "steps": [
                 {
@@ -83,7 +89,7 @@ def test_aggregate_df() -> None:
             ]
         }
     )
-    info = run(pipeline, ctx)
+    info = run(plan, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[AggregateDfOp.Outputs.DF]
     out = store.get_df(out_key)
@@ -97,7 +103,7 @@ def test_concat_df() -> None:
     bindings = {"a/df": "k_a", "b/df": "k_b"}
     store_data = {"k_a": a, "k_b": b}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build(
+    plan = build(
         {
             "steps": [
                 {
@@ -108,7 +114,7 @@ def test_concat_df() -> None:
             ]
         }
     )
-    info = run(pipeline, ctx)
+    info = run(plan, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[ConcatDfOp.Outputs.DF]
     out = store.get_df(out_key)
@@ -120,7 +126,7 @@ def test_check_warn_aggregates_warnings() -> None:
     bindings = {"main/df": "k_main"}
     store_data = {"k_main": df}
     store, ctx = _store_and_ctx(bindings, store_data)
-    pipeline = build(
+    plan = build(
         {
             "steps": [
                 {
@@ -137,7 +143,7 @@ def test_check_warn_aggregates_warnings() -> None:
             ]
         }
     )
-    info = run(pipeline, ctx)
+    info = run(plan, ctx)
     assert info.status == "succeeded"
     assert "found zero in a" in info.warnings
     assert "b too high" in info.warnings

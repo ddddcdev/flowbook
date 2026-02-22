@@ -16,7 +16,7 @@ def test_df_roundtrip_across_store_instances():
         "postgresql+psycopg://flowbook:flowbook@localhost:5432/flowbook",
     )
 
-    key = "artifact:data/df_roundtrip"
+    key = "artifact/data/df_roundtrip"
 
     df0 = pd.DataFrame(
         {"a": [1, 2, 3], "b": ["x", "y", "z"]},
@@ -39,7 +39,7 @@ def test_df_meta_stored():
         "postgresql+psycopg://flowbook:flowbook@localhost:5432/flowbook",
     )
 
-    key = "artifact:data/df_meta_test"
+    key = "artifact/data/df_meta_test"
 
     df = pd.DataFrame(
         {"name": ["Alice", "Bob"], "age": [25, 30], "score": [95.5, 87.3]},
@@ -57,10 +57,13 @@ def test_df_meta_stored():
             meta->'columns' as columns,
             meta->'schema' as schema
         FROM artifacts 
-        WHERE artifact_key = :key
+        WHERE run_id = :run_id AND entity_key = :entity_key AND artifact_path = :artifact_path
     """)
+    run_id, entity_key, artifact_path = key.split("/", 2)
     with engine.begin() as conn:
-        result = conn.execute(stmt, {"key": key}).one()
+        result = conn.execute(
+            stmt, {"run_id": run_id, "entity_key": entity_key, "artifact_path": artifact_path}
+        ).one()
 
     row_count, col_count, columns, schema = result
     assert row_count == "2"

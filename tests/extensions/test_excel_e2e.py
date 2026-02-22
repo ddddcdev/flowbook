@@ -48,8 +48,8 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     }
     config_store.put_spec(Mapping, mapping_name, mapping_spec, config_id=str(uuid4()))
 
-    # 3) Setup pipeline config (no planner, direct execution)
-    pipeline_config = {
+    # 3) Setup plan config (no planner, direct execution)
+    plan_config = {
         "steps": [
             {
                 "name": "read",
@@ -92,7 +92,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
     run.put_input("sheet_name", "in")
     run.put_input("header_row", 0)
     run.put_input("mapping_name_val", mapping_name)
-    info = run.exec(pipeline_config=pipeline_config)
+    info = run.exec_plan(plan_config=plan_config)
 
     # 5) Verify execution succeeded
     assert info.status == "succeeded"

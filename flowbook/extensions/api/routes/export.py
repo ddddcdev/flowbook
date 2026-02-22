@@ -1,7 +1,7 @@
 """
 Route: POST /export (JSON), POST /export (Form)
 
-Execute an export pipeline on existing artifacts (no file upload).
+Execute an export plan on existing artifacts (no file upload).
 - JSON: template_name + bindings (logical name -> artifact key)
 - Form: source_artifact_key + mapping_name (uses export_excel_region template)
 """
@@ -40,9 +40,9 @@ def _run_info_to_response(info: Any) -> RunResponse:
 @router.post("/export", response_model=RunResponse)
 def export_artifacts(req: ExportRequest) -> RunResponse:
     """
-    Run an export pipeline over existing artifacts.
+    Run an export plan over existing artifacts.
 
-    - **template_name**: pipeline template to resolve from config store
+    - **template_name**: plan template to resolve from config store
     - **bindings**: map of logical name -> full artifact key
     """
     engine = get_engine()
@@ -55,6 +55,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
         session.put_input("template_name", req.template_name)
 
         planner_config: dict[str, Any] = {
+            "name": "export",
             "steps": [
                 {
                     "name": "planner",
@@ -63,10 +64,10 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
                         "template_name": "@template_name",
                     },
                 }
-            ]
+            ],
         }
 
-        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
+        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
 
         return RunResponse(
             run_id=exec_info.run_id,
@@ -95,10 +96,11 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
 )
 async def export_from_artifact(
     source_artifact_key: Annotated[str, Form(...)],
+    entity_key: Annotated[str, Form()] = "default",
     mapping_name: Annotated[str, Form()] = "detect_region_test",
 ) -> RunResponse:
     """
-    Run export pipeline on an existing import: load DataFrame at source_artifact_key,
+    Run export plan on an existing import: load DataFrame at source_artifact_key,
     apply mapping, write xlsx. Uses export_excel_region template.
     """
     engine = get_engine()
@@ -114,22 +116,26 @@ async def export_from_artifact(
             )
         ) from None
 
-    session = engine.prepare()
+    session = engine.prepare(entity_key=entity_key)
     try:
         session.put_input("template_name", "export_excel_region")
         session.put_input("artifact_key", source_artifact_key)
         session.put_input("mapping_name", mapping_name)
+        # Download filename: entity_key-based
+        safe_key = entity_key.replace("/", "_").replace("\\", "_")
+        session.put_input("output_filename", f"{safe_key}_exported.xlsx")
 
         planner_config = {
+            "name": "export",
             "steps": [
                 {
                     "name": "planner",
                     "op": "plan_from_template",
                     "inputs": {"template_name": "@template_name"},
                 }
-            ]
+            ],
         }
-        planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
+        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
         return _run_info_to_response(exec_info)
     except Exception as e:
         raise to_http_error(e, run_id=session.run_id) from e

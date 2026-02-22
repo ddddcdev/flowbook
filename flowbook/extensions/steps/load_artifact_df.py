@@ -1,7 +1,7 @@
 """
 Load an artifact by key and expose it as a DataFrame output.
 
-Used by export pipelines to run map+write on an existing import (read/df) without
+Used by export plans to run map+write on an existing import (read/df) without
 passing a DataFrame into session.put_input (which may not support non-primitive types).
 """
 

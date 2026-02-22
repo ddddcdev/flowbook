@@ -1,5 +1,5 @@
 """
-Streamlit demo: call flowbook API (Import -> List -> Export -> Download).
+Streamlit demo: hands-on flow via API (Inspect -> Import -> Entity runs -> Export -> Download).
 
 Run with API up:
   poetry run uvicorn flowbook.extensions.api.app:app --reload
@@ -9,10 +9,13 @@ Run with API up:
 from __future__ import annotations
 
 import io
+import re
 
 import pandas as pd
 import requests
 import streamlit as st
+
+from flowbook.core.artifacts.key_utils import parse_artifact_key
 
 DEFAULT_BASE = "http://localhost:8000"
 
@@ -21,12 +24,44 @@ def api(base: str, path: str) -> str:
     return f"{base.rstrip('/')}{path}"
 
 
+def _filename_from_response(r: requests.Response, fallback: str) -> str:
+    """Extract filename from Content-Disposition header."""
+    cd = r.headers.get("content-disposition")
+    if not cd or "filename=" not in cd:
+        return fallback
+    m = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\s]+)', cd, re.I)
+    return m.group(1).strip() if m else fallback
+
+
+def _entity_key_from_artifact_key(key: str) -> str:
+    """Extract entity_key from artifact key {run_id}/{entity_key}/{path}."""
+    try:
+        _run_id, entity_key, _path = parse_artifact_key(key)
+        return entity_key or "default"
+    except ValueError:
+        return "default"
+
+
 def health(base: str) -> bool:
     try:
         r = requests.get(api(base, "/health"), timeout=5)
         return r.status_code == 200 and r.json().get("status") == "ok"
     except Exception:
         return False
+
+
+def _entity_key_options(base: str) -> list[str]:
+    """Fetch registered entity_keys from latest_entity_runs; fallback to demo/excel."""
+    try:
+        r = requests.get(api(base, "/latest_entity_runs"), timeout=10)
+        r.raise_for_status()
+        entries = r.json().get("entries", [])
+        keys = sorted({e["entity_key"] for e in entries if e.get("entity_key")})
+        if "demo/excel" not in keys:
+            keys = ["demo/excel"] + keys
+        return keys if keys else ["demo/excel"]
+    except Exception:
+        return ["demo/excel"]
 
 
 def main() -> None:
@@ -43,13 +78,27 @@ def main() -> None:
     else:
         st.sidebar.success("API OK")
 
-    tab_inspect, tab_import, tab_artifacts, tab_export, tab_download, tab_configs = st.tabs(
-        ["Inspect", "Import", "Artifacts", "Export", "Download", "Configs"]
-    )
+    entity_key_opts = _entity_key_options(base)
+
+    tab_names = [
+        "Inspect", "Import", "Entity runs", "Artifacts", "Export", "Download",
+        "Configs",
+    ]
+    tabs = st.tabs(tab_names)
+    tab_inspect = tabs[0]
+    tab_import = tabs[1]
+    tab_entity_runs = tabs[2]
+    tab_artifacts = tabs[3]
+    tab_export = tabs[4]
+    tab_download = tabs[5]
+    tab_configs = tabs[6]
 
     with tab_inspect:
         st.subheader("Inspect Excel (optional)")
         st.caption("Detect kind and effective date from the uploaded xlsx before import.")
+        entity_key_inspect = st.selectbox(
+            "entity_key", options=entity_key_opts, key="inspect_entity_key"
+        )
         file_inspect = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="inspect_file")
         if file_inspect and st.button("Run inspect", key="inspect_btn"):
             with st.spinner("Inspecting..."):
@@ -63,7 +112,10 @@ def main() -> None:
                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             )
                         },
-                        data={"input_profile_name": "source"},
+                        data={
+                            "entity_key": entity_key_inspect,
+                            "input_profile_name": "source",
+                        },
                         timeout=30,
                     )
                     r.raise_for_status()
@@ -75,6 +127,10 @@ def main() -> None:
 
     with tab_import:
         st.subheader("Import Excel (table extract)")
+        st.caption("Upload xlsx, set entity_key (e.g. demo/excel). Creates read/df artifact.")
+        entity_key_import = st.selectbox(
+            "entity_key", options=entity_key_opts, key="import_entity_key"
+        )
         file = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="import_file")
         if file and st.button("Run import"):
             with st.spinner("Importing..."):
@@ -90,6 +146,7 @@ def main() -> None:
                         },
                         data={
                             "template_name": "import_excel_region",
+                            "entity_key": entity_key_import,
                             "input_profile_name": "source",
                             "sheet_name": "data",
                             "header_row": 0,
@@ -123,8 +180,53 @@ def main() -> None:
                 except requests.RequestException as e:
                     st.error(str(e))
 
+    with tab_entity_runs:
+        st.subheader("Entity runs")
+        st.caption("Per-run and per-entity results. Postgres only; in-memory returns empty.")
+        run_id_filter = st.text_input("Filter by run_id", key="er_run_id", placeholder="optional")
+        entity_key_filter = st.text_input(
+            "Filter by entity_key", key="er_entity_key", placeholder="optional"
+        )
+        if st.button("Refresh", key="entity_runs_refresh"):
+            try:
+                params = {}
+                if run_id_filter.strip():
+                    params["run_id"] = run_id_filter.strip()
+                if entity_key_filter.strip():
+                    params["entity_key"] = entity_key_filter.strip()
+                r = requests.get(api(base, "/entity_runs"), params=params or None, timeout=10)
+                r.raise_for_status()
+                st.session_state["entity_runs"] = r.json().get("entries", [])
+                latest_params = (
+                    {"entity_key": entity_key_filter.strip()}
+                    if entity_key_filter.strip()
+                    else None
+                )
+                r2 = requests.get(
+                    api(base, "/latest_entity_runs"),
+                    params=latest_params,
+                    timeout=10,
+                )
+                r2.raise_for_status()
+                st.session_state["latest_entity_runs"] = r2.json().get("entries", [])
+            except requests.RequestException as e:
+                st.error(str(e))
+        er_entries = st.session_state.get("entity_runs", [])
+        lat_entries = st.session_state.get("latest_entity_runs", [])
+        if er_entries:
+            st.write("**entity_runs** (by run_id)")
+            df_er = pd.DataFrame(er_entries)
+            st.dataframe(df_er, use_container_width=True, hide_index=True)
+        else:
+            st.info("No entity_runs. Click Refresh or run Import first.")
+        if lat_entries:
+            st.write("**latest_entity_runs** (latest per entity_key)")
+            df_lat = pd.DataFrame(lat_entries)
+            st.dataframe(df_lat, use_container_width=True, hide_index=True)
+
     with tab_artifacts:
         st.subheader("List artifacts")
+        st.caption("Artifact keys for Export (read/df) and Download.")
         if st.button("Refresh list"):
             try:
                 r = requests.get(api(base, "/artifacts"), timeout=10)
@@ -147,6 +249,7 @@ def main() -> None:
 
     with tab_export:
         st.subheader("Export (filter/map -> xlsx)")
+        st.caption("Pick read/df artifact, set entity_key. Creates write/bytes (xlsx).")
         keys = st.session_state.get("artifact_keys", [])
         df_keys = [k for k in keys if k.endswith("/read/df")]
         if not df_keys:
@@ -164,6 +267,19 @@ def main() -> None:
                 st.info("No import keys. List artifacts first or run Import.")
         else:
             source = st.selectbox("Source artifact (read/df)", options=df_keys, key="export_source")
+            inferred = _entity_key_from_artifact_key(source)
+            export_opts = (
+                [inferred] + [k for k in entity_key_opts if k != inferred]
+                if inferred not in entity_key_opts
+                else entity_key_opts
+            )
+            default_idx = 0 if inferred not in entity_key_opts else entity_key_opts.index(inferred)
+            entity_key_export = st.selectbox(
+                "entity_key",
+                options=export_opts,
+                index=default_idx,
+                key="export_entity_key",
+            )
             if st.button("Run export"):
                 with st.spinner("Exporting..."):
                     try:
@@ -171,6 +287,7 @@ def main() -> None:
                             api(base, "/export/from_artifact"),
                             data={
                                 "source_artifact_key": source,
+                                "entity_key": entity_key_export,
                                 "mapping_name": "detect_region_test",
                             },
                             timeout=60,
@@ -199,6 +316,7 @@ def main() -> None:
 
     with tab_download:
         st.subheader("Download artifact")
+        st.caption("Pick artifact; filename comes from Content-Disposition (entity_key-based).")
         keys = st.session_state.get("artifact_keys", [])
         if not keys:
             if st.button("Load keys to download"):
@@ -217,17 +335,19 @@ def main() -> None:
             if key.endswith("/read/df"):
                 suffix = "as_excel"
                 label = "Download as Excel (imported table)"
-                file_name = "imported.xlsx"
+                fallback_name = "imported.xlsx"
             else:
                 suffix = "raw"
                 label = "Download raw (exported xlsx or parquet)"
-                file_name = "exported.xlsx"
+                fallback_name = "exported.xlsx"
             url = api(base, f"/artifacts/{key}/{suffix}")
             if st.button("Prepare download", key="prepare_dl"):
                 with st.spinner("Fetching..."):
                     try:
                         r = requests.get(url, timeout=30)
                         r.raise_for_status()
+                        file_name = _filename_from_response(r, fallback_name)
+                        st.session_state["dl_key"] = key
                         st.session_state["dl_bytes"] = r.content
                         st.session_state["dl_file_name"] = file_name
                         st.session_state["dl_mime"] = (
@@ -235,12 +355,16 @@ def main() -> None:
                             if suffix == "as_excel"
                             else "application/octet-stream"
                         )
+                        st.session_state["dl_label"] = label
                         st.success("Ready. Click the download button below.")
                     except requests.RequestException as e:
                         st.error(str(e))
-            if "dl_bytes" in st.session_state and st.session_state.get("dl_file_name") == file_name:
+            if (
+                "dl_bytes" in st.session_state
+                and st.session_state.get("dl_key") == key
+            ):
                 st.download_button(
-                    label=label,
+                    label=st.session_state.get("dl_label", label),
                     data=st.session_state["dl_bytes"],
                     file_name=st.session_state["dl_file_name"],
                     mime=st.session_state["dl_mime"],

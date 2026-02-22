@@ -32,5 +32,5 @@ Previously, every string in step inputs was treated as a logical binding name. T
 
 ## Consequences
 
-- Pipeline configs and plan templates must use `@read/df` (not `read/df`) for refs.
+- Plan configs and plan templates must use `@read/df` (not `read/df`) for refs.
 - Literals (mapping name, template name, etc.) stay as plain strings.
