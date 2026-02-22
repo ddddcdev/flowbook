@@ -121,6 +121,9 @@ async def export_from_artifact(
         session.put_input("template_name", "export_excel_region")
         session.put_input("artifact_key", source_artifact_key)
         session.put_input("mapping_name", mapping_name)
+        # Download filename: entity_key-based
+        safe_key = entity_key.replace("/", "_").replace("\\", "_")
+        session.put_input("output_filename", f"{safe_key}_exported.xlsx")
 
         planner_config = {
             "name": "export",

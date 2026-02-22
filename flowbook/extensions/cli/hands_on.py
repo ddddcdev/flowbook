@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -241,22 +242,33 @@ def run(
 
     # Step 7: Download
     print("\n=== Step 7: Download ===")
-    imported_file = Path("demo_imported.xlsx")
-    exported_file = Path("demo_exported.xlsx")
+
+    def _filename_from_response(r: httpx.Response, fallback: str) -> str:
+        cd = r.headers.get("content-disposition")
+        if not cd or "filename=" not in cd:
+            return fallback
+        # Parse filename="..." or filename*=UTF-8''...
+        m = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\s]+)', cd, re.I)
+        return m.group(1).strip() if m else fallback
+
     if read_df_key:
         try:
             r = httpx.get(f"{base}/artifacts/{read_df_key}/as_excel", timeout=60.0)
             r.raise_for_status()
-            imported_file.write_bytes(r.content)
-            print(f"Saved imported: {imported_file}")
+            fname = _filename_from_response(r, "demo_imported.xlsx")
+            out = Path(fname)
+            out.write_bytes(r.content)
+            print(f"Saved imported: {out}")
         except httpx.HTTPError as e:
             print(f"Download error: {e}", file=sys.stderr)
     if bytes_key:
         try:
             r = httpx.get(f"{base}/artifacts/{bytes_key}/raw", timeout=60.0)
             r.raise_for_status()
-            exported_file.write_bytes(r.content)
-            print(f"Saved exported: {exported_file}")
+            fname = _filename_from_response(r, "demo_exported.xlsx")
+            out = Path(fname)
+            out.write_bytes(r.content)
+            print(f"Saved exported: {out}")
         except httpx.HTTPError as e:
             print(f"Download error: {e}", file=sys.stderr)
     if not read_df_key and not bytes_key:

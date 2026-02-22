@@ -94,20 +94,23 @@ def _persist_output(
     value: JsonValue | bytes | object,
     *,
     created_at: object = None,
+    meta: dict | None = None,
 ) -> None:
-    meta = {}
+    kwargs: dict = {}
     if created_at is not None:
-        meta["created_at"] = created_at
+        kwargs["created_at"] = created_at
+    if meta:
+        kwargs["meta"] = dict(meta)
     if isinstance(value, bytes):
-        store.put_bytes(out_key, value, **meta)
+        store.put_bytes(out_key, value, **kwargs)
         return
     # Lazy import to keep core import-safe (no pandas at import time).
     import pandas as pd
 
     if isinstance(value, pd.DataFrame):
-        store.put_df(out_key, value, **meta)
+        store.put_df(out_key, value, **kwargs)
         return
-    store.put(out_key, cast(JsonValue, value), **meta)
+    store.put(out_key, cast(JsonValue, value), **kwargs)
 
 
 def _upsert_entity_run(
@@ -183,6 +186,8 @@ def run(plan: Plan, ctx: RunContext) -> RunInfo:
 
             # Persist outputs to artifacts (all returned keys, except those starting with '_')
             out_map: dict[str, str] = {}
+            step_meta = step_output.get("_meta")
+            step_meta_dict = step_meta if isinstance(step_meta, dict) else None
             for out_name, out_value in step_output.items():
                 if out_name.startswith("_"):
                     continue
@@ -196,6 +201,7 @@ def run(plan: Plan, ctx: RunContext) -> RunInfo:
                     out_key,
                     out_value,
                     created_at=created_at,
+                    meta=step_meta_dict,
                 )
                 if ctx.index is not None:
                     ctx.index.record(

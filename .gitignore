@@ -125,9 +125,11 @@ dmypy.json
 # Local / session docs (chat summaries, scratch; do not commit)
 .local/
 
-# Hands-on demo outputs
+# Hands-on demo outputs (entity_key-based names)
 demo_imported.xlsx
 demo_exported.xlsx
+demo_*_imported.xlsx
+demo_*_exported.xlsx
 
 # IDEs
 .vscode/

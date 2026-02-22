@@ -75,6 +75,9 @@ async def import_file(
         # For read_excel_detect_region template
         session.put_input("region_profile_name", region_profile_name)
         session.put_input("mapping_name", mapping_name)
+        # Download filename for read/df: entity_key-based
+        safe_key = entity_key.replace("/", "_").replace("\\", "_")
+        session.put_input("import_output_filename", f"{safe_key}_imported.xlsx")
 
         planner_config = {
             "name": "import",

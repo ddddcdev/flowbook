@@ -275,6 +275,7 @@ class PostgresArtifactsStore(ArtifactsStore):
     def put_bytes(self, key: str, data: bytes, **kwargs: Any) -> str:
         run_id, entity_key, path = parse_artifact_key(key)
         meta_vals = self._meta_values(**kwargs)
+        meta = dict(kwargs.get("meta") or {})
         vals = {
             "run_id": run_id,
             "entity_key": entity_key,
@@ -283,7 +284,7 @@ class PostgresArtifactsStore(ArtifactsStore):
             "codec": "none",
             "bytes": data,
             "json": None,
-            "meta": {},
+            "meta": meta,
             **meta_vals,
         }
         pk_cols = ("run_id", "entity_key", "artifact_path")
@@ -325,6 +326,7 @@ class PostgresArtifactsStore(ArtifactsStore):
             "columns": [str(c) for c in df.columns.tolist()],
             "schema": {str(c): str(df.dtypes[c]) for c in df.columns},
         }
+        meta.update(kwargs.get("meta") or {})
 
         run_id, entity_key, path = parse_artifact_key(key)
         meta_vals = self._meta_values(**kwargs)

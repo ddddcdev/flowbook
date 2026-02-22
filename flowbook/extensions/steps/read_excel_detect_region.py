@@ -118,8 +118,9 @@ class ReadExcelDetectRegionOp(BaseOp):
         SRC_EXCEL_BYTES = "src_excel_bytes"
         SHEET = "sheet"
         REGION_PROFILE_NAME = "region_profile_name"
+        OUTPUT_FILENAME = "output_filename"
         REQUIRED = (SRC_EXCEL_BYTES, REGION_PROFILE_NAME)
-        OPTIONAL = (SHEET,)
+        OPTIONAL = (SHEET, OUTPUT_FILENAME)
 
     class Outputs(OutputsBase):
         DF = "df"
@@ -146,7 +147,11 @@ class ReadExcelDetectRegionOp(BaseOp):
         header_row_1, hint_to_col_1 = _find_header_row(ws, column_hints)
         df = _read_region(ws, header_row_1, hint_to_col_1, column_hints)
 
-        return {self.Outputs.DF: df}
+        result: dict[str, Any] = {self.Outputs.DF: df}
+        if output_filename := inputs.get(self.Inputs.OUTPUT_FILENAME):
+            if isinstance(output_filename, str):
+                result["_meta"] = {"filename": output_filename}
+        return result
 
 
 register = register_from_steps()
