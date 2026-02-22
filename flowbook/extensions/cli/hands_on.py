@@ -71,7 +71,7 @@ def run(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     )
                 },
-                data={"input_profile_name": "source"},
+                data={"entity_key": "demo/excel", "input_profile_name": "source"},
                 timeout=30.0,
             )
         r.raise_for_status()
@@ -96,6 +96,7 @@ def run(
                 },
                 data={
                     "template_name": "import_excel_region",
+                    "entity_key": "demo/excel",
                     "sheet_name": "data",
                     "region_profile_name": "detail_region",
                 },
@@ -138,7 +139,11 @@ def run(
         try:
             r = httpx.post(
                 f"{base}/export/from_artifact",
-                data={"source_artifact_key": read_df_key, "mapping_name": "detect_region_test"},
+                data={
+                    "source_artifact_key": read_df_key,
+                    "entity_key": "demo/excel",
+                    "mapping_name": "detect_region_test",
+                },
                 timeout=60.0,
             )
             r.raise_for_status()

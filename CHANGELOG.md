@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- **entity_key + entity_runs**: Replaced namespace with entity_key. `prepare(entity_key=)`, `exec(entity_key=)`. Artifacts scoped by (run_id, entity_key). `entity_runs` table for canonical result per (run_id, entity_key).
+- **Artifacts composite PK**: artifacts table uses (run_id, entity_key, path) as primary key; key format `{run_id}/{entity_key}/{path}`. Inputs use `run_id//input/{name}`.
+
+### Removed
+
+- **namespace / namespace_prefix**: Fully removed from ArtifactIndex, artifacts store, and run.
+
+### Changed
+
+- **ArtifactIndex**: `namespace_prefix` → `entity_key` in IndexRow and protocol.
+- **RunContext**: Added required `entity_key` field.
+- **ADR-ARTIFACT-NAMESPACE**: Superseded. ADR-ARTIFACT-INDEX updated for entity_key.
+
 ## [0.1.0a2] - 2026-02-19
 
 ### Added

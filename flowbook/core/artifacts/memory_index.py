@@ -19,7 +19,7 @@ class InMemoryArtifactIndex(ArtifactIndex):
         run_id: str,
         artifact_key: str,
         logical_address: str,
-        namespace_prefix: str,
+        entity_key: str,
         created_at: datetime,
         content_type: str,
     ) -> None:
@@ -28,7 +28,7 @@ class InMemoryArtifactIndex(ArtifactIndex):
                 run_id=run_id,
                 artifact_key=artifact_key,
                 logical_address=logical_address,
-                namespace_prefix=namespace_prefix,
+                entity_key=entity_key,
                 created_at=created_at,
                 content_type=content_type,
             )
@@ -36,20 +36,20 @@ class InMemoryArtifactIndex(ArtifactIndex):
 
     def list_index(
         self,
-        namespace_prefix: str,
+        entity_key: str,
         limit: int = 200,
         order: Literal["desc", "asc"] = "desc",
     ) -> list[IndexRow]:
-        filtered = [r for r in self._rows if r.namespace_prefix == namespace_prefix]
+        filtered = [r for r in self._rows if r.entity_key == entity_key]
         filtered.sort(key=lambda r: r.created_at, reverse=(order == "desc"))
         return filtered[:limit]
 
     def latest_per_logical(
         self,
-        namespace_prefix: str,
+        entity_key: str,
         limit: int = 200,
     ) -> list[IndexRow]:
-        filtered = [r for r in self._rows if r.namespace_prefix == namespace_prefix]
+        filtered = [r for r in self._rows if r.entity_key == entity_key]
         filtered.sort(key=lambda r: (r.logical_address, r.created_at), reverse=True)
         seen: set[str] = set()
         result: list[IndexRow] = []

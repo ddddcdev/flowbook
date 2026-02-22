@@ -49,12 +49,18 @@ def test_run_aggregates_step_warnings_into_run_info() -> None:
         ]
     }
     pipeline = build(pipeline_config)
-    ctx = RunContext(run_id="r1", store=store, registry=registry, bindings={})
+    ctx = RunContext(
+        run_id="r1",
+        entity_key="default",
+        store=store,
+        registry=registry,
+        bindings={},
+    )
 
     info = run(pipeline, ctx)
 
     assert info.status == "succeeded"
     assert info.warnings == ["warning one", "warning two"]
     # _warnings must not be persisted as artifact
-    assert "r1/w/out" in info.artifacts_written
+    assert "r1/default/w/out" in info.artifacts_written
     assert not any("_warnings" in k for k in info.artifacts_written)

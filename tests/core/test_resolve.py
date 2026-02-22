@@ -30,7 +30,13 @@ def _ctx(bindings: dict[str, str], store_data: dict[str, Any] | None = None) -> 
     store: RunStore = _MockStore(data)  # type: ignore[assignment]
     from flowbook.core.registry.registry import Registry
 
-    return RunContext(run_id="run1", store=store, registry=Registry(), bindings=bindings)
+    return RunContext(
+        run_id="run1",
+        entity_key="default",
+        store=store,
+        registry=Registry(),
+        bindings=bindings,
+    )
 
 
 pytestmark = pytest.mark.unit

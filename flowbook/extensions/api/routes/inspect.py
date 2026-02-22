@@ -20,6 +20,7 @@ router = APIRouter(tags=["inspect"])
 @router.post("/inspect", response_model=InspectResponse)
 async def inspect(
     file: Annotated[UploadFile, File(...)],
+    entity_key: Annotated[str, Form()] = "default",
     input_profile_name: Annotated[str, Form()] = "source",
 ) -> InspectResponse:
     """
@@ -29,7 +30,7 @@ async def inspect(
     - **input_profile_name**: config profile to use for kind detection
     """
     engine = get_engine()
-    session = engine.prepare()
+    session = engine.prepare(entity_key=entity_key)
 
     try:
         contents = await file.read()
@@ -41,6 +42,7 @@ async def inspect(
         session.put_input("input_profile_name", input_profile_name)
 
         config = {
+            "name": "inspect",
             "steps": [
                 {
                     "name": "inspect",
@@ -51,7 +53,7 @@ async def inspect(
                         "src_excel_filename": "@src_excel_filename",
                     },
                 }
-            ]
+            ],
         }
 
         info = session.exec(pipeline_config=config)

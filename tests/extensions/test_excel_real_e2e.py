@@ -88,6 +88,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
 
     template_spec = {
         "plan": {
+            "name": "excel_e2e",
             "steps": [
                 {
                     "name": "read",
@@ -129,7 +130,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     )
 
     src_bytes = Path("tests/fixtures/excel/real_input.xlsx").read_bytes()
-    bytes_artifact_key = "artifact:bytes/src_excel"
+    bytes_artifact_key = "artifact/bytes/src_excel"
 
     # ---- Inspect (bytes + filename) ----
     inspect_run = engine.prepare()

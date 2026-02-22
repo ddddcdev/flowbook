@@ -39,6 +39,7 @@ def _run_info_to_response(info: Any) -> RunResponse:
 async def import_file(
     file: Annotated[UploadFile, File(...)],
     template_name: Annotated[str, Form(...)],
+    entity_key: Annotated[str, Form()] = "default",
     input_profile_name: Annotated[str, Form()] = "source",
     sheet_name: Annotated[str, Form()] = "data",
     header_row: Annotated[int, Form()] = 0,
@@ -57,7 +58,7 @@ async def import_file(
     - **region_profile_name**: for import_excel_region template (default: "detail_region")
     """
     engine = get_engine()
-    session = engine.prepare()
+    session = engine.prepare(entity_key=entity_key)
 
     try:
         contents = await file.read()
@@ -76,6 +77,7 @@ async def import_file(
         session.put_input("mapping_name", mapping_name)
 
         planner_config = {
+            "name": "import",
             "steps": [
                 {
                     "name": "planner",
@@ -84,7 +86,7 @@ async def import_file(
                         "template_name": "@template_name",
                     },
                 }
-            ]
+            ],
         }
 
         planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)

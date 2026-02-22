@@ -36,6 +36,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     # ---- Put template in config store ----
     template_spec = {
         "plan": {
+            "name": "tmpl_add",
             "steps": [
                 {
                     "name": "add",
@@ -287,6 +288,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
     # Put template requiring x and y
     template_spec = {
         "plan": {
+            "name": "tmpl_add",
             "steps": [
                 {
                     "name": "add",

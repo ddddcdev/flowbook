@@ -65,6 +65,7 @@ def client() -> TestClient:
         "import_excel",
         {
             "plan": {
+                "name": "import_excel",
                 "steps": [
                     {
                         "name": "read",
@@ -87,6 +88,7 @@ def client() -> TestClient:
         "export_excel",
         {
             "plan": {
+                "name": "export_excel",
                 "steps": [
                     {
                         "name": "write",
@@ -211,14 +213,14 @@ def test_export_excel_with_bindings(client: TestClient):
 
     # Pre-populate a DataFrame artifact that the export pipeline will consume
     df = pd.DataFrame({"col_a": [1, 2], "col_b": [3, 4]})
-    engine.store.put_df("artifact:test/df", df)
+    engine.store.put_df("artifact/test/df", df)
 
     r = client.post(
         "/export",
         json={
             "template_name": "export_excel",
             "bindings": {
-                "in_key": "artifact:test/df",
+                "in_key": "artifact/test/df",
             },
         },
     )
@@ -235,29 +237,30 @@ def test_export_excel_with_bindings(client: TestClient):
 
 def test_artifacts_list(client: TestClient):
     engine = get_engine()
-    engine.store.put("artifact:smoke/a", 1)
+    engine.store.put("artifact/smoke/a", 1)
 
-    r = client.get("/artifacts", params={"prefix": "artifact:smoke/"})
+    r = client.get("/artifacts", params={"prefix": "artifact/smoke/"})
 
     assert r.status_code == 200
     body = r.json()
-    assert "artifact:smoke/a" in body["keys"]
+    assert "artifact/smoke/a" in body["keys"]
 
 
 def test_artifacts_get(client: TestClient):
     engine = get_engine()
-    engine.store.put("artifact:smoke/val", 42)
+    engine.store.put("artifact/smoke/val", 42)
 
-    r = client.get("/artifacts/artifact:smoke/val")
+    r = client.get("/artifacts/artifact/smoke/val")
 
     assert r.status_code == 200
     body = r.json()
-    assert body["key"] == "artifact:smoke/val"
+    assert body["key"] == "artifact/smoke/val"
     assert body["value"] == 42
 
 
 def test_artifacts_get_not_found(client: TestClient):
-    r = client.get("/artifacts/nonexistent_key")
+    # Use valid key format (run_id/entity_key/path) for non-existent artifact
+    r = client.get("/artifacts/run1/unit1/nonexistent_path")
 
     assert r.status_code == 404
     detail = r.json()["detail"]

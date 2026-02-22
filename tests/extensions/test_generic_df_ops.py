@@ -32,7 +32,13 @@ def _store_and_ctx(
     store = DefaultRunStore(artifacts=artifacts, configs=config_store)
     registry = Registry()
     register_steps(registry)
-    return store, RunContext(run_id="r1", store=store, registry=registry, bindings=bindings)
+    return store, RunContext(
+        run_id="r1",
+        entity_key="default",
+        store=store,
+        registry=registry,
+        bindings=bindings,
+    )
 
 
 def test_merge_df() -> None:

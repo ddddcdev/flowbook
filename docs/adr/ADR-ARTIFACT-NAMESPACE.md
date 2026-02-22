@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Logical addresses may be hierarchical; the first segment is used as namespace prefix for indexing.
+**Superseded.** Replaced by entity_key (ADR-ARTIFACT-INDEX updated). Namespace and namespace_prefix have been removed.
 
 ## Context
 

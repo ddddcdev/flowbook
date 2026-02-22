@@ -1,4 +1,4 @@
-"""Artifact index: record and query by namespace for tenant 'latest' use cases."""
+"""Artifact index: record and query by entity_key for tenant 'latest' use cases."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ class IndexRow:
     run_id: str
     artifact_key: str
     logical_address: str
-    namespace_prefix: str
+    entity_key: str
     created_at: datetime
     content_type: str
 
@@ -28,20 +28,20 @@ class ArtifactIndex(Protocol):
         run_id: str,
         artifact_key: str,
         logical_address: str,
-        namespace_prefix: str,
+        entity_key: str,
         created_at: datetime,
         content_type: str,
     ) -> None: ...
 
     def list_index(
         self,
-        namespace_prefix: str,
+        entity_key: str,
         limit: int = 200,
         order: Literal["desc", "asc"] = "desc",
     ) -> list[IndexRow]: ...
 
     def latest_per_logical(
         self,
-        namespace_prefix: str,
+        entity_key: str,
         limit: int = 200,
     ) -> list[IndexRow]: ...

@@ -116,6 +116,7 @@ def seed_config_for_api() -> int:
         "import_excel",
         {
             "plan": {
+                "name": "import_excel",
                 "steps": [
                     {
                         "name": "read",
@@ -138,6 +139,7 @@ def seed_config_for_api() -> int:
         "export_excel",
         {
             "plan": {
+                "name": "export_excel",
                 "steps": [
                     {
                         "name": "write",
@@ -171,7 +173,7 @@ def seed_one_artifact() -> int:
 
     store = PostgresArtifactsStore(database_url=url)
     metadata.create_all(store.engine)
-    key = "smoke-test/artifact"
+    key = "seed/demo/excel/result"
     store.put(key, {"smoke": True, "message": "seed for artifacts list"})
     print(f"Seeded artifact: {key}")
     return 0
@@ -213,7 +215,10 @@ def reset_db(config_dir: str | Path) -> int:
 
     with artifacts_store.engine.begin() as conn:
         conn.execute(text("TRUNCATE artifacts"))
-    print("Cleared artifacts.", flush=True)
+        conn.execute(text("TRUNCATE entity_runs"))
+        conn.execute(text("TRUNCATE runs"))
+        conn.execute(text("TRUNCATE entities"))
+    print("Cleared artifacts, entity_runs, runs, entities.", flush=True)
 
     with config_store.engine.begin() as conn:
         conn.execute(text("TRUNCATE configs"))

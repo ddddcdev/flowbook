@@ -55,6 +55,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
         session.put_input("template_name", req.template_name)
 
         planner_config: dict[str, Any] = {
+            "name": "export",
             "steps": [
                 {
                     "name": "planner",
@@ -63,7 +64,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
                         "template_name": "@template_name",
                     },
                 }
-            ]
+            ],
         }
 
         planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
@@ -95,6 +96,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
 )
 async def export_from_artifact(
     source_artifact_key: Annotated[str, Form(...)],
+    entity_key: Annotated[str, Form()] = "default",
     mapping_name: Annotated[str, Form()] = "detect_region_test",
 ) -> RunResponse:
     """
@@ -114,20 +116,21 @@ async def export_from_artifact(
             )
         ) from None
 
-    session = engine.prepare()
+    session = engine.prepare(entity_key=entity_key)
     try:
         session.put_input("template_name", "export_excel_region")
         session.put_input("artifact_key", source_artifact_key)
         session.put_input("mapping_name", mapping_name)
 
         planner_config = {
+            "name": "export",
             "steps": [
                 {
                     "name": "planner",
                     "op": "plan_from_template",
                     "inputs": {"template_name": "@template_name"},
                 }
-            ]
+            ],
         }
         planner_info, exec_info = session.exec_with_plan_once(planner_config=planner_config)
         return _run_info_to_response(exec_info)

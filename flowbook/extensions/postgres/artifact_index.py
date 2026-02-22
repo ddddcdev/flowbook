@@ -1,8 +1,7 @@
 """Postgres-backed artifact index for list_index and latest_per_logical queries.
 
-Uses the artifacts table directly (run_id, logical_address, namespace_prefix, created_at
-are stored with each artifact). record() is a no-op since metadata is written by
-PostgresArtifactsStore.put/put_bytes/put_df.
+Reads from artifacts table (composite PK: run_id, entity_key, artifact_path).
+record() is a no-op since metadata is written by PostgresArtifactsStore.
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from typing import Literal
 from sqlalchemy import create_engine, select, text
 
 from flowbook.core.artifacts.index import ArtifactIndex, IndexRow
+from flowbook.core.artifacts.key_utils import build_artifact_key
 
 from .artifacts_store import artifacts
 
@@ -28,7 +28,7 @@ class PostgresArtifactIndex(ArtifactIndex):
         run_id: str,
         artifact_key: str,
         logical_address: str,
-        namespace_prefix: str,
+        entity_key: str,
         created_at: datetime,
         content_type: str,
     ) -> None:
@@ -37,7 +37,7 @@ class PostgresArtifactIndex(ArtifactIndex):
 
     def list_index(
         self,
-        namespace_prefix: str,
+        entity_key: str,
         limit: int = 200,
         order: Literal["desc", "asc"] = "desc",
     ) -> list[IndexRow]:
@@ -47,17 +47,12 @@ class PostgresArtifactIndex(ArtifactIndex):
         stmt = (
             select(
                 artifacts.c.run_id,
-                artifacts.c.artifact_key,
-                artifacts.c.logical_address,
-                artifacts.c.namespace_prefix,
+                artifacts.c.entity_key,
+                artifacts.c.artifact_path,
                 artifacts.c.created_at,
                 artifacts.c.content_type,
             )
-            .where(
-                artifacts.c.namespace_prefix == namespace_prefix,
-                artifacts.c.run_id.isnot(None),
-                artifacts.c.logical_address.isnot(None),
-            )
+            .where(artifacts.c.entity_key == entity_key)
             .order_by(order_clause)
             .limit(limit)
         )
@@ -66,31 +61,29 @@ class PostgresArtifactIndex(ArtifactIndex):
         return [
             IndexRow(
                 run_id=r[0],
-                artifact_key=r[1],
+                artifact_key=build_artifact_key(r[0], r[1], r[2]),
                 logical_address=r[2],
-                namespace_prefix=r[3],
-                created_at=r[4],
-                content_type=r[5],
+                entity_key=r[1],
+                created_at=r[3],
+                content_type=r[4],
             )
             for r in rows
         ]
 
     def latest_per_logical(
         self,
-        namespace_prefix: str,
+        entity_key: str,
         limit: int = 200,
     ) -> list[IndexRow]:
         stmt = text(
             """
-            SELECT run_id, artifact_key, logical_address, namespace_prefix, created_at, content_type
+            SELECT run_id, entity_key, artifact_path, created_at, content_type
             FROM (
                 SELECT *, ROW_NUMBER() OVER (
-                    PARTITION BY logical_address ORDER BY created_at DESC
+                    PARTITION BY artifact_path ORDER BY created_at DESC
                 ) AS rn
                 FROM artifacts
-                WHERE namespace_prefix = :prefix
-                  AND run_id IS NOT NULL
-                  AND logical_address IS NOT NULL
+                WHERE entity_key = :ek
             ) sub
             WHERE rn = 1
             ORDER BY created_at DESC
@@ -98,15 +91,15 @@ class PostgresArtifactIndex(ArtifactIndex):
             """
         )
         with self.engine.connect() as conn:
-            rows = conn.execute(stmt, {"prefix": namespace_prefix, "lim": limit}).fetchall()
+            rows = conn.execute(stmt, {"ek": entity_key, "lim": limit}).fetchall()
         return [
             IndexRow(
                 run_id=r[0],
-                artifact_key=r[1],
+                artifact_key=build_artifact_key(r[0], r[1], r[2]),
                 logical_address=r[2],
-                namespace_prefix=r[3],
-                created_at=r[4],
-                content_type=r[5],
+                entity_key=r[1],
+                created_at=r[3],
+                content_type=r[4],
             )
             for r in rows
         ]

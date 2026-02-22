@@ -21,8 +21,11 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class RunContext:
     run_id: str
+    entity_key: str
     store: RunStore
     registry: Registry
     bindings: dict[str, str]  # logical -> artifact key
     meta: dict[str, Any] | None = None
     index: ArtifactIndex | None = None
+    run_config_json: str | None = None  # for runs table (planner config)
+    entity_config_json: str | None = None  # for entity_runs table (exec config)
