@@ -58,7 +58,7 @@ def list_entity_runs(
 
 
 @router.get(
-    "/entity_runs/{run_id}/{entity_key}",
+    "/entity_runs/{run_id}/{entity_key:path}",
     response_model=EntityRunGetResponse,
     summary="Get entity run",
 )
@@ -110,7 +110,7 @@ def list_latest_entity_runs(
 
 
 @router.get(
-    "/latest_entity_runs/{entity_key}",
+    "/latest_entity_runs/{entity_key:path}",
     response_model=LatestEntityRunGetResponse,
     summary="Get latest entity run for entity",
 )
