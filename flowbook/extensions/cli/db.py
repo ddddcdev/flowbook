@@ -10,6 +10,16 @@ from pathlib import Path
 from typing import Any
 
 
+def get_bundled_configs_dir() -> Path | None:
+    """Return path to bundled configs (flowbook/flowbook/configs/) or None if not found."""
+    try:
+        from flowbook.extensions import cli
+        root = Path(cli.__file__).resolve().parent.parent.parent / "configs"
+        return root if root.exists() else None
+    except Exception:
+        return None
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         obj = json.load(f)
@@ -22,6 +32,24 @@ def _normalize_url(url: str) -> str:
     if url.startswith("postgresql://") and "+" not in url.split("//", 1)[0]:
         return "postgresql+psycopg://" + url[len("postgresql://") :]
     return url
+
+
+def _seed_configs_from_dir_into_store(
+    store: Any, root: Path, type_map: dict[str, Any]
+) -> int:
+    """Seed configs from a directory into an existing store. Returns count."""
+    total = 0
+    for subdir, spec_type in type_map.items():
+        d = root / subdir
+        if not d.exists():
+            continue
+        for p in sorted(d.glob("*.json")):
+            name = p.stem
+            spec = _load_json(p)
+            store.put_spec(spec_type, name, spec, config_id=str(uuid.uuid4()))
+            print(f"Seeded {spec_type.__name__}: {name}")
+            total += 1
+    return total
 
 
 def seed_configs_from_dir(config_dir: str | Path) -> int:
@@ -61,20 +89,64 @@ def seed_configs_from_dir(config_dir: str | Path) -> int:
         "routing": Routing,
     }
 
-    total = 0
-    for subdir, spec_type in type_map.items():
-        d = root / subdir
-        if not d.exists():
-            continue
-
-        for p in sorted(d.glob("*.json")):
-            name = p.stem
-            spec = _load_json(p)
-            store.put_spec(spec_type, name, spec, config_id=str(uuid.uuid4()))
-            print(f"Seeded {spec_type.__name__}: {name}")
-            total += 1
-
+    total = _seed_configs_from_dir_into_store(store, root, type_map)
     print(f"Done. Seeded {total} configs from {root}.")
+    return 0
+
+
+def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None) -> int:
+    """
+    Seed from bundled configs (flowbook package), then overlay from overlay_dir if it exists.
+    Use when flowbook[demo] is installed. Returns exit code.
+    """
+    url = os.environ.get("FLOWBOOK_DATABASE_URL")
+    if not url:
+        print(
+            "Set FLOWBOOK_DATABASE_URL (e.g. postgresql+psycopg://flowbook:flowbook@localhost:5432/flowbook)",
+            file=sys.stderr,
+        )
+        return 1
+
+    url = _normalize_url(url)
+
+    from sqlalchemy import text
+
+    from flowbook.core.configs.spec_types import InputProfile, Mapping, PlanTemplate, Routing
+    from flowbook.extensions.postgres.config_store import PostgresConfigStore
+    from flowbook.extensions.postgres.config_store import metadata as configs_meta
+
+    bundled = get_bundled_configs_dir()
+    if not bundled or not bundled.exists():
+        print(
+            "Bundled configs not found. Install flowbook[demo] or use --config-dir <path>.",
+            file=sys.stderr,
+        )
+        return 1
+
+    store = PostgresConfigStore(database_url=url)
+    configs_meta.create_all(store.engine)
+    with store.engine.begin() as conn:
+        conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS configs_kind_name_uq ON configs(kind, name)")
+        )
+
+    type_map: dict[str, Any] = {
+        "input_profiles": InputProfile,
+        "mappings": Mapping,
+        "templates": PlanTemplate,
+        "routing": Routing,
+    }
+
+    total = _seed_configs_from_dir_into_store(store, bundled, type_map)
+    print(f"Seeded {total} from bundled configs.", flush=True)
+
+    overlay = Path(overlay_dir) if overlay_dir else None
+    if overlay and overlay.exists():
+        overlay_total = _seed_configs_from_dir_into_store(store, overlay, type_map)
+        print(f"Overlaid {overlay_total} from {overlay}.", flush=True)
+        total += overlay_total
+
+    print(f"Done. Seeded {total} configs total.")
     return 0
 
 
@@ -224,5 +296,13 @@ def reset_db(config_dir: str | Path) -> int:
         conn.execute(text("TRUNCATE configs"))
     print("Cleared configs.", flush=True)
 
+    bundled = get_bundled_configs_dir()
+    if bundled and bundled.exists():
+        overlay = None if str(config_dir).lower() == "bundled" else config_dir
+        msg = "Seeding from bundled configs"
+        if overlay:
+            msg += f" + overlay {overlay}"
+        print(msg + " ...", flush=True)
+        return seed_configs_from_bundled_and_overlay(overlay)
     print("Seeding from config dir ...", flush=True)
     return seed_configs_from_dir(config_dir)

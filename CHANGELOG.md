@@ -6,9 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-02-23
+
 ### Added
 
-- **entity_key + entity_runs**: Replaced namespace with entity_key. `prepare(entity_key=)`, `exec(entity_key=)`. Artifacts scoped by (run_id, entity_key). `entity_runs` table for canonical result per (run_id, entity_key).
+- **entity_key + entity_runs**: Replaced namespace with entity_key. `create_run(entity_key=)`, `exec_plan(plan_config=)`. Artifacts scoped by (run_id, entity_key). `entity_runs` table for canonical result per (run_id, entity_key).
 - **Artifacts composite PK**: artifacts table uses (run_id, entity_key, path) as primary key; key format `{run_id}/{entity_key}/{path}`. Inputs use `run_id//input/{name}`.
 
 ### Removed
@@ -19,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **ArtifactIndex**: `namespace_prefix` → `entity_key` in IndexRow and protocol.
 - **RunContext**: Added required `entity_key` field.
+- **Engine**: `prepare()` removed; use `create_run(entity_key=)` with context manager.
+- **RunSession**: `exec(pipeline_config=)` → `exec_plan(plan_config=)`; `exec_with_plan_once` → `exec_with_planner_once`.
 - **ADR-ARTIFACT-NAMESPACE**: Superseded. ADR-ARTIFACT-INDEX updated for entity_key.
 
 ## [0.1.0a2] - 2026-02-19
@@ -68,5 +72,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.
 
+[0.1.0a3]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a3
 [0.1.0a2]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a2
 [0.1.0a1]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a1

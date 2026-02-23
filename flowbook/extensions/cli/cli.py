@@ -74,6 +74,29 @@ def register_cli(app: Typer) -> None:
 
     app.add_typer(db_app, name="db")
 
+    # ---- api ----
+    @app.command("api")
+    def api_serve(
+        host: str = t.Option("127.0.0.1", "--host", "-H", help="Bind host"),
+        port: int = t.Option(8000, "--port", "-p", help="Bind port"),
+        reload: bool = t.Option(True, "--reload/--no-reload", help="Enable auto-reload"),
+    ) -> None:
+        """Run flowbook API server (uvicorn)."""
+        try:
+            import uvicorn
+        except ImportError:
+            t.echo(
+                "uvicorn not installed. pip install flowbook[full] or flowbook[fastapi].",
+                err=True,
+            )
+            raise t.Exit(1) from None
+        uvicorn.run(
+            "flowbook.extensions.api.app:app",
+            host=host,
+            port=port,
+            reload=reload,
+        )
+
     # ---- hands-on ----
     @app.command("hands-on")
     def hands_on(

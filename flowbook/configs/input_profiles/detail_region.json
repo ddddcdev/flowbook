@@ -1,0 +1,4 @@
+{
+  "kind_rules": [{ "pattern": ".*", "kind": "detail" }],
+  "column_hints": ["明細No", "品名", "数量", "余計1", "余計2", "備考", "日付"]
+}

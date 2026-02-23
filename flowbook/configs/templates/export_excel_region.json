@@ -1,0 +1,28 @@
+{
+  "plan": {
+    "name": "export_excel_region",
+    "steps": [
+      {
+        "name": "load",
+        "op": "load_artifact_df",
+        "inputs": { "artifact_key": "@artifact_key" }
+      },
+      {
+        "name": "map",
+        "op": "apply_mapping",
+        "inputs": {
+          "df": "@load/df",
+          "mapping_name": "@mapping_name"
+        }
+      },
+      {
+        "name": "write",
+        "op": "write_excel",
+        "inputs": {
+          "df": "@map/df",
+          "output_filename": "@output_filename"
+        }
+      }
+    ]
+  }
+}

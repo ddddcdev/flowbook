@@ -14,6 +14,12 @@ Core-only install has no heavy dependencies. For Excel, Postgres, and FastAPI ex
 pip install "flowbook[full]"
 ```
 
+Optional: add bundled configs for hands-on (no extra deps):
+
+```sh
+pip install "flowbook[full,demo]"
+```
+
 Dev CLI (Typer/Rich) for local development and demos:
 
 ```sh
@@ -74,8 +80,7 @@ API and Streamlit UI run from the repo for development and demos.
 ### API
 
 ```sh
-FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
-  poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook poetry run flowbook api
 ```
 
 API docs: <http://localhost:8000/docs>
@@ -98,7 +103,7 @@ Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export
 FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
 ```
 
-Truncates artifacts and configs, then seeds from `configs/` (default `--config-dir configs`).
+Truncates artifacts and configs, then seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
 
 ### Hands-on flow
 

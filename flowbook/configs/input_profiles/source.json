@@ -1,0 +1,9 @@
+{
+  "kind_rules": [
+    { "pattern": "^fileA_.*\\.xlsx$", "kind": "fileA" },
+    { "pattern": "^real_input\\.xlsx$", "kind": "fileA" },
+    { "pattern": "^demo_input\\.xlsx$", "kind": "fileA" },
+    { "pattern": ".*\\.xlsx$", "kind": "fileA" }
+  ],
+  "date_rule": { "sheet": "meta", "cell": "B2" }
+}

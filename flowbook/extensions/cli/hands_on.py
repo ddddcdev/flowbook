@@ -10,6 +10,31 @@ from pathlib import Path
 
 import httpx
 
+_console = None
+
+
+def _get_console():
+    """Lazy-init Rich Console when available. Returns None if Rich not installed."""
+    global _console
+    if _console is not None:
+        return _console
+    try:
+        from rich.console import Console
+        _console = Console(force_terminal=True)
+        return _console
+    except ImportError:
+        _console = False
+        return None
+
+
+def _print_json(data: object) -> None:
+    """Print JSON with Rich syntax highlighting when available."""
+    con = _get_console()
+    if con:
+        con.print_json(data=data)
+    else:
+        print(json.dumps(data, indent=2))
+
 
 def run(
     base_url: str = "http://127.0.0.1:8000",
@@ -53,7 +78,7 @@ def run(
     try:
         r = httpx.get(f"{base}/health", timeout=10.0)
         r.raise_for_status()
-        print(json.dumps(r.json(), indent=2))
+        _print_json(r.json())
     except httpx.HTTPError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -76,7 +101,7 @@ def run(
                 timeout=30.0,
             )
         r.raise_for_status()
-        print(json.dumps(r.json(), indent=2))
+        _print_json(r.json())
     except httpx.HTTPError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -105,7 +130,7 @@ def run(
             )
         r.raise_for_status()
         import_data = r.json()
-        print(json.dumps(import_data, indent=2))
+        _print_json(import_data)
     except httpx.HTTPError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -196,7 +221,7 @@ def run(
                 if k.endswith("/write/bytes"):
                     bytes_key = k
                     break
-            print(json.dumps(export_data, indent=2))
+            _print_json(export_data)
             print(f"\nwrite/bytes key (exported): {bytes_key}")
         except httpx.HTTPError as e:
             print(f"Error: {e}", file=sys.stderr)
