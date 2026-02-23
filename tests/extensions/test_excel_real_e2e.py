@@ -133,67 +133,67 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     bytes_artifact_key = "artifact/bytes/src_excel"
 
     # ---- Inspect (bytes + filename) ----
-    inspect_run = engine.prepare()
-    inspect_run.store.put_bytes(bytes_artifact_key, src_bytes)
-    inspect_run.bind("src_excel_bytes", bytes_artifact_key)
-    inspect_run.put_input("src_excel_filename", "fileA_real_input.xlsx")
-    inspect_run.put_input("input_profile_name", "source")
+    with engine.create_run() as inspect_run:
+        inspect_run.store.put_bytes(bytes_artifact_key, src_bytes)
+        inspect_run.bind("src_excel_bytes", bytes_artifact_key)
+        inspect_run.put_input("src_excel_filename", "fileA_real_input.xlsx")
+        inspect_run.put_input("input_profile_name", "source")
 
-    inspect_config = {
-        "steps": [
-            {
-                "name": "inspect",
-                "op": "inspect_excel_bytes_v2",
-                "inputs": {
-                    InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES: "@src_excel_bytes",
-                    InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "@src_excel_filename",
-                },
-            }
-        ]
-    }
+        inspect_config = {
+            "steps": [
+                {
+                    "name": "inspect",
+                    "op": "inspect_excel_bytes_v2",
+                    "inputs": {
+                        InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                        InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES: "@src_excel_bytes",
+                        InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "@src_excel_filename",
+                    },
+                }
+            ]
+        }
 
-    inspect_info = inspect_run.exec_plan(plan_config=inspect_config)
-    assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
+        inspect_info = inspect_run.exec_plan(plan_config=inspect_config)
+        assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
 
-    result_key = inspect_info.steps[0].outputs[InspectExcelBytesV2Op.Outputs.RESULT]
-    result = inspect_run.get_dict(result_key)
-    assert result["detected_kind"] == "fileA"
-    assert result["effective_date"] == "2026-02-10"
+        result_key = inspect_info.steps[0].outputs[InspectExcelBytesV2Op.Outputs.RESULT]
+        result = inspect_run.get_dict(result_key)
+        assert result["detected_kind"] == "fileA"
+        assert result["effective_date"] == "2026-02-10"
 
     template_name = _resolve_template_name(config_store, result["detected_kind"])
 
     # ---- Plan + Execute ----
-    run = engine.prepare()
-    run.store.put_bytes(bytes_artifact_key, src_bytes)
-    run.bind("src_excel_bytes", bytes_artifact_key)
-    run.put_input("sheet_name", "data")
-    run.put_input("header_row", 0)
-    run.put_input("mapping_name_val", "mvp_map")
-    run.put_input("template_name", template_name)
+    with engine.create_run() as run:
+        run.store.put_bytes(bytes_artifact_key, src_bytes)
+        run.bind("src_excel_bytes", bytes_artifact_key)
+        run.put_input("sheet_name", "data")
+        run.put_input("header_row", 0)
+        run.put_input("mapping_name_val", "mvp_map")
+        run.put_input("template_name", template_name)
 
-    planner_config = {
-        "steps": [
-            {
-                "name": "planner",
-                "op": "plan_from_template",
-                "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
-            }
-        ]
-    }
+        planner_config = {
+            "steps": [
+                {
+                    "name": "planner",
+                    "op": "plan_from_template",
+                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                }
+            ]
+        }
 
-    info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
+        info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
 
-    assert info1.status == "succeeded", f"planner failed: {info1.errors}"
-    assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
+        assert info1.status == "succeeded", f"planner failed: {info1.errors}"
+        assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
 
-    write_step = info2.steps[-1]
-    assert WriteExcelOp.Outputs.BYTES in write_step.outputs
+        write_step = info2.steps[-1]
+        assert WriteExcelOp.Outputs.BYTES in write_step.outputs
 
-    out_bytes_key = write_step.outputs[WriteExcelOp.Outputs.BYTES]
-    out_bytes = run.get_bytes(out_bytes_key)
-    assert len(out_bytes) > 0
+        out_bytes_key = write_step.outputs[WriteExcelOp.Outputs.BYTES]
+        out_bytes = run.get_bytes(out_bytes_key)
+        assert len(out_bytes) > 0
 
-    wb = openpyxl.load_workbook(BytesIO(out_bytes), data_only=True)
-    assert wb.sheetnames
-    assert "out" in wb.sheetnames
+        wb = openpyxl.load_workbook(BytesIO(out_bytes), data_only=True)
+        assert wb.sheetnames
+        assert "out" in wb.sheetnames

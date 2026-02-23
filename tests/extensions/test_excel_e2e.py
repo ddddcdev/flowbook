@@ -85,29 +85,28 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
         config_store=config_store,
         meta={"env": "test"},
     )
-    run = engine.prepare()
+    with engine.create_run() as run:
+        # Put input parameters as artifacts (path, sheet, header for read_excel)
+        run.put_input("excel_path", str(in_excel_path))
+        run.put_input("sheet_name", "in")
+        run.put_input("header_row", 0)
+        run.put_input("mapping_name_val", mapping_name)
+        info = run.exec_plan(plan_config=plan_config)
 
-    # Put input parameters as artifacts (path, sheet, header for read_excel)
-    run.put_input("excel_path", str(in_excel_path))
-    run.put_input("sheet_name", "in")
-    run.put_input("header_row", 0)
-    run.put_input("mapping_name_val", mapping_name)
-    info = run.exec_plan(plan_config=plan_config)
+        # 5) Verify execution succeeded
+        assert info.status == "succeeded"
+        assert len(info.steps) == 3
 
-    # 5) Verify execution succeeded
-    assert info.status == "succeeded"
-    assert len(info.steps) == 3
+        # 6) Verify output bytes and content
+        out_bytes_key = info.steps[2].outputs[WriteExcelOp.Outputs.BYTES]
+        out_bytes = run.get_bytes(out_bytes_key)
+        out_excel_path = tmp_path / "out.xlsx"
+        out_excel_path.write_bytes(out_bytes)
 
-    # 6) Verify output bytes and content
-    out_bytes_key = info.steps[2].outputs[WriteExcelOp.Outputs.BYTES]
-    out_bytes = run.get_bytes(out_bytes_key)
-    out_excel_path = tmp_path / "out.xlsx"
-    out_excel_path.write_bytes(out_bytes)
+        df_out = pd.read_excel(out_excel_path, sheet_name="out", engine="openpyxl")
 
-    df_out = pd.read_excel(out_excel_path, sheet_name="out", engine="openpyxl")
-
-    # Verify mapping was applied: columns are ["A", "b"], rows match filtered data
-    assert list(df_out.columns) == ["A", "b"]
-    assert len(df_out) == 2
-    assert df_out["A"].tolist() == [1, 2]
-    assert df_out["b"].tolist() == [10, 30]
+        # Verify mapping was applied: columns are ["A", "b"], rows match filtered data
+        assert list(df_out.columns) == ["A", "b"]
+        assert len(df_out) == 2
+        assert df_out["A"].tolist() == [1, 2]
+        assert df_out["b"].tolist() == [10, 30]

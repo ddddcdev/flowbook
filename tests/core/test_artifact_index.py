@@ -16,7 +16,7 @@ from flowbook import (
 )
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.context import RunContext
-from flowbook.core.runtime.run import run
+from flowbook.core.runtime.executor import execute_plan
 
 pytestmark = pytest.mark.unit
 
@@ -65,7 +65,7 @@ def test_run_with_index_records_outputs() -> None:
     store.put("run1//input/x", 2)
     store.put("run1//input/y", 3)
 
-    info = run(plan, ctx)
+    info = execute_plan(plan, ctx)
 
     assert info.status == "succeeded"
     rows = index.list_index("add", limit=10)

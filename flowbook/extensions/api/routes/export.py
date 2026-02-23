@@ -46,47 +46,45 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
     - **bindings**: map of logical name -> full artifact key
     """
     engine = get_engine()
-    session = engine.prepare()
+    with engine.create_run() as session:
+        try:
+            for name, artifact_key in req.bindings.items():
+                session.bind(name, artifact_key)
 
-    try:
-        for name, artifact_key in req.bindings.items():
-            session.bind(name, artifact_key)
+            session.put_input("template_name", req.template_name)
 
-        session.put_input("template_name", req.template_name)
+            planner_config: dict[str, Any] = {
+                "name": "export",
+                "steps": [
+                    {
+                        "name": "planner",
+                        "op": "plan_from_template",
+                        "inputs": {
+                            "template_name": "@template_name",
+                        },
+                    }
+                ],
+            }
 
-        planner_config: dict[str, Any] = {
-            "name": "export",
-            "steps": [
-                {
-                    "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {
-                        "template_name": "@template_name",
-                    },
-                }
-            ],
-        }
+            planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
 
-        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
-
-        return RunResponse(
-            run_id=exec_info.run_id,
-            status=exec_info.status,
-            artifacts_written=list(exec_info.artifacts_written),
-            errors=list(exec_info.errors),
-            steps=[
-                {
-                    "name": s.name,
-                    "status": s.status,
-                    "outputs": dict(s.outputs),
-                    "error": s.error,
-                }
-                for s in exec_info.steps
-            ],
-        )
-
-    except Exception as e:
-        raise to_http_error(e, run_id=session.run_id) from e
+            return RunResponse(
+                run_id=exec_info.run_id,
+                status=exec_info.status,
+                artifacts_written=list(exec_info.artifacts_written),
+                errors=list(exec_info.errors),
+                steps=[
+                    {
+                        "name": s.name,
+                        "status": s.status,
+                        "outputs": dict(s.outputs),
+                        "error": s.error,
+                    }
+                    for s in exec_info.steps
+                ],
+            )
+        except Exception as e:
+            raise to_http_error(e, run_id=session.run_id) from e
 
 
 @router.post(
@@ -116,26 +114,26 @@ async def export_from_artifact(
             )
         ) from None
 
-    session = engine.prepare(entity_key=entity_key)
-    try:
-        session.put_input("template_name", "export_excel_region")
-        session.put_input("artifact_key", source_artifact_key)
-        session.put_input("mapping_name", mapping_name)
-        # Download filename: entity_key-based
-        safe_key = entity_key.replace("/", "_").replace("\\", "_")
-        session.put_input("output_filename", f"{safe_key}_exported.xlsx")
+    with engine.create_run(entity_key=entity_key) as session:
+        try:
+            session.put_input("template_name", "export_excel_region")
+            session.put_input("artifact_key", source_artifact_key)
+            session.put_input("mapping_name", mapping_name)
+            # Download filename: entity_key-based
+            safe_key = entity_key.replace("/", "_").replace("\\", "_")
+            session.put_input("output_filename", f"{safe_key}_exported.xlsx")
 
-        planner_config = {
-            "name": "export",
-            "steps": [
-                {
-                    "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {"template_name": "@template_name"},
-                }
-            ],
-        }
-        planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
-        return _run_info_to_response(exec_info)
-    except Exception as e:
-        raise to_http_error(e, run_id=session.run_id) from e
+            planner_config = {
+                "name": "export",
+                "steps": [
+                    {
+                        "name": "planner",
+                        "op": "plan_from_template",
+                        "inputs": {"template_name": "@template_name"},
+                    }
+                ],
+            }
+            planner_info, exec_info = session.exec_with_planner_once(planner_config=planner_config)
+            return _run_info_to_response(exec_info)
+        except Exception as e:
+            raise to_http_error(e, run_id=session.run_id) from e

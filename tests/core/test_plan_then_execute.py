@@ -31,33 +31,32 @@ def test_planner_produces_plan_output_then_engine_executes_plan() -> None:
     }
 
     engine = Engine(store=store, registry=registry, meta={"env": "test"})
-    run = engine.prepare()
+    with engine.create_run() as run:
+        run.put_input("x", 2)
+        run.put_input("y", 3)
 
-    run.put_input("x", 2)
-    run.put_input("y", 3)
+        info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
 
-    info1, info2 = run.exec_with_planner_once(planner_config=planner_config)
+        # ✅ Verify planner step produced plan output
+        assert info1.status == "succeeded"
+        assert len(info1.steps) == 1
+        planner_step = info1.steps[0]
+        assert planner_step.name == "planner"
+        assert PlanFromTwoNumbersOp.Outputs.PLAN in planner_step.outputs
 
-    # ✅ Verify planner step produced plan output
-    assert info1.status == "succeeded"
-    assert len(info1.steps) == 1
-    planner_step = info1.steps[0]
-    assert planner_step.name == "planner"
-    assert PlanFromTwoNumbersOp.Outputs.PLAN in planner_step.outputs
+        # ✅ Load plan from artifact (traceable via StepRunInfo)
+        plan_key = planner_step.outputs[PlanFromTwoNumbersOp.Outputs.PLAN]
+        plan = run.get_dict(plan_key)
 
-    # ✅ Load plan from artifact (traceable via StepRunInfo)
-    plan_key = planner_step.outputs[PlanFromTwoNumbersOp.Outputs.PLAN]
-    plan = run.get_dict(plan_key)
+        assert isinstance(plan, dict)
+        assert "steps" in plan
+        assert plan["steps"][0]["op"] == "add"
+        assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"}
 
-    assert isinstance(plan, dict)
-    assert "steps" in plan
-    assert plan["steps"][0]["op"] == "add"
-    assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"}
+        # ✅ Verify plan execution produced expected output
+        assert info2.status == "succeeded"
+        assert len(info2.steps) == 1
+        assert info2.steps[0].name == "add"
 
-    # ✅ Verify plan execution produced expected output
-    assert info2.status == "succeeded"
-    assert len(info2.steps) == 1
-    assert info2.steps[0].name == "add"
-
-    out_sum_key = info2.steps[0].outputs[AddOp.Outputs.SUM]
-    assert run.get(out_sum_key) == 5
+        out_sum_key = info2.steps[0].outputs[AddOp.Outputs.SUM]
+        assert run.get(out_sum_key) == 5

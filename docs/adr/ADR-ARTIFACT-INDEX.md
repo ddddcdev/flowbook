@@ -15,7 +15,7 @@ Artifact keys follow `{run_id}/{entity_key}/{path}`. The **entity_key** is an op
 - **Protocol**: `ArtifactIndex` with `record(...)`, `list_index(entity_key, limit, order)`, `latest_per_logical(entity_key, limit)`.
 - **IndexRow**: run_id, artifact_key, logical_address, entity_key, created_at, content_type.
 - **When**: On every output persist (if `RunContext.index` is set), the runner calls `index.record(...)`.
-- **entity_key**: Passed explicitly from prepare/exec; not derived from logical address.
+- **entity_key**: Passed explicitly from create_run/exec; not derived from logical address.
 
 ### Artifacts table (Postgres)
 

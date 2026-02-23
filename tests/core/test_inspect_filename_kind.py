@@ -34,8 +34,8 @@ PROFILE_CONFIG = {
 }
 
 
-def create_engine_and_session():
-    """Helper to create engine and session with test config."""
+def create_engine():
+    """Helper to create engine with test config."""
     artifacts_store = InMemoryArtifactsStore()
     config_store = InMemoryConfigStore()
 
@@ -50,15 +50,12 @@ def create_engine_and_session():
     registry = Registry()
     register_steps(registry)
 
-    engine = Engine(
+    return Engine(
         store=artifacts_store,
         registry=registry,
         config_store=config_store,
         meta={"env": "test"},
     )
-
-    run_session = engine.prepare()
-    return run_session
 
 
 @pytest.mark.parametrize(
@@ -75,88 +72,88 @@ def create_engine_and_session():
 def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_pattern):
     """Test inspect step correctly identifies kind from filename pattern."""
     # --- Arrange
-    run_session = create_engine_and_session()
+    engine = create_engine()
+    with engine.create_run() as run_session:
+        # Provide path for inspection
+        path = f"/data/{filename}"
+        run_session.put_input("input_profile_name", "source")
+        run_session.put_input("path", path)
 
-    # Provide path for inspection
-    path = f"/data/{filename}"
-    run_session.put_input("input_profile_name", "source")
-    run_session.put_input("path", path)
+        # Plan config
+        config = {
+            "steps": [
+                {
+                    "name": "inspect",
+                    "op": "inspect_filename_kind",
+                    "inputs": {
+                        InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    },
+                }
+            ]
+        }
 
-    # Plan config
-    config = {
-        "steps": [
-            {
-                "name": "inspect",
-                "op": "inspect_filename_kind",
-                "inputs": {
-                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                    InspectFilenameKindOp.Inputs.PATH: "@path",
-                },
-            }
-        ]
-    }
+        # --- Act
+        info = run_session.exec_plan(plan_config=config)
 
-    # --- Act
-    info = run_session.exec_plan(plan_config=config)
+        # --- Assert
+        assert info.status == "succeeded", f"Run failed: {info.errors}"
+        step_info = info.steps[0]
+        assert step_info.status == "succeeded"
 
-    # --- Assert
-    assert info.status == "succeeded", f"Run failed: {info.errors}"
-    step_info = info.steps[0]
-    assert step_info.status == "succeeded"
+        result_key = step_info.outputs[InspectFilenameKindOp.Outputs.RESULT]
+        result = run_session.get_dict(result_key)
 
-    result_key = step_info.outputs[InspectFilenameKindOp.Outputs.RESULT]
-    result = run_session.get_dict(result_key)
-
-    # Validate result schema
-    assert result["schema_version"] == "inspect_result_v1"
-    assert result["input_profile_name"] == "source"
-    assert result["resolved_path"] == path
-    assert result["filename"] == filename
-    assert result["detected_kind"] == expected_kind
-    assert result["evidence"]["matcher"] == "filename_regex"
-    assert result["evidence"]["matched_pattern"] == expected_pattern
+        # Validate result schema
+        assert result["schema_version"] == "inspect_result_v1"
+        assert result["input_profile_name"] == "source"
+        assert result["resolved_path"] == path
+        assert result["filename"] == filename
+        assert result["detected_kind"] == expected_kind
+        assert result["evidence"]["matcher"] == "filename_regex"
+        assert result["evidence"]["matched_pattern"] == expected_pattern
 
 
 def test_inspect_unknown_filename_no_error():
     """Test inspect step returns None for unknown filename (no error raised)."""
     # --- Arrange
-    run_session = create_engine_and_session()
+    engine = create_engine()
+    with engine.create_run() as run_session:
+        # Provide unknown filename
+        path = "/data/unknown_file.txt"
+        run_session.put_input("input_profile_name", "source")
+        run_session.put_input("path", path)
 
-    # Provide unknown filename
-    path = "/data/unknown_file.txt"
-    run_session.put_input("input_profile_name", "source")
-    run_session.put_input("path", path)
+        # Plan config
+        config = {
+            "steps": [
+                {
+                    "name": "inspect",
+                    "op": "inspect_filename_kind",
+                    "inputs": {
+                        InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    },
+                }
+            ]
+        }
 
-    # Plan config
-    config = {
-        "steps": [
-            {
-                "name": "inspect",
-                "op": "inspect_filename_kind",
-                "inputs": {
-                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                    InspectFilenameKindOp.Inputs.PATH: "@path",
-                },
-            }
-        ]
-    }
+        # --- Act
+        info = run_session.exec_plan(plan_config=config)
 
-    # --- Act
-    info = run_session.exec_plan(plan_config=config)
+        # --- Assert (should succeed, but detected_kind is None)
+        assert info.status == "succeeded", f"Run failed: {info.errors}"
+        step_info = info.steps[0]
 
-    # --- Assert (should succeed, but detected_kind is None)
-    assert info.status == "succeeded", f"Run failed: {info.errors}"
-    step_info = info.steps[0]
+        result_key = step_info.outputs[InspectFilenameKindOp.Outputs.RESULT]
+        result = run_session.get_dict(result_key)
 
-    result_key = step_info.outputs[InspectFilenameKindOp.Outputs.RESULT]
-    result = run_session.get_dict(result_key)
-
-    # Key assertion: detected_kind is None for unknown kind
-    assert result["detected_kind"] is None
-    # matched_pattern should also be None (no match)
-    assert result["evidence"]["matched_pattern"] is None
-    assert result["filename"] == "unknown_file.txt"
-    assert result["evidence"]["matcher"] == "filename_regex"
+        # Key assertion: detected_kind is None for unknown kind
+        assert result["detected_kind"] is None
+        # matched_pattern should also be None (no match)
+        assert result["evidence"]["matched_pattern"] is None
+        assert result["filename"] == "unknown_file.txt"
+        assert result["evidence"]["matcher"] == "filename_regex"
 
 
 def test_inspect_missing_config_raises_error():
@@ -177,31 +174,31 @@ def test_inspect_missing_config_raises_error():
         meta={"env": "test"},
     )
 
-    run_session = engine.prepare()
-    run_session.put_input("input_profile_name", "missing_profile")
-    run_session.put_input("path", "/data/fileA_test.xlsx")
+    with engine.create_run() as run_session:
+        run_session.put_input("input_profile_name", "missing_profile")
+        run_session.put_input("path", "/data/fileA_test.xlsx")
 
-    # Plan config
-    config = {
-        "steps": [
-            {
-                "name": "inspect",
-                "op": "inspect_filename_kind",
-                "inputs": {
-                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                    InspectFilenameKindOp.Inputs.PATH: "@path",
-                },
-            }
-        ]
-    }
+        # Plan config
+        config = {
+            "steps": [
+                {
+                    "name": "inspect",
+                    "op": "inspect_filename_kind",
+                    "inputs": {
+                        InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    },
+                }
+            ]
+        }
 
-    # --- Act
-    info = run_session.exec_plan(plan_config=config)
+        # --- Act
+        info = run_session.exec_plan(plan_config=config)
 
-    # --- Assert: run should fail
-    assert info.status == "failed"
-    assert len(info.errors) > 0
-    assert "not found" in info.errors[0]
+        # --- Assert: run should fail
+        assert info.status == "failed"
+        assert len(info.errors) > 0
+        assert "not found" in info.errors[0]
 
 
 def test_inspect_missing_kind_rules_raises_error():
@@ -228,58 +225,58 @@ def test_inspect_missing_kind_rules_raises_error():
         meta={"env": "test"},
     )
 
-    run_session = engine.prepare()
-    run_session.put_input("input_profile_name", "incomplete")
-    run_session.put_input("path", "/data/fileA_test.xlsx")
+    with engine.create_run() as run_session:
+        run_session.put_input("input_profile_name", "incomplete")
+        run_session.put_input("path", "/data/fileA_test.xlsx")
 
-    # Plan config
-    config = {
-        "steps": [
-            {
-                "name": "inspect",
-                "op": "inspect_filename_kind",
-                "inputs": {
-                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                    InspectFilenameKindOp.Inputs.PATH: "@path",
-                },
-            }
-        ]
-    }
+        # Plan config
+        config = {
+            "steps": [
+                {
+                    "name": "inspect",
+                    "op": "inspect_filename_kind",
+                    "inputs": {
+                        InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                        InspectFilenameKindOp.Inputs.PATH: "@path",
+                    },
+                }
+            ]
+        }
 
-    # --- Act
-    info = run_session.exec_plan(plan_config=config)
+        # --- Act
+        info = run_session.exec_plan(plan_config=config)
 
-    # --- Assert: run should fail
-    assert info.status == "failed"
-    assert len(info.errors) > 0
-    assert "kind_rules" in info.errors[0]
+        # --- Assert: run should fail
+        assert info.status == "failed"
+        assert len(info.errors) > 0
+        assert "kind_rules" in info.errors[0]
 
 
 def test_inspect_missing_path_input_raises_error():
     """Test inspect step raises error when path input is missing."""
     # --- Arrange
-    run_session = create_engine_and_session()
+    engine = create_engine()
+    with engine.create_run() as run_session:
+        # Only provide input_profile_name, NOT path
+        run_session.put_input("input_profile_name", "source")
 
-    # Only provide input_profile_name, NOT path
-    run_session.put_input("input_profile_name", "source")
+        # Plan config
+        config = {
+            "steps": [
+                {
+                    "name": "inspect",
+                    "op": "inspect_filename_kind",
+                    "inputs": {
+                        InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
+                        InspectFilenameKindOp.Inputs.PATH: "@path",  # binding missing
+                    },
+                }
+            ]
+        }
 
-    # Plan config
-    config = {
-        "steps": [
-            {
-                "name": "inspect",
-                "op": "inspect_filename_kind",
-                "inputs": {
-                    InspectFilenameKindOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                    InspectFilenameKindOp.Inputs.PATH: "@path",  # binding missing
-                },
-            }
-        ]
-    }
+        # --- Act
+        info = run_session.exec_plan(plan_config=config)
 
-    # --- Act
-    info = run_session.exec_plan(plan_config=config)
-
-    # --- Assert: run should fail
-    assert info.status == "failed"
-    assert len(info.errors) > 0
+        # --- Assert: run should fail
+        assert info.status == "failed"
+        assert len(info.errors) > 0

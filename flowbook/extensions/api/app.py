@@ -8,8 +8,11 @@ copy and extend this app.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
+from flowbook.core.logging import configure_logging
 from flowbook.extensions.api.routes.artifacts import router as artifacts_router
 from flowbook.extensions.api.routes.configs import router as configs_router
 from flowbook.extensions.api.routes.entity_runs import router as entity_runs_router
@@ -18,7 +21,14 @@ from flowbook.extensions.api.routes.import_ import router as import_router
 from flowbook.extensions.api.routes.inspect import router as inspect_router
 from flowbook.extensions.api.routes.runs import router as runs_router
 
-app = FastAPI(title="flowbook-api", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    configure_logging()
+    yield
+
+
+app = FastAPI(title="flowbook-api", version="0.1.0", lifespan=lifespan)
 
 
 @app.get("/health")
