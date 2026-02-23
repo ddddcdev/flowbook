@@ -58,6 +58,7 @@ To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (m
   ```
   (The dev group includes full extras so tests can run; for a minimal env use `pip install flowbook` only.)
 - **Full test suite** (integration + e2e): Start Postgres (see below), then `npm run test` or `poetry run pytest`. To run only integration: `poetry run pytest -m integration`.
+- **Releasing**: See [Releasing](docs/releasing.md). Publish = tag + twine upload. Pre-release (alpha/beta) = push to dev branch only.
 
 ## License
 
