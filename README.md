@@ -37,7 +37,7 @@ flowbook streamlit  # Streamlit UI
 ## Usage (high-level)
 
 1. **Engine** = store (artifacts) + registry (ops) + optional config store. You build it once.
-2. **Session** = `engine.prepare()`. Put inputs (logical name → value), then run a **plan config** (list of steps with `name`, `op`, `inputs`).
+2. **Session** = `with engine.create_run() as session:`. Put inputs (logical name → value), then run a **plan config** (list of steps with `name`, `op`, `inputs`).
 3. Optionally run a **planner** first (e.g. `plan_from_template`); it produces a plan config that you then execute in the same session.
 4. Steps read from the store (via resolved inputs) and write outputs back; later steps can depend on them. All orchestration is driven by config; new capabilities are new ops in your extensions.
 

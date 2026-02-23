@@ -16,12 +16,37 @@ from typing import Any
 
 from flowbook.core.artifacts.key_utils import build_artifact_key
 from flowbook.core.artifacts.store import JsonValue
+from flowbook.core.logging import get_logger
 from flowbook.core.registry.registry import Registry
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.context import RunContext
-from flowbook.core.runtime.run import run
+from flowbook.core.runtime.executor import execute_plan
 from flowbook.core.runtime.store import RunStore
 from flowbook.core.runtime.types import RunInfo
+
+logger = get_logger(__name__)
+
+
+def _extract_plan_name(plan_config: dict[str, Any]) -> str | None:
+    """Extract plan name from plan_config (top-level or nested plan.name)."""
+    name = plan_config.get("name")
+    if name is not None:
+        return str(name)
+    plan = plan_config.get("plan")
+    if isinstance(plan, dict):
+        return plan.get("name")
+    return None
+
+
+def _primary_artifact_path_from_info(info: RunInfo) -> str | None:
+    """Compute primary artifact path from RunInfo (last step's first output)."""
+    if not info.steps:
+        return None
+    last = info.steps[-1]
+    if not last.outputs:
+        return None
+    first_out = next(iter(last.outputs.keys()), None)
+    return f"{last.name}/{first_out}" if first_out else None
 
 
 @dataclass
@@ -34,6 +59,16 @@ class RunSession:
 
     _bindings: dict[str, str] = field(default_factory=dict)
     _executed: bool = False
+
+    def __enter__(self) -> RunSession:
+        return self
+
+    def __exit__(self, exc_type: type | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+        logger.info(
+            "run ended",
+            extra={"run_id": self.run_id, "entity_key": self.entity_key},
+        )
+        # Future: artifact cleanup, resource teardown
 
     # ---- key helpers ----
 
@@ -100,19 +135,30 @@ class RunSession:
             raise RuntimeError("RunSession already executed; create a new session")
         self._executed = True
 
-        entity_config_json = json.dumps(plan_config) if plan_config else None
+        plan_name = _extract_plan_name(plan_config)
         plan = build(plan_config)
+
+        logger.info(
+            "plan_config",
+            extra={
+                "run_id": self.run_id,
+                "entity_key": entity_key,
+                "plan_config": plan_config,
+            },
+        )
+        entity_config_json = json.dumps(plan_config) if plan_config else None
+        meta = {**(self.meta or {}), "plan_name": plan_name}
         run_ctx = RunContext(
             run_id=self.run_id,
             entity_key=entity_key,
             store=self.store,
             registry=self.registry,
-            meta=self.meta,
+            meta=meta,
             bindings=self._bindings,
             run_config_json=None,
             entity_config_json=entity_config_json,
         )
-        return run(plan, run_ctx)
+        return execute_plan(plan, run_ctx)
 
     def exec_plan(self, *, plan_config: dict[str, Any]) -> RunInfo:
         """Execute plan. Records config to runs (entry) and entity_runs (executed)."""

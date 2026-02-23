@@ -16,7 +16,7 @@ from flowbook.core.registry.base_op import BaseOp
 from flowbook.core.registry.spec import InputsBase, OutputsBase
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.context import RunContext
-from flowbook.core.runtime.run import run
+from flowbook.core.runtime.executor import execute_plan
 
 pytestmark = pytest.mark.unit
 
@@ -57,7 +57,7 @@ def test_run_aggregates_step_warnings_into_run_info() -> None:
         bindings={},
     )
 
-    info = run(plan, ctx)
+    info = execute_plan(plan, ctx)
 
     assert info.status == "succeeded"
     assert info.warnings == ["warning one", "warning two"]

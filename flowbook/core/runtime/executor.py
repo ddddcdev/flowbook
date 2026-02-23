@@ -1,6 +1,6 @@
 """
-run:
-- Executes a Plan sequentially.
+executor: Executes a Plan sequentially (run_id > exec(plan) > step hierarchy).
+
 - Step.inputs may contain refs (@<logical_address>), literals, or nested dict/list.
   Refs are resolved via RunContext.bindings (logical -> artifact_key -> store.get_any).
   Only strings starting with @ are refs; others are passed through.
@@ -15,11 +15,24 @@ from typing import cast
 
 from flowbook.core.artifacts.key_utils import build_artifact_key
 from flowbook.core.artifacts.store import JsonValue
+from flowbook.core.logging import get_logger
 from flowbook.core.registry.registry import UnknownOp
 from flowbook.core.runtime.context import RunContext
 from flowbook.core.runtime.resolve import collect_refs_in_inputs, resolve_value
 from flowbook.core.runtime.store import RunStore
 from flowbook.core.runtime.types import Plan, RunInfo, Step, StepRunInfo
+
+logger = get_logger(__name__)
+
+
+def _base_extra(
+    run_id: str, entity_key: str, artifact_path: str | None = None
+) -> dict[str, object]:
+    """Build common extra dict. Omit artifact_path when None."""
+    d: dict[str, object] = {"run_id": run_id, "entity_key": entity_key}
+    if artifact_path is not None:
+        d["artifact_path"] = artifact_path
+    return d
 
 
 def _validate_step_contracts(plan: Plan, ctx: RunContext) -> None:
@@ -135,7 +148,17 @@ def _upsert_entity_run(
         )
 
 
-def run(plan: Plan, ctx: RunContext) -> RunInfo:
+def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
+    """Execute a plan sequentially. Part of run_id > exec(plan) > step hierarchy."""
+    plan_name = (ctx.meta or {}).get("plan_name") if ctx.meta else None
+    step_names = [s.name for s in plan.steps]
+    extra = {
+        **_base_extra(ctx.run_id, ctx.entity_key),
+        "plan_name": plan_name,
+        "step_names": step_names,
+    }
+    logger.info("plan started", extra=extra)
+
     info = RunInfo(run_id=ctx.run_id, status="running")
     _upsert_entity_run(
         ctx.store,
@@ -151,6 +174,13 @@ def run(plan: Plan, ctx: RunContext) -> RunInfo:
 
         for step in plan.steps:
             _validate_step_inputs(step, ctx)
+            step_extra = {
+                **_base_extra(ctx.run_id, ctx.entity_key),
+                "step": step.name,
+                "status": "running",
+            }
+            logger.debug("step started", extra=step_extra)
+
             step_info = StepRunInfo(
                 name=step.name,
                 status="running",
@@ -219,6 +249,15 @@ def run(plan: Plan, ctx: RunContext) -> RunInfo:
             step_info.outputs = out_map
             step_info.status = "succeeded"
 
+            first_out = next(iter(out_map.keys()), None)
+            primary_so_far = f"{step.name}/{first_out}" if first_out else None
+            step_extra_done = {
+                **_base_extra(ctx.run_id, ctx.entity_key, primary_so_far),
+                "step": step.name,
+                "status": "succeeded",
+            }
+            logger.debug("step completed", extra=step_extra_done)
+
         primary_artifact_path = None
         if info.steps:
             last_step = info.steps[-1]
@@ -236,6 +275,11 @@ def run(plan: Plan, ctx: RunContext) -> RunInfo:
             entity_config_json=ctx.entity_config_json,
         )
         info.status = "succeeded"
+        exec_extra = {
+            **_base_extra(ctx.run_id, ctx.entity_key, primary_artifact_path),
+            "status": "succeeded",
+        }
+        logger.info("plan completed", extra=exec_extra)
         return info
 
     except Exception as e:
@@ -260,4 +304,12 @@ def run(plan: Plan, ctx: RunContext) -> RunInfo:
             run_config_json=ctx.run_config_json,
             entity_config_json=ctx.entity_config_json,
         )
+        failed_step = info.steps[-1].name if info.steps else None
+        err_extra = {
+            **_base_extra(ctx.run_id, ctx.entity_key, primary_artifact_path),
+            "status": "failed",
+            "error": msg,
+            "step": failed_step,
+        }
+        logger.error("plan failed", extra=err_extra)
         return info

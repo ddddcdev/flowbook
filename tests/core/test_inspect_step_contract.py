@@ -27,17 +27,16 @@ def test_inspect_step_writes_control_artifacts() -> None:
     }
 
     engine = Engine(store=store, registry=registry, meta={"env": "test"})
-    run = engine.prepare()
+    with engine.create_run() as run:
+        # inputs は run 内へ投入（bindingsはrunが内部で保持する想定）
+        run.put_input("source_uri", "/tmp/dummy.xlsx")
+        run.put_input("read_spec", {"sheet": 0})
 
-    # inputs は run 内へ投入（bindingsはrunが内部で保持する想定）
-    run.put_input("source_uri", "/tmp/dummy.xlsx")
-    run.put_input("read_spec", {"sheet": 0})
+        info = run.exec_plan(plan_config=config)
+        assert info.status == "succeeded"
 
-    info = run.exec_plan(plan_config=config)
-    assert info.status == "succeeded"
-
-    inspect_key = info.steps[0].outputs[InspectOp.Outputs.INSPECT_RESULT]
-    r = run.get_dict(inspect_key)
-    assert r["source_uri"] == "/tmp/dummy.xlsx"
-    assert "warnings" in r
-    assert "suggested_read_spec" in r
+        inspect_key = info.steps[0].outputs[InspectOp.Outputs.INSPECT_RESULT]
+        r = run.get_dict(inspect_key)
+        assert r["source_uri"] == "/tmp/dummy.xlsx"
+        assert "warnings" in r
+        assert "suggested_read_spec" in r

@@ -14,7 +14,7 @@ from flowbook import (
 )
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.context import RunContext
-from flowbook.core.runtime.run import run
+from flowbook.core.runtime.executor import execute_plan
 from flowbook.extensions.steps.aggregate_df import AggregateDfOp
 from flowbook.extensions.steps.concat_df import ConcatDfOp
 from flowbook.extensions.steps.merge_df import MergeDfOp
@@ -63,7 +63,7 @@ def test_merge_df() -> None:
             ]
         }
     )
-    info = run(plan, ctx)
+    info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[MergeDfOp.Outputs.DF]
     out = store.get_df(out_key)
@@ -89,7 +89,7 @@ def test_aggregate_df() -> None:
             ]
         }
     )
-    info = run(plan, ctx)
+    info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[AggregateDfOp.Outputs.DF]
     out = store.get_df(out_key)
@@ -114,7 +114,7 @@ def test_concat_df() -> None:
             ]
         }
     )
-    info = run(plan, ctx)
+    info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
     out_key = info.steps[0].outputs[ConcatDfOp.Outputs.DF]
     out = store.get_df(out_key)
@@ -143,7 +143,7 @@ def test_check_warn_aggregates_warnings() -> None:
             ]
         }
     )
-    info = run(plan, ctx)
+    info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
     assert "found zero in a" in info.warnings
     assert "b too high" in info.warnings
