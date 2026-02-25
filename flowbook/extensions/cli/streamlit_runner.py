@@ -26,21 +26,27 @@ def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) 
     if not venv.is_absolute():
         venv = repo / venv
 
+    def _ensure_deps() -> None:
+        pip = venv / "bin" / "pip" if os.name != "nt" else venv / "Scripts" / "pip.exe"
+        pkgs = ["streamlit", "requests", "altair>=4,<5", "-q"]
+        if sys.version_info >= (3, 13):
+            pkgs.insert(-1, "standard-imghdr")  # imghdr removed in 3.13
+        if (repo / "pyproject.toml").exists():
+            subprocess.run([str(pip), "install", "-e", str(repo)] + pkgs, check=True, cwd=repo)
+        else:
+            subprocess.run([str(pip), "install", "flowbook[full]"] + pkgs, check=True)
+
     if not venv.exists():
         print(f"Creating {venv} (streamlit + requests)...")
         subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True, cwd=repo)
-        pip = venv / "bin" / "pip" if os.name != "nt" else venv / "Scripts" / "pip.exe"
-        if (repo / "pyproject.toml").exists():
-            subprocess.run(
-                [str(pip), "install", "-e", str(repo), "streamlit", "requests", "-q"],
-                check=True,
-                cwd=repo,
-            )
-        else:
-            subprocess.run(
-                [str(pip), "install", "flowbook[full]", "streamlit", "requests", "-q"],
-                check=True,
-            )
+        _ensure_deps()
+    else:
+        streamlit_exe = (
+            venv / "bin" / "streamlit" if os.name != "nt" else venv / "Scripts" / "streamlit.exe"
+        )
+        if not streamlit_exe.exists():
+            print(f"Installing streamlit into {venv}...")
+            _ensure_deps()
 
     streamlit_exe = (
         venv / "bin" / "streamlit" if os.name != "nt" else venv / "Scripts" / "streamlit.exe"

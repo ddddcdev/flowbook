@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-02-25
+
+### Added
+
+- **Step introspection**: `GET /steps`, `GET /steps/{op_name}` API; `flowbook steps list`, `flowbook steps show <op_name>` CLI; Streamlit Steps tab. See [Plan from steps](docs/steps/plan-from-steps.md).
+- **result_artifacts**: Optional `result_artifacts` in plan config; JSON schema `result_artifacts_json`. If absent, derived from last step's first output.
+- **DB init**: `flowbook db init` for first-time schema creation (requires `FLOWBOOK_DB_RESET=1`).
+- **DB compose**: `flowbook db up` / `flowbook db down` for Postgres via Docker Compose.
+- **Docker**: `flowbook api up/down`, `flowbook streamlit up/down`; infra Dockerfiles for cloud deploy.
+
+### Changed
+
+- **read_excel_detect_region**: Refactored to df-based region extraction; supports .xlsx and .xls (engine from filename).
+- **hands-on**: Removed Japanese from demo data; added result_artifacts examples.
+- **Streamlit**: Altair 5 compatibility; venv fix.
+
+### Documentation
+
+- **README**: Native-first; cloud-ready Docker instructions.
+
 ## [0.1.0a3] - 2026-02-23
 
 ### Added
@@ -72,6 +92,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.
 
+[0.1.0a4]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a4
 [0.1.0a3]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a3
 [0.1.0a2]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a2
 [0.1.0a1]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a1

@@ -20,6 +20,7 @@ from flowbook.extensions.api.routes.export import router as export_router
 from flowbook.extensions.api.routes.import_ import router as import_router
 from flowbook.extensions.api.routes.inspect import router as inspect_router
 from flowbook.extensions.api.routes.runs import router as runs_router
+from flowbook.extensions.api.routes.steps import router as steps_router
 
 
 @asynccontextmanager
@@ -43,3 +44,4 @@ app.include_router(artifacts_router)
 app.include_router(configs_router)
 app.include_router(entity_runs_router)
 app.include_router(runs_router)
+app.include_router(steps_router)

@@ -1,6 +1,6 @@
 [project]
 name = "flowbook"
-version = "0.1.0a3"
+version = "0.1.0a4"
 description = "Config-driven data flow framework with pluggable ops and extensions (Excel, Postgres, FastAPI)."
 authors = [{ name = "d4c.dev", email = "info@d4c.dev" }]
 readme = "README.md"
@@ -17,7 +17,7 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-excel = ["pandas>=3.0.0,<4.0.0", "openpyxl>=3.1.5,<4.0.0"]
+excel = ["pandas>=3.0.0,<4.0.0", "openpyxl>=3.1.5,<4.0.0", "xlrd>=2.0.1"]
 postgres = [
     "psycopg[binary]>=3.3.2,<4.0.0",
     "sqlalchemy>=2.0.46,<3.0.0",
@@ -75,6 +75,7 @@ ruff = "^0.14.14"
 python-multipart = "^0.0.22"
 psycopg2-binary = "^2.9.11"
 twine = "^6.2.0"
+keyrings-alt = "^5.0.2"
 
 [tool.pytest.ini_options]
 markers = [

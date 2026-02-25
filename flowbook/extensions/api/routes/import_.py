@@ -50,7 +50,7 @@ async def import_file(
     """
     Import an uploaded Excel file using a named plan template.
 
-    - **file**: Excel file (.xlsx)
+    - **file**: Excel file (.xlsx, .xls)
     - **template_name**: plan template (e.g. import_excel or import_excel_region)
     - **input_profile_name**: config profile for input handling
     - **sheet_name**: sheet to read (default: "data")
@@ -64,6 +64,7 @@ async def import_file(
 
             # Store file bytes and register bindings
             session.put_input_bytes("src_excel_bytes", contents)
+            session.put_input("src_excel_filename", file.filename or "")
             session.put_input("input_profile_name", input_profile_name)
             session.put_input("template_name", template_name)
 

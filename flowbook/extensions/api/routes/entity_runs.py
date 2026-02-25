@@ -8,6 +8,8 @@ In-memory store returns empty list / 404.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from flowbook.extensions.api.deps import get_engine
@@ -18,9 +20,22 @@ from flowbook.extensions.api.schemas import (
     EntityRunsListResponse,
     LatestEntityRunGetResponse,
     LatestEntityRunsListResponse,
+    ResultArtifactEntry,
 )
 
 router = APIRouter(tags=["entity_runs"])
+
+
+def _result_artifacts_to_entries(
+    ra: list[dict[str, Any]] | None,
+) -> list[ResultArtifactEntry] | None:
+    if not ra:
+        return None
+    return [
+        ResultArtifactEntry(path=item.get("path", ""), label=item.get("label"))
+        for item in ra
+        if isinstance(item, dict) and item.get("path")
+    ] or None
 
 
 def _dict_to_entry(d: dict) -> EntityRunEntry:
@@ -28,7 +43,7 @@ def _dict_to_entry(d: dict) -> EntityRunEntry:
         run_id=d["run_id"],
         entity_key=d["entity_key"],
         status=d["status"],
-        artifact_path=d.get("artifact_path"),
+        result_artifacts=_result_artifacts_to_entries(d.get("result_artifacts")),
         config_json=d.get("config_json"),
         created_at=d.get("created_at"),
         updated_at=d.get("updated_at"),
@@ -77,7 +92,7 @@ def get_entity_run(run_id: str, entity_key: str) -> EntityRunGetResponse:
             run_id=row["run_id"],
             entity_key=row["entity_key"],
             status=row["status"],
-            artifact_path=row.get("artifact_path"),
+            result_artifacts=_result_artifacts_to_entries(row.get("result_artifacts")),
             config_json=row.get("config_json"),
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
@@ -129,7 +144,7 @@ def get_latest_entity_run(entity_key: str) -> LatestEntityRunGetResponse:
             run_id=row["run_id"],
             entity_key=row["entity_key"],
             status=row["status"],
-            artifact_path=row.get("artifact_path"),
+            result_artifacts=_result_artifacts_to_entries(row.get("result_artifacts")),
             config_json=row.get("config_json"),
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),

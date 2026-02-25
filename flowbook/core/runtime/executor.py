@@ -25,6 +25,10 @@ from flowbook.core.runtime.types import Plan, RunInfo, Step, StepRunInfo
 logger = get_logger(__name__)
 
 
+class ResultArtifactsValidationError(RuntimeError):
+    """Raised when result_artifacts path is not produced by any step."""
+
+
 def _base_extra(
     run_id: str, entity_key: str, artifact_path: str | None = None
 ) -> dict[str, object]:
@@ -126,25 +130,74 @@ def _persist_output(
     store.put(out_key, cast(JsonValue, value), **kwargs)
 
 
+def _result_artifacts_from_plan(
+    plan: object, info: RunInfo
+) -> list[dict[str, str | None]] | None:
+    """Build result_artifacts list from plan if declared. Validates paths exist in outputs."""
+    ra = getattr(plan, "result_artifacts", None)
+    if not ra:
+        return None
+    produced: set[str] = set()
+    for s in info.steps:
+        if s.outputs:
+            for out_name in s.outputs:
+                produced.add(f"{s.name}/{out_name}")
+    out: list[dict[str, str | None]] = []
+    for item in ra:
+        path = (
+            getattr(item, "path", None)
+            if hasattr(item, "path")
+            else (item.get("path") if isinstance(item, dict) else None)
+        )
+        label = (
+            getattr(item, "label", None)
+            if hasattr(item, "label")
+            else (item.get("label") if isinstance(item, dict) else None)
+        )
+        if not path:
+            continue
+        if path not in produced:
+            raise ResultArtifactsValidationError(
+                f"result_artifacts path '{path}' not produced by any step. "
+                f"Available: {sorted(produced)}"
+            )
+        out.append({"path": path, "label": label})
+    return out if out else None
+
+
+def _result_artifacts_from_last_step(info: RunInfo) -> list[dict[str, str | None]] | None:
+    """Derive result_artifacts from last step's first output when plan has no result_artifacts."""
+    if not info.steps:
+        return None
+    last = info.steps[-1]
+    if not last.outputs:
+        return None
+    first_out = next(iter(last.outputs.keys()), None)
+    if not first_out:
+        return None
+    return [{"path": f"{last.name}/{first_out}", "label": None}]
+
+
 def _upsert_entity_run(
     store: RunStore,
     run_id: str,
     entity_key: str,
     status: str,
-    artifact_path: str | None = None,
     run_config_json: str | None = None,
     entity_config_json: str | None = None,
+    result_artifacts: list[dict[str, str | None]] | None = None,
 ) -> None:
-    """Upsert entity_runs if store supports it. artifact_path=primary step output path."""
+    """Upsert entity_runs if store supports it.
+    result_artifacts: list of {path, label} for main results. Always set when run has outputs."""
     upsert = getattr(store, "upsert_entity_run", None)
     if callable(upsert):
         upsert(
             run_id,
             entity_key,
             status,
-            artifact_path=artifact_path,
             run_config_json=run_config_json,
             entity_config_json=entity_config_json,
+            result_artifacts=result_artifacts,
         )
 
 
@@ -258,30 +311,32 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
             }
             logger.debug("step completed", extra=step_extra_done)
 
-        primary_artifact_path = None
-        if info.steps:
-            last_step = info.steps[-1]
-            if last_step.outputs:
-                first_out = next(iter(last_step.outputs.keys()))
-                primary_artifact_path = f"{last_step.name}/{first_out}"
+        result_artifacts_list: list[dict[str, str | None]] | None = None
+        if plan.result_artifacts and info.steps:
+            result_artifacts_list = _result_artifacts_from_plan(plan, info)
+        if result_artifacts_list is None and info.steps:
+            result_artifacts_list = _result_artifacts_from_last_step(info)
 
         _upsert_entity_run(
             ctx.store,
             ctx.run_id,
             ctx.entity_key,
             "succeeded",
-            artifact_path=primary_artifact_path,
             run_config_json=ctx.run_config_json,
             entity_config_json=ctx.entity_config_json,
+            result_artifacts=result_artifacts_list,
         )
         info.status = "succeeded"
+        primary_path = result_artifacts_list[0]["path"] if result_artifacts_list else None
         exec_extra = {
-            **_base_extra(ctx.run_id, ctx.entity_key, primary_artifact_path),
+            **_base_extra(ctx.run_id, ctx.entity_key, primary_path),
             "status": "succeeded",
         }
         logger.info("plan completed", extra=exec_extra)
         return info
 
+    except ResultArtifactsValidationError:
+        raise
     except Exception as e:
         info.status = "failed"
         msg = f"{type(e).__name__}: {e}"
@@ -289,24 +344,28 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
         if info.steps:
             info.steps[-1].status = "failed"
             info.steps[-1].error = msg
-        primary_artifact_path = None
-        if info.steps:
-            last_step = info.steps[-1]
-            if last_step.outputs:
-                first_out = next(iter(last_step.outputs.keys()))
-                primary_artifact_path = f"{last_step.name}/{first_out}"
+        result_artifacts_list: list[dict[str, str | None]] | None = None
+        if plan.result_artifacts and info.steps:
+            try:
+                result_artifacts_list = _result_artifacts_from_plan(plan, info)
+            except ResultArtifactsValidationError:
+                pass
+        if result_artifacts_list is None and info.steps:
+            result_artifacts_list = _result_artifacts_from_last_step(info)
+
         _upsert_entity_run(
             ctx.store,
             ctx.run_id,
             ctx.entity_key,
             "failed",
-            artifact_path=primary_artifact_path,
             run_config_json=ctx.run_config_json,
             entity_config_json=ctx.entity_config_json,
+            result_artifacts=result_artifacts_list,
         )
         failed_step = info.steps[-1].name if info.steps else None
+        primary_path = result_artifacts_list[0]["path"] if result_artifacts_list else None
         err_extra = {
-            **_base_extra(ctx.run_id, ctx.entity_key, primary_artifact_path),
+            **_base_extra(ctx.run_id, ctx.entity_key, primary_path),
             "status": "failed",
             "error": msg,
             "step": failed_step,

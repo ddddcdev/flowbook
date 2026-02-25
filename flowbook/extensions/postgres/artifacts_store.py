@@ -60,7 +60,7 @@ entity_runs = Table(
     metadata,
     Column("run_id", Text, primary_key=True),
     Column("entity_key", Text, primary_key=True),
-    Column("artifact_path", Text, nullable=True),
+    Column("result_artifacts_json", Text, nullable=True),
     Column("status", Text, nullable=False),
     Column("config_json", Text, nullable=True),
     Column(
@@ -116,10 +116,16 @@ def _run_row_to_dict(row: Any) -> dict[str, Any]:
 
 def _entity_run_row_to_dict(row: Any) -> dict[str, Any]:
     """Convert entity_runs Row to JSON-serializable dict."""
+    result_artifacts = None
+    if getattr(row, "result_artifacts_json", None):
+        try:
+            result_artifacts = json.loads(row.result_artifacts_json)
+        except (json.JSONDecodeError, TypeError):
+            pass
     return {
         "run_id": row.run_id,
         "entity_key": row.entity_key,
-        "artifact_path": row.artifact_path,
+        "result_artifacts": result_artifacts,
         "status": row.status,
         "config_json": row.config_json,
         "created_at": row.created_at.isoformat() if row.created_at else None,
@@ -455,28 +461,30 @@ class PostgresArtifactsStore(ArtifactsStore):
         run_id: str,
         entity_key: str,
         status: str,
-        artifact_path: str | None = None,
         run_config_json: str | None = None,
         entity_config_json: str | None = None,
+        result_artifacts: list[dict[str, str | None]] | None = None,
     ) -> None:
         """Upsert entity_runs row for (run_id, entity_key). Ensures runs and entities exist first.
-        artifact_path: Primary step output path (e.g. inspect/result, read/df).
+        result_artifacts: list of {path, label} for main results. When plan has no result_artifacts,
+        executor derives from last step's output.
         """
         self.upsert_run(run_id, status, config_json=run_config_json)
         self.upsert_entity(entity_key)
+        result_artifacts_json = json.dumps(result_artifacts) if result_artifacts else None
         vals = {
             "run_id": run_id,
             "entity_key": entity_key,
             "status": status,
-            "artifact_path": artifact_path,
+            "result_artifacts_json": result_artifacts_json,
             "config_json": entity_config_json,
         }
         set_cols: dict[str, object] = {
             "status": status,
             "updated_at": text("now()"),
         }
-        if artifact_path is not None:
-            set_cols["artifact_path"] = artifact_path
+        if result_artifacts_json is not None:
+            set_cols["result_artifacts_json"] = result_artifacts_json
         if entity_config_json is not None:
             set_cols["config_json"] = entity_config_json
         stmt = (
@@ -536,7 +544,9 @@ class PostgresArtifactsStore(ArtifactsStore):
         entity_key: str | None = None,
     ) -> list[dict[str, Any]]:
         """List latest entity_run per entity_key (updated_at max). No new table."""
-        cols_str = "run_id, entity_key, artifact_path, status, config_json, created_at, updated_at"
+        cols_str = (
+            "run_id, entity_key, result_artifacts_json, status, config_json, created_at, updated_at"
+        )
         raw_sql = (
             f"SELECT {cols_str} FROM ("
             f"SELECT DISTINCT ON (entity_key) {cols_str} "
@@ -552,12 +562,20 @@ class PostgresArtifactsStore(ArtifactsStore):
                 rows = conn.execute(text(raw_sql)).all()
 
         cols = [
-            "run_id", "entity_key", "artifact_path", "status",
-            "config_json", "created_at", "updated_at",
+            "run_id", "entity_key", "result_artifacts_json",
+            "status", "config_json", "created_at", "updated_at",
         ]
         result = []
         for row in rows:
             d = dict(zip(cols, row, strict=True))
+            result_artifacts = None
+            if d.get("result_artifacts_json"):
+                try:
+                    result_artifacts = json.loads(d["result_artifacts_json"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            d["result_artifacts"] = result_artifacts
+            del d["result_artifacts_json"]
             for k in ("created_at", "updated_at"):
                 v = d.get(k)
                 if v is not None and hasattr(v, "isoformat"):

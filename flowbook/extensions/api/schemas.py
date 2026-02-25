@@ -118,11 +118,18 @@ class RunGetResponse(BaseModel):
 # ---- /entity_runs, /latest_entity_runs ----
 
 
+class ResultArtifactEntry(BaseModel):
+    """One main result artifact: path (step/key) and optional label for UI."""
+
+    path: str
+    label: str | None = None
+
+
 class EntityRunEntry(BaseModel):
     run_id: str
     entity_key: str
     status: str
-    artifact_path: str | None = None
+    result_artifacts: list[ResultArtifactEntry] | None = None
     config_json: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
@@ -136,7 +143,7 @@ class EntityRunGetResponse(BaseModel):
     run_id: str
     entity_key: str
     status: str
-    artifact_path: str | None = None
+    result_artifacts: list[ResultArtifactEntry] | None = None
     config_json: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
@@ -150,7 +157,7 @@ class LatestEntityRunGetResponse(BaseModel):
     run_id: str
     entity_key: str
     status: str
-    artifact_path: str | None = None
+    result_artifacts: list[ResultArtifactEntry] | None = None
     config_json: str | None = None
     created_at: str | None = None
     updated_at: str | None = None

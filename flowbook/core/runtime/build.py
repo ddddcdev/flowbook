@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flowbook.core.runtime.types import Plan, Step
+from flowbook.core.runtime.types import Plan, ResultArtifact, Step
 
 
 def build(plan_config: dict[str, Any]) -> Plan:
@@ -28,4 +28,19 @@ def build(plan_config: dict[str, Any]) -> Plan:
                 inputs=dict(step_cfg.get("inputs", {})),
             )
         )
-    return Plan(steps=steps)
+
+    result_artifacts: list[ResultArtifact] | None = None
+    raw = plan_config.get("result_artifacts")
+    if isinstance(raw, list) and raw:
+        result_artifacts = []
+        for item in raw:
+            if isinstance(item, dict) and "step" in item and "key" in item:
+                path = f"{item['step']}/{item['key']}"
+                label = item.get("label") if isinstance(item.get("label"), str) else None
+                result_artifacts.append(ResultArtifact(path=path, label=label))
+            else:
+                raise ValueError(
+                    f"result_artifacts entry must have step and key: {item!r}"
+                )
+
+    return Plan(steps=steps, result_artifacts=result_artifacts)

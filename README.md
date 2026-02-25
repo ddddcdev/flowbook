@@ -8,7 +8,7 @@ flowbook --version
 flowbook doctor
 ```
 
-Core-only install has no heavy dependencies. For Excel, Postgres, and FastAPI extensions:
+Core-only install has no heavy dependencies. For Excel (.xlsx, .xls), Postgres, and FastAPI extensions:
 
 ```sh
 pip install "flowbook[full]"
@@ -26,9 +26,14 @@ Dev CLI (Typer/Rich) for local development and demos:
 pip install "flowbook[dev]"
 flowbook --version
 flowbook doctor
-flowbook db reset    # DB reset + seed (needs flowbook[dev])
+flowbook db init    # Create schema (first-time only)
+flowbook db reset   # DB reset + seed (needs flowbook[dev])
+flowbook db up      # Start Postgres (Docker, optional)
+flowbook api       # Run API (uvicorn)
+flowbook streamlit # Streamlit UI (venv)
 flowbook hands-on   # API hands-on flow
-flowbook streamlit  # Streamlit UI
+flowbook steps list # List available steps (ops)
+flowbook steps show <op_name>  # Show step spec (inputs, outputs)
 ```
 
 `flowbook doctor` prints Python/OS/flowbook version and suggests `pip install "flowbook[excel]"`, `"flowbook[postgres]"`, `"flowbook[fastapi]"`, or `"flowbook[full]"` for missing extensions.
@@ -36,6 +41,7 @@ flowbook streamlit  # Streamlit UI
 ## Concept
 
 - **Config-driven**: Which steps run, in what order, and how inputs are bound—all come from **config** (plan config, ConfigStore, plan templates). Change the flow without changing framework code.
+- **Steps (ops)**: Flowbook uses pluggable **steps** (ops). Each step has inputs and outputs; plans compose steps. List available steps: `flowbook steps list`. Show step details (docstring, inputs, outputs): `flowbook steps show <op_name>`. API: `GET /steps`, `GET /steps/{op_name}`. Streamlit: Steps tab.
 - **Extend via extensions**: The **behavior** of each step is an **op** registered in a `Registry`. Add new ops in your own package; the framework only resolves `op name → run op`. No need to touch the core.
 - **Single data rule**: Data lives only in **Artifacts**; steps receive resolved values and return a dict. Contracts are explicit (e.g. `PortSpec` for inputs).
 - **AI-friendly**: Config (templates, rules, mappings) is easy for LLMs to generate or choose. New ops (including AI-backed ones) plug in the same way. You can call LLMs inside an op; the engine stays agnostic.
@@ -47,7 +53,7 @@ flowbook streamlit  # Streamlit UI
 3. Optionally run a **planner** first (e.g. `plan_from_template`); it produces a plan config that you then execute in the same session.
 4. Steps read from the store (via resolved inputs) and write outputs back; later steps can depend on them. All orchestration is driven by config; new capabilities are new ops in your extensions.
 
-To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points). To add CLI commands: see [Adding custom CLI](docs/adding-custom-cli.md).
+To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points). To compose plans from steps: see [Plan from steps](docs/steps/plan-from-steps.md). To add CLI commands: see [Adding custom CLI](docs/adding-custom-cli.md).
 
 ## Development
 
@@ -66,45 +72,62 @@ Apache License 2.0
 
 
 
-## Running Postgres with Docker Compose
+## Dev commands
 
-```sh
-docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v
-docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d
-docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres logs -f
-```
+The commands below are for **local development**. The Docker subcommands (`flowbook db up`, `flowbook api up`, `flowbook streamlit up`) require an `infra/` directory (compose files, env files). Clone this repo or copy `infra/` to use them.
 
 ## Dev / Demo
 
-API and Streamlit UI run from the repo for development and demos.
+API and Streamlit UI run from the repo for development and demos. Postgres is required for the API.
+
+### Postgres
+
+Run Postgres (local install, cloud, or Docker):
+
+```sh
+# Option: Docker Compose (requires infra/)
+flowbook db up    # Start Postgres (uses infra/.env.postgres)
+flowbook db down  # Stop Postgres
+```
+
+Use `--env-file PATH` / `--no-env-file` to override. Or run Postgres yourself and set `FLOWBOOK_DATABASE_URL`.
+
+**First-time**: Docker Compose runs init scripts automatically. For cloud or local Postgres, run `FLOWBOOK_DB_RESET=1 flowbook db init` to create the schema.
 
 ### API
 
 ```sh
-FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook poetry run flowbook api
+FLOWBOOK_DATABASE_URL=postgresql+psycopg://flowbook:flowbook@localhost:5432/flowbook poetry run flowbook api
 ```
 
 API docs: <http://localhost:8000/docs>
 
-### Streamlit UI
+Docker: `flowbook api up` / `flowbook api down` (uses infra/.env.api, network_mode: host). Cloud deploy: `docker build -f infra/Dockerfile.api -t flowbook-api .` — set `FLOWBOOK_DATABASE_URL` via env/secrets; image listens on `$PORT`.
 
-Streamlit runs in a separate venv (pandas version compatibility):
+### Streamlit UI
 
 ```sh
 flowbook streamlit
 ```
 
-Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
+Runs in a separate venv (pandas version compatibility). Requires the API. If you see `ModuleNotFoundError: altair.vegalite.v4`, remove `.venv-ui` and run again.
 
-### DB reset (dev only)
+Tabs: Steps, Inspect, Import, Artifacts, Export, Download, Configs.
 
-**Safety**: Requires `FLOWBOOK_DB_RESET=1`. Refuses non-localhost DSNs.
+Docker: `flowbook streamlit up` / `flowbook streamlit down` (uses infra/.env.streamlit). Cloud deploy: `docker build -f infra/Dockerfile.streamlit -t flowbook-streamlit .` — set `FLOWBOOK_API_URL` via env/secrets.
+
+### DB init and reset (dev only)
+
+**First-time setup** (empty DB, no tables): Create schema before reset. Requires `FLOWBOOK_DB_RESET=1` and localhost DSN.
+
+**Reset** (truncate + seed): Same safety requirements. Run `flowbook db init` first if the DB has no schema.
 
 ```sh
+FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db init
 FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
 ```
 
-Truncates artifacts and configs, then seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
+`flowbook db init` creates entities, runs, entity_runs, artifacts, configs. `flowbook db reset` truncates them and seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
 
 ### Hands-on flow
 
@@ -112,7 +135,7 @@ Truncates artifacts and configs, then seeds from bundled configs (flowbook[demo]
 flowbook hands-on
 ```
 
-Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download (interactive). Requires API up and a fixture. Generate fixture:
+Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download (interactive). Requires API up and a fixture. Excel import supports .xlsx and .xls (region-based import uses df-based detection). Generate fixture:
 
 ```sh
 flowbook fixture generate -o tests/fixtures/excel

@@ -134,6 +134,35 @@ def test_health():
     assert r.json() == {"status": "ok"}
 
 
+# ---- steps ----
+
+
+def test_steps_list(client: TestClient):
+    r = client.get("/steps")
+    assert r.status_code == 200
+    body = r.json()
+    assert "ops" in body
+    assert isinstance(body["ops"], list)
+    assert "add" in body["ops"]
+
+
+def test_steps_get(client: TestClient):
+    r = client.get("/steps/add")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["op_name"] == "add"
+    assert "required_inputs" in body
+    assert "x" in body["required_inputs"]
+    assert "y" in body["required_inputs"]
+    assert "output_keys" in body
+    assert "sum" in body["output_keys"]
+
+
+def test_steps_get_unknown_returns_404(client: TestClient):
+    r = client.get("/steps/nonexistent_op")
+    assert r.status_code == 404
+
+
 # ---- inspect ----
 
 

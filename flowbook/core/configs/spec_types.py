@@ -67,13 +67,25 @@ class Mapping(ConfigSpecKind):
         ops: list[dict[str, Any]]
 
 
+class ResultArtifactSpec(TypedDict):
+    """One entry in result_artifacts. step and key required; label optional for UI display."""
+
+    step: str
+    key: str
+    label: NotRequired[str]
+
+
 class PlanTemplate(ConfigSpecKind):
     KIND: str = "plan_template"
 
     class Spec(TypedDict):
-        """Spec for kind='plan_template'. plan is a plan config."""
+        """Spec for kind='plan_template'. plan is a plan config.
+        result_artifacts: optional list of (step, key) paths to treat as main results.
+        When present, these paths are used instead of last step's first output.
+        """
 
         plan: dict[str, Any]
+        result_artifacts: NotRequired[list[ResultArtifactSpec]]
 
 
 class LookupTable(ConfigSpecKind):

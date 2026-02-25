@@ -27,6 +27,14 @@ def _get_console():
         return None
 
 
+def _fmt_result_artifacts(ra: list) -> str:
+    """Format result_artifacts for display."""
+    if not ra:
+        return "(none)"
+    parts = [f"{x['path']}" + (f" ({x['label']})" if x.get("label") else "") for x in ra]
+    return ", ".join(parts)
+
+
 def _print_json(data: object) -> None:
     """Print JSON with Rich syntax highlighting when available."""
     con = _get_console()
@@ -161,19 +169,21 @@ def run(
         # entity_runs for this run (Postgres only; InMemory returns empty)
         r_er = httpx.get(f"{base}/entity_runs", params={"run_id": run_id}, timeout=10.0)
         if r_er.status_code == 200 and r_er.json().get("entries"):
-            print("entity_runs (this run):")
+            print("entity_runs (this run) - result_artifacts = main result paths from plan:")
             for ent in r_er.json()["entries"]:
-                ap = ent.get("artifact_path") or ""
+                ra = ent.get("result_artifacts") or []
                 ri, ek, st = ent["run_id"], ent["entity_key"], ent["status"]
-                print(f"  - {ri}/{ek} status={st} artifact_path={ap}")
-            # Get details to confirm artifact_path
+                ra_str = _fmt_result_artifacts(ra)
+                print(f"  - {ri}/{ek} status={st} result_artifacts=[{ra_str}]")
+            # Get details to confirm result_artifacts
             r_er_get = httpx.get(f"{base}/entity_runs/{run_id}/{entity_key}", timeout=10.0)
             if r_er_get.status_code == 200:
                 detail = r_er_get.json()
-                ap = detail.get("artifact_path")
+                ra = detail.get("result_artifacts") or []
+                ap = ra[0]["path"] if ra else None
                 if ap:
                     read_df_key = f"{run_id}/{entity_key}/{ap}"
-                    print(f"  -> read_df_key from entity_run: {read_df_key}")
+                    print(f"  -> read_df_key from entity_run result_artifacts[0]: {read_df_key}")
         else:
             print("entity_runs: (empty or not available; using import response)")
         # Artifacts for this run
@@ -244,8 +254,10 @@ def run(
             if r_er.status_code == 200 and r_er.json().get("entries"):
                 print(f"entity_runs (run_id={rid}):")
                 for ent in r_er.json()["entries"]:
-                    ap = ent.get("artifact_path") or ""
-                    print(f"  - {ent['entity_key']} status={ent['status']} artifact_path={ap}")
+                    ra = ent.get("result_artifacts") or []
+                    ra_str = _fmt_result_artifacts(ra)
+                    ek, st = ent["entity_key"], ent["status"]
+                    print(f"  - {ek} status={st} result_artifacts=[{ra_str}]")
             r_art = httpx.get(f"{base}/artifacts", params={"prefix": f"{rid}/"}, timeout=10.0)
             r_art.raise_for_status()
             keys = r_art.json().get("keys", [])

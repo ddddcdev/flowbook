@@ -1,0 +1,11 @@
+name: flowbook-streamlit
+
+services:
+  streamlit:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.streamlit
+    container_name: flowbook-streamlit
+    network_mode: host
+    environment:
+      FLOWBOOK_API_URL: ${FLOWBOOK_API_URL:-http://localhost:8000}

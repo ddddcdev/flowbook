@@ -32,7 +32,15 @@ def register_cli(app: Typer) -> None:
     default_base = os.environ.get("FLOWBOOK_API_URL", "http://127.0.0.1:8000")
 
     # ---- db ----
-    db_app = t.Typer(help="DB operations: reset, seed configs, seed defaults, seed artifact.")
+    db_app = t.Typer(help="DB operations: init, reset, seed configs, seed defaults, seed artifact.")
+
+    @db_app.command("init")
+    def db_init() -> None:
+        """Create schema for first-time setup. Needs FLOWBOOK_DB_RESET=1."""
+        from flowbook.extensions.cli.db import init_db_schema
+
+        code = init_db_schema()
+        raise t.Exit(code)
 
     @db_app.command("reset")
     def db_reset(
@@ -72,16 +80,111 @@ def register_cli(app: Typer) -> None:
         code = seed_one_artifact()
         raise t.Exit(code)
 
+    def _find_infra_root() -> Path:
+        """Find repo root where infra/compose.postgres.yml exists."""
+        p = Path(__file__).resolve()
+        for parent in [p] + list(p.parents):
+            compose = parent / "infra" / "compose.postgres.yml"
+            if compose.exists():
+                return parent
+        return Path.cwd()
+
+    @db_app.command("up")
+    def db_up(
+        env_file: str | None = t.Option(
+            None,
+            "--env-file",
+            help="Env file for compose (default: infra/.env.postgres)",
+        ),
+        no_env_file: bool = t.Option(
+            False,
+            "--no-env-file",
+            help="Use host env (e.g. poetry's .env) instead of --env-file",
+        ),
+    ) -> None:
+        """Start Postgres via docker compose (uses infra/.env.postgres)."""
+        import subprocess
+
+        repo = _find_infra_root()
+        compose_file = repo / "infra" / "compose.postgres.yml"
+        default_env = repo / "infra" / ".env.postgres"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        env_path = None
+        if not no_env_file:
+            env_path = Path(env_file) if env_file else default_env
+            if not env_path.is_absolute():
+                env_path = repo / env_path
+            if not env_path.exists():
+                t.echo(f"Env file not found: {env_path}", err=True)
+                raise t.Exit(1)
+        cmd = ["docker", "compose", "-f", str(compose_file)]
+        if env_path is not None:
+            cmd.extend(["--env-file", str(env_path)])
+        cmd.extend(["up", "-d"])
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
+    @db_app.command("down")
+    def db_down(
+        env_file: str | None = t.Option(
+            None,
+            "--env-file",
+            help="Env file for compose (default: infra/.env.postgres)",
+        ),
+        no_env_file: bool = t.Option(
+            False,
+            "--no-env-file",
+            help="Use host env (e.g. poetry's .env) instead of --env-file",
+        ),
+    ) -> None:
+        """Stop Postgres via docker compose (uses infra/.env.postgres)."""
+        import subprocess
+
+        repo = _find_infra_root()
+        compose_file = repo / "infra" / "compose.postgres.yml"
+        default_env = repo / "infra" / ".env.postgres"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        env_path = None
+        if not no_env_file:
+            env_path = Path(env_file) if env_file else default_env
+            if not env_path.is_absolute():
+                env_path = repo / env_path
+            if not env_path.exists():
+                t.echo(f"Env file not found: {env_path}", err=True)
+                raise t.Exit(1)
+        cmd = ["docker", "compose", "-f", str(compose_file)]
+        if env_path is not None:
+            cmd.extend(["--env-file", str(env_path)])
+        cmd.append("down")
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
     app.add_typer(db_app, name="db")
 
     # ---- api ----
-    @app.command("api")
-    def api_serve(
+    api_app = t.Typer(help="API server: run (uvicorn), up/down (Docker, same UX as flowbook db).")
+
+    def _find_api_compose_root() -> Path:
+        p = Path(__file__).resolve()
+        for parent in [p] + list(p.parents):
+            if (parent / "infra" / "compose.api.yml").exists():
+                return parent
+        return Path.cwd()
+
+    @api_app.callback(invoke_without_command=True)
+    def api_default(
+        ctx: Context,  # pyright: ignore[reportInvalidTypeForm]
         host: str = t.Option("127.0.0.1", "--host", "-H", help="Bind host"),
         port: int = t.Option(8000, "--port", "-p", help="Bind port"),
         reload: bool = t.Option(True, "--reload/--no-reload", help="Enable auto-reload"),
     ) -> None:
-        """Run flowbook API server (uvicorn)."""
+        """Run flowbook API server (uvicorn). Use 'api up' / 'api down' for Docker."""
+        if ctx.invoked_subcommand is not None:
+            return
         try:
             import uvicorn
         except ImportError:
@@ -96,6 +199,85 @@ def register_cli(app: Typer) -> None:
             port=port,
             reload=reload,
         )
+
+    @api_app.command("up")
+    def api_up(
+        detach: bool = t.Option(True, "-d/--no-detach", help="Run container in background"),
+        env_file: str | None = t.Option(
+            None,
+            "--env-file",
+            help="Env file for compose (default: infra/.env.api)",
+        ),
+        no_env_file: bool = t.Option(
+            False,
+            "--no-env-file",
+            help="Use host env (e.g. poetry's .env) instead of --env-file",
+        ),
+    ) -> None:
+        """Start API via Docker (template for GCP etc.)."""
+        import subprocess
+
+        repo = _find_api_compose_root()
+        compose_file = repo / "infra" / "compose.api.yml"
+        default_env = repo / "infra" / ".env.api"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        env_path = None
+        if not no_env_file:
+            env_path = Path(env_file) if env_file else default_env
+            if not env_path.is_absolute():
+                env_path = repo / env_path
+            if not env_path.exists():
+                t.echo(f"Env file not found: {env_path}", err=True)
+                raise t.Exit(1)
+        cmd = ["docker", "compose", "-f", str(compose_file)]
+        if env_path is not None:
+            cmd.extend(["--env-file", str(env_path)])
+        cmd.append("up")
+        if detach:
+            cmd.append("-d")
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
+    @api_app.command("down")
+    def api_down(
+        env_file: str | None = t.Option(
+            None,
+            "--env-file",
+            help="Env file for compose (default: infra/.env.api)",
+        ),
+        no_env_file: bool = t.Option(
+            False,
+            "--no-env-file",
+            help="Use host env (e.g. poetry's .env) instead of --env-file",
+        ),
+    ) -> None:
+        """Stop API Docker container."""
+        import subprocess
+
+        repo = _find_api_compose_root()
+        compose_file = repo / "infra" / "compose.api.yml"
+        default_env = repo / "infra" / ".env.api"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        env_path = None
+        if not no_env_file:
+            env_path = Path(env_file) if env_file else default_env
+            if not env_path.is_absolute():
+                env_path = repo / env_path
+            if not env_path.exists():
+                t.echo(f"Env file not found: {env_path}", err=True)
+                raise t.Exit(1)
+        cmd = ["docker", "compose", "-f", str(compose_file)]
+        if env_path is not None:
+            cmd.extend(["--env-file", str(env_path)])
+        cmd.append("down")
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
+    app.add_typer(api_app, name="api")
 
     # ---- hands-on ----
     @app.command("hands-on")
@@ -152,21 +334,155 @@ def register_cli(app: Typer) -> None:
 
     app.add_typer(fixture_app, name="fixture")
 
-    # ---- streamlit ----
-    _streamlit_extra = t.Argument(default=None, help="Extra args passed to streamlit run")
+    # ---- steps ----
+    steps_app = t.Typer(help="List and show step (op) specs. Use for plan composition.")
 
-    @app.command("streamlit")
-    def streamlit_cmd(
+    @steps_app.command("list")
+    def steps_list() -> None:
+        """List all registered op names."""
+        from flowbook import Registry, discover_steps
+
+        registry = Registry()
+        discover_steps(registry)
+        ops = registry.list_ops()
+        for name in ops:
+            t.echo(name)
+
+    @steps_app.command("show")
+    def steps_show(
+        op_name: str = t.Argument(..., help="Op name (e.g. add, read_excel_detect_region)"),
+    ) -> None:
+        """Show op docstring, inputs (required/optional), outputs."""
+        from flowbook import Registry, UnknownOp, discover_steps
+
+        registry = Registry()
+        discover_steps(registry)
+        try:
+            spec = registry.get_op_spec(op_name)
+        except UnknownOp as e:
+            t.echo(f"Unknown op: {op_name}", err=True)
+            raise t.Exit(1) from e
+        t.echo(f"# {spec.op_name}")
+        if spec.docstring:
+            t.echo()
+            t.echo(spec.docstring)
+        t.echo()
+        t.echo("## Inputs")
+        if spec.required_inputs:
+            t.echo("  Required: " + ", ".join(spec.required_inputs))
+        if spec.optional_inputs:
+            t.echo("  Optional: " + ", ".join(spec.optional_inputs))
+        if not spec.required_inputs and not spec.optional_inputs:
+            t.echo("  (none)")
+        t.echo()
+        t.echo("## Outputs")
+        t.echo("  " + (", ".join(spec.output_keys) if spec.output_keys else "(none)"))
+
+    app.add_typer(steps_app, name="steps")
+
+    # ---- streamlit ----
+    streamlit_app = t.Typer(help="Streamlit UI: run (venv), up/down (Docker).")
+
+    def _find_streamlit_compose_root() -> Path:
+        p = Path(__file__).resolve()
+        for parent in [p] + list(p.parents):
+            if (parent / "infra" / "compose.streamlit.yml").exists():
+                return parent
+        return Path.cwd()
+
+    @streamlit_app.callback(invoke_without_command=True)
+    def streamlit_default(
+        ctx: Context,  # pyright: ignore[reportInvalidTypeForm]
         venv_dir: str = t.Option(
             ".venv-ui", "--venv", help="Venv for Streamlit (created if missing)"
         ),
-        extra: list[str] = _streamlit_extra,
     ) -> None:
-        """Run Streamlit UI in a separate venv (pandas version compatibility)."""
+        """Run Streamlit UI in venv (default). Use 'streamlit up' / 'streamlit down' for Docker."""
+        if ctx.invoked_subcommand is not None:
+            return
         from flowbook.extensions.cli.streamlit_runner import run as run_streamlit
 
-        code = run_streamlit(venv_dir=venv_dir, extra_args=extra or [])
+        code = run_streamlit(venv_dir=venv_dir, extra_args=[])
         raise t.Exit(code)
+
+    @streamlit_app.command("up")
+    def streamlit_up(
+        detach: bool = t.Option(True, "-d/--no-detach", help="Run container in background"),
+        env_file: str | None = t.Option(
+            None,
+            "--env-file",
+            help="Env file for compose (default: infra/.env.streamlit)",
+        ),
+        no_env_file: bool = t.Option(
+            False,
+            "--no-env-file",
+            help="Use host env (e.g. poetry's .env) instead of --env-file",
+        ),
+    ) -> None:
+        """Start Streamlit via Docker (same UX as flowbook db up)."""
+        import subprocess
+
+        repo = _find_streamlit_compose_root()
+        compose_file = repo / "infra" / "compose.streamlit.yml"
+        default_env = repo / "infra" / ".env.streamlit"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        env_path = None
+        if not no_env_file:
+            env_path = Path(env_file) if env_file else default_env
+            if not env_path.is_absolute():
+                env_path = repo / env_path
+            if not env_path.exists():
+                t.echo(f"Env file not found: {env_path}", err=True)
+                raise t.Exit(1)
+        cmd = ["docker", "compose", "-f", str(compose_file)]
+        if env_path is not None:
+            cmd.extend(["--env-file", str(env_path)])
+        cmd.append("up")
+        if detach:
+            cmd.append("-d")
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
+    @streamlit_app.command("down")
+    def streamlit_down(
+        env_file: str | None = t.Option(
+            None,
+            "--env-file",
+            help="Env file for compose (default: infra/.env.streamlit)",
+        ),
+        no_env_file: bool = t.Option(
+            False,
+            "--no-env-file",
+            help="Use host env (e.g. poetry's .env) instead of --env-file",
+        ),
+    ) -> None:
+        """Stop Streamlit Docker container (same UX as flowbook db down)."""
+        import subprocess
+
+        repo = _find_streamlit_compose_root()
+        compose_file = repo / "infra" / "compose.streamlit.yml"
+        default_env = repo / "infra" / ".env.streamlit"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        env_path = None
+        if not no_env_file:
+            env_path = Path(env_file) if env_file else default_env
+            if not env_path.is_absolute():
+                env_path = repo / env_path
+            if not env_path.exists():
+                t.echo(f"Env file not found: {env_path}", err=True)
+                raise t.Exit(1)
+        cmd = ["docker", "compose", "-f", str(compose_file)]
+        if env_path is not None:
+            cmd.extend(["--env-file", str(env_path)])
+        cmd.append("down")
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
+    app.add_typer(streamlit_app, name="streamlit")
 
     # ---- artifacts (API) ----
     _add_artifacts_commands(app, default_base)
