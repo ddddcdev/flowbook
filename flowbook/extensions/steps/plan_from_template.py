@@ -18,6 +18,7 @@ class PlanFromTemplateOp(BaseOp):
 
     class Outputs(OutputsBase):
         PLAN = "plan"
+        RESULT_ARTIFACTS = "result_artifacts"
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
         template_name = inputs[self.Inputs.TEMPLATE_NAME]
@@ -40,7 +41,10 @@ class PlanFromTemplateOp(BaseOp):
                 f"Got {type(plan).__name__}: {plan}"
             )
 
-        return {self.Outputs.PLAN: plan}
+        out: dict[str, Any] = {self.Outputs.PLAN: plan}
+        if "result_artifacts" in tmpl and tmpl["result_artifacts"]:
+            out["result_artifacts"] = tmpl["result_artifacts"]
+        return out
 
 
 register = register_from_steps()

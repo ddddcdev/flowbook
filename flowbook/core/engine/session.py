@@ -199,6 +199,9 @@ class RunSession:
         name = planner_config.get("name")
         if name and "name" not in plan_config:
             plan_config = {**plan_config, "name": name}
+        if "result_artifacts" in planner_step.outputs:
+            ra_key = planner_step.outputs["result_artifacts"]
+            plan_config = {**plan_config, "result_artifacts": self.store.get(ra_key)}
         self._executed = False
         exec_info = self._exec(
             plan_config=plan_config, entity_key=self.entity_key

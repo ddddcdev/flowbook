@@ -20,8 +20,17 @@ class Step:
 
 
 @dataclass(frozen=True)
+class ResultArtifact:
+    """Declared main result: path (step/key) and optional label for UI."""
+
+    path: str  # "{step}/{key}"
+    label: str | None = None
+
+
+@dataclass(frozen=True)
 class Plan:
     steps: list[Step]
+    result_artifacts: list[ResultArtifact] | None = None
 
 
 @dataclass
