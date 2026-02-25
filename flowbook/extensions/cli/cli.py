@@ -32,7 +32,15 @@ def register_cli(app: Typer) -> None:
     default_base = os.environ.get("FLOWBOOK_API_URL", "http://127.0.0.1:8000")
 
     # ---- db ----
-    db_app = t.Typer(help="DB operations: reset, seed configs, seed defaults, seed artifact.")
+    db_app = t.Typer(help="DB operations: init, reset, seed configs, seed defaults, seed artifact.")
+
+    @db_app.command("init")
+    def db_init() -> None:
+        """Create schema (entities, runs, entity_runs, artifacts, configs) for first-time setup. Needs FLOWBOOK_DB_RESET=1."""
+        from flowbook.extensions.cli.db import init_db_schema
+
+        code = init_db_schema()
+        raise t.Exit(code)
 
     @db_app.command("reset")
     def db_reset(

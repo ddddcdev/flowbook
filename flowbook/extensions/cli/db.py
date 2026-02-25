@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import uuid
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -248,6 +249,50 @@ def seed_one_artifact() -> int:
     key = "seed/demo/excel/result"
     store.put(key, {"smoke": True, "message": "seed for artifacts list"})
     print(f"Seeded artifact: {key}")
+    return 0
+
+
+def init_db_schema() -> int:
+    """Create tables (entities, runs, entity_runs, artifacts, configs) for first-time setup.
+    Use before flowbook db reset when the DB has no schema yet.
+    Returns exit code."""
+    if os.environ.get("FLOWBOOK_DB_RESET") != "1":
+        print(
+            "Refusing to run: set FLOWBOOK_DB_RESET=1 to confirm you want to modify the DB.",
+            file=sys.stderr,
+        )
+        return 1
+
+    database_url = os.environ.get("FLOWBOOK_DATABASE_URL")
+    if not database_url:
+        print(
+            "FLOWBOOK_DATABASE_URL is required. Set it in .env (see .env.example).",
+            file=sys.stderr,
+        )
+        return 1
+
+    if "localhost" not in database_url and "127.0.0.1" not in database_url:
+        print(
+            "Refusing to run: DSN does not look like localhost. Only local/dev DBs may be modified.",
+            file=sys.stderr,
+        )
+        return 1
+
+    database_url = _normalize_url(database_url)
+
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(database_url, future=True)
+    schema_pkg = "flowbook.schema"
+    files = ["10_artifacts.sql", "20_configs.sql"]
+
+    with engine.begin() as conn:
+        for name in files:
+            sql = (resources.files(schema_pkg) / name).read_text(encoding="utf-8")
+            conn.execute(text(sql))
+            print(f"Executed {name}", flush=True)
+
+    print("Schema created. You can now run flowbook db reset to seed configs.", flush=True)
     return 0
 
 

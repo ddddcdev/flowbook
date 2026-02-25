@@ -26,7 +26,8 @@ Dev CLI (Typer/Rich) for local development and demos:
 pip install "flowbook[dev]"
 flowbook --version
 flowbook doctor
-flowbook db reset    # DB reset + seed (needs flowbook[dev])
+flowbook db init    # Create schema (first-time only)
+flowbook db reset   # DB reset + seed (needs flowbook[dev])
 flowbook db up      # Start Postgres (Docker, optional)
 flowbook api       # Run API (uvicorn)
 flowbook streamlit # Streamlit UI (venv)
@@ -88,6 +89,8 @@ flowbook db down  # Stop Postgres
 
 Use `--env-file PATH` / `--no-env-file` to override. Or run Postgres yourself and set `FLOWBOOK_DATABASE_URL`.
 
+**First-time**: Docker Compose runs init scripts automatically. For cloud or local Postgres, run `FLOWBOOK_DB_RESET=1 flowbook db init` to create the schema.
+
 ### API
 
 ```sh
@@ -110,15 +113,18 @@ Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
 
 Docker: `flowbook streamlit up` / `flowbook streamlit down` (uses infra/.env.streamlit). Cloud deploy: `docker build -f infra/Dockerfile.streamlit -t flowbook-streamlit .` — set `FLOWBOOK_API_URL` via env/secrets.
 
-### DB reset (dev only)
+### DB init and reset (dev only)
 
-**Safety**: Requires `FLOWBOOK_DB_RESET=1`. Refuses non-localhost DSNs.
+**First-time setup** (empty DB, no tables): Create schema before reset. Requires `FLOWBOOK_DB_RESET=1` and localhost DSN.
+
+**Reset** (truncate + seed): Same safety requirements. Run `flowbook db init` first if the DB has no schema.
 
 ```sh
+FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db init
 FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
 ```
 
-Truncates artifacts and configs, then seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
+`flowbook db init` creates entities, runs, entity_runs, artifacts, configs. `flowbook db reset` truncates them and seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
 
 ### Hands-on flow
 
