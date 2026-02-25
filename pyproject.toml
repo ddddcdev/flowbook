@@ -75,6 +75,7 @@ ruff = "^0.14.14"
 python-multipart = "^0.0.22"
 psycopg2-binary = "^2.9.11"
 twine = "^6.2.0"
+keyrings-alt = "^5.0.2"
 
 [tool.pytest.ini_options]
 markers = [
