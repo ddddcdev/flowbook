@@ -72,6 +72,68 @@ def register_cli(app: Typer) -> None:
         code = seed_one_artifact()
         raise t.Exit(code)
 
+    def _find_infra_root() -> Path:
+        """Find repo root where infra/compose.postgres.yml exists."""
+        p = Path(__file__).resolve()
+        for parent in [p] + list(p.parents):
+            compose = parent / "infra" / "compose.postgres.yml"
+            if compose.exists():
+                return parent
+        return Path.cwd()
+
+    @db_app.command("up")
+    def db_up() -> None:
+        """Start Postgres via docker compose (uses infra/.env.postgres)."""
+        import subprocess
+
+        repo = _find_infra_root()
+        compose_file = repo / "infra" / "compose.postgres.yml"
+        env_file = repo / "infra" / ".env.postgres"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        if not env_file.exists():
+            t.echo(f"Env file not found: {env_file}", err=True)
+            raise t.Exit(1)
+        cmd = [
+            "docker",
+            "compose",
+            "-f",
+            str(compose_file),
+            "--env-file",
+            str(env_file),
+            "up",
+            "-d",
+        ]
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
+    @db_app.command("down")
+    def db_down() -> None:
+        """Stop Postgres via docker compose (uses infra/.env.postgres)."""
+        import subprocess
+
+        repo = _find_infra_root()
+        compose_file = repo / "infra" / "compose.postgres.yml"
+        env_file = repo / "infra" / ".env.postgres"
+        if not compose_file.exists():
+            t.echo(f"Compose file not found: {compose_file}", err=True)
+            raise t.Exit(1)
+        if not env_file.exists():
+            t.echo(f"Env file not found: {env_file}", err=True)
+            raise t.Exit(1)
+        cmd = [
+            "docker",
+            "compose",
+            "-f",
+            str(compose_file),
+            "--env-file",
+            str(env_file),
+            "down",
+        ]
+        code = subprocess.run(cmd, cwd=str(repo)).returncode
+        raise t.Exit(code)
+
     app.add_typer(db_app, name="db")
 
     # ---- api ----

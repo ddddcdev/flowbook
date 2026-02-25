@@ -68,10 +68,11 @@ Apache License 2.0
 
 ## Running Postgres with Docker Compose
 
+With flowbook[dev] installed:
+
 ```sh
-docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v
-docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d
-docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres logs -f
+flowbook db up    # Start Postgres (applies infra/.env.postgres)
+flowbook db down  # Stop Postgres
 ```
 
 ## Dev / Demo
