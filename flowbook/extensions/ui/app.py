@@ -9,6 +9,7 @@ Run with API up:
 from __future__ import annotations
 
 import io
+import os
 import re
 
 import pandas as pd
@@ -17,7 +18,7 @@ import streamlit as st
 
 from flowbook.core.artifacts.key_utils import parse_artifact_key
 
-DEFAULT_BASE = "http://localhost:8000"
+DEFAULT_BASE = os.environ.get("FLOWBOOK_API_URL", "http://localhost:8000")
 
 
 def api(base: str, path: str) -> str:

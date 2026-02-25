@@ -1,0 +1,14 @@
+# flowbook API. Build from repo root: docker build -f infra/Dockerfile.api .
+# Template for GCP Cloud Run etc. DB connection via FLOWBOOK_DATABASE_URL (localhost with network_mode: host).
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY flowbook ./flowbook
+
+RUN pip install --no-cache-dir -e ".[full]"
+
+EXPOSE 8000
+
+CMD ["uvicorn", "flowbook.extensions.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

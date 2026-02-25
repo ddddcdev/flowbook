@@ -1,0 +1,11 @@
+name: flowbook-api
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    container_name: flowbook-api
+    network_mode: host
+    env_file:
+      - .env.api

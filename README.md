@@ -27,8 +27,12 @@ pip install "flowbook[dev]"
 flowbook --version
 flowbook doctor
 flowbook db reset    # DB reset + seed (needs flowbook[dev])
+flowbook db up      # Start Postgres
+flowbook api up     # Start API (Docker, template for GCP etc.)
+flowbook streamlit up  # Start Streamlit (Docker)
+flowbook api       # Run API (uvicorn, poetry)
 flowbook hands-on   # API hands-on flow
-flowbook streamlit  # Streamlit UI
+flowbook streamlit # Streamlit UI (venv)
 ```
 
 `flowbook doctor` prints Python/OS/flowbook version and suggests `pip install "flowbook[excel]"`, `"flowbook[postgres]"`, `"flowbook[fastapi]"`, or `"flowbook[full]"` for missing extensions.
@@ -66,14 +70,20 @@ Apache License 2.0
 
 
 
+## Dev commands (require infra/)
+
+The commands `flowbook db`, `flowbook streamlit`, and `flowbook api` are for **local development**. They expect an `infra/` directory (compose files, env files) in the project. Clone this repo or copy `infra/` to use them.
+
 ## Running Postgres with Docker Compose
 
 With flowbook[dev] installed:
 
 ```sh
-flowbook db up    # Start Postgres (applies infra/.env.postgres)
+flowbook db up    # Start Postgres (uses infra/.env.postgres)
 flowbook db down  # Stop Postgres
 ```
+
+Use `--env-file PATH` to override; `--no-env-file` to use host env (e.g. poetry's .env).
 
 ## Dev / Demo
 
@@ -81,21 +91,46 @@ API and Streamlit UI run from the repo for development and demos.
 
 ### API
 
+**Docker (template for GCP Cloud Run etc.):**
+
+```sh
+flowbook db up     # Start Postgres first
+flowbook api up    # Start API (uses infra/.env.api, network_mode: host → localhost:5432)
+flowbook api down  # Stop API
+```
+
+**Poetry (development, hot reload):**
+
 ```sh
 FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook poetry run flowbook api
 ```
+
+Use `--env-file PATH` / `--no-env-file` like db and streamlit.
 
 API docs: <http://localhost:8000/docs>
 
 ### Streamlit UI
 
-Streamlit runs in a separate venv (pandas version compatibility):
+**Docker (same UX as flowbook db up):**
+
+```sh
+flowbook streamlit up    # Start Streamlit (uses infra/.env.streamlit)
+flowbook streamlit down  # Stop Streamlit
+```
+
+Use `--env-file PATH` to override; `--no-env-file` to use host env (e.g. poetry's .env).
+
+**Local (venv):**
 
 ```sh
 flowbook streamlit
 ```
 
-Requires the API to be running. Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
+Runs in a separate venv (pandas version compatibility). If you see `ModuleNotFoundError: altair.vegalite.v4`, remove `.venv-ui` and run again.
+
+Requires the API to be running (e.g. `flowbook api` on host). Docker uses `network_mode: host`; `FLOWBOOK_API_URL` from infra/.env.streamlit or host env.
+
+Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
 
 ### DB reset (dev only)
 

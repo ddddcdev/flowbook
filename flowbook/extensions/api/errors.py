@@ -6,10 +6,14 @@ DoD: failure responses always include run_id (if available) + reason.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException
 
 from flowbook import UnknownOp
 from flowbook.core.artifacts.store import ArtifactNotFound
+
+logger = logging.getLogger(__name__)
 
 
 def to_http_error(e: Exception, *, run_id: str | None = None) -> HTTPException:
@@ -35,5 +39,6 @@ def to_http_error(e: Exception, *, run_id: str | None = None) -> HTTPException:
         detail["reason"] = str(e)
         return HTTPException(status_code=400, detail=detail)
 
-    detail["reason"] = "internal error"
+    logger.exception("Unhandled exception")
+    detail["reason"] = str(e)
     return HTTPException(status_code=500, detail=detail)

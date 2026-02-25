@@ -32,13 +32,13 @@ def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) 
         pip = venv / "bin" / "pip" if os.name != "nt" else venv / "Scripts" / "pip.exe"
         if (repo / "pyproject.toml").exists():
             subprocess.run(
-                [str(pip), "install", "-e", str(repo), "streamlit", "requests", "-q"],
+                [str(pip), "install", "-e", str(repo), "streamlit", "requests", "altair>=4,<5", "-q"],
                 check=True,
                 cwd=repo,
             )
         else:
             subprocess.run(
-                [str(pip), "install", "flowbook[full]", "streamlit", "requests", "-q"],
+                [str(pip), "install", "flowbook[full]", "streamlit", "requests", "altair>=4,<5", "-q"],
                 check=True,
             )
 

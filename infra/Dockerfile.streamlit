@@ -1,0 +1,16 @@
+# Streamlit UI for flowbook. Build from repo root: docker build -f infra/Dockerfile.streamlit .
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Copy package and install (build from repo root)
+COPY pyproject.toml README.md ./
+COPY flowbook ./flowbook
+
+# flowbook[full] requires pandas>=3, which conflicts with streamlit's pandas<3.
+# Install core + streamlit stack (streamlit brings pandas 2.x).
+RUN pip install --no-cache-dir -e . streamlit requests "altair>=4,<5" openpyxl
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "flowbook/extensions/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
