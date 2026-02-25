@@ -2,6 +2,8 @@
 
 This guide shows how to add your own steps (ops) so the engine can run them. The **minimal way** is to write a module and call its `register(registry)` once at startup—no packaging or entry points required. If you prefer to ship steps as an installable package, you can use entry points so they are discovered automatically.
 
+**Listing steps**: `flowbook steps list` lists all registered ops. `flowbook steps show <op_name>` shows docstring, inputs (required/optional), and outputs. See [Plan from steps](steps/plan-from-steps.md) for composing plans from steps.
+
 ---
 
 ## Minimal: run your register at startup (recommended to start)
@@ -86,6 +88,14 @@ If you want your steps in an installable package and discovered automatically (n
 4. **App code** only needs `discover_steps(registry)`; your steps are loaded from the entry point.
 
 After the first install, **code changes** in your step modules are picked up on the next run (editable install). Run install again only if you **change** `pyproject.toml` (e.g. add or edit the entry point).
+
+---
+
+## Inputs and Outputs convention
+
+- **Inputs**: Subclass `InputsBase`. Define key constants (e.g. `X = "x"`) and set `REQUIRED` and `OPTIONAL` tuples. Keys must be disjoint.
+- **Outputs**: Subclass `OutputsBase`. Define key constants (e.g. `OUT = "out"`). Uppercase str attributes become `KEYS` automatically.
+- **Docstring**: Add a class docstring; it appears in `flowbook steps show` and API `GET /steps/{op_name}`.
 
 ---
 

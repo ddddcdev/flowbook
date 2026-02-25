@@ -82,17 +82,65 @@ def main() -> None:
     entity_key_opts = _entity_key_options(base)
 
     tab_names = [
-        "Inspect", "Import", "Entity runs", "Artifacts", "Export", "Download",
+        "Steps", "Inspect", "Import", "Entity runs", "Artifacts", "Export", "Download",
         "Configs",
     ]
     tabs = st.tabs(tab_names)
-    tab_inspect = tabs[0]
-    tab_import = tabs[1]
-    tab_entity_runs = tabs[2]
-    tab_artifacts = tabs[3]
-    tab_export = tabs[4]
-    tab_download = tabs[5]
-    tab_configs = tabs[6]
+    tab_steps = tabs[0]
+    tab_inspect = tabs[1]
+    tab_import = tabs[2]
+    tab_entity_runs = tabs[3]
+    tab_artifacts = tabs[4]
+    tab_export = tabs[5]
+    tab_download = tabs[6]
+    tab_configs = tabs[7]
+
+    with tab_steps:
+        st.subheader("Steps (ops)")
+        st.caption("Select a row to view its spec below.")
+        if st.button("Refresh", key="steps_refresh"):
+            st.session_state.pop("steps_list", None)
+        try:
+            r = requests.get(api(base, "/steps"), timeout=10)
+            r.raise_for_status()
+            ops = r.json().get("ops", [])
+            if ops:
+                df = pd.DataFrame({"op": ops})
+                event = st.dataframe(
+                    df,
+                    key="steps_df",
+                    width="stretch",
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                )
+                row_idx = None
+                if event.selection and event.selection.rows:
+                    row_idx = event.selection.rows[0]
+                if row_idx is not None and 0 <= row_idx < len(ops):
+                    op_name = ops[row_idx]
+                    r2 = requests.get(api(base, f"/steps/{op_name}"), timeout=10)
+                    r2.raise_for_status()
+                    spec = r2.json()
+                    st.subheader(f"Spec: {op_name}")
+                    st.markdown(spec.get("docstring") or "(no docstring)")
+                    st.caption(
+                        "Inputs (required): "
+                        + ", ".join(spec.get("required_inputs", []))
+                        or "(none)"
+                    )
+                    st.caption(
+                        "Inputs (optional): "
+                        + ", ".join(spec.get("optional_inputs", []))
+                        or "(none)"
+                    )
+                    st.caption(
+                        "Outputs: " + ", ".join(spec.get("output_keys", [])) or "(none)"
+                    )
+            else:
+                st.info("No steps. API may not have discover_steps loaded.")
+        except requests.RequestException as e:
+            st.error(str(e))
 
     with tab_inspect:
         st.subheader("Inspect Excel (optional)")
@@ -177,7 +225,7 @@ def main() -> None:
                         )
                         raw_resp.raise_for_status()
                         df = pd.read_parquet(io.BytesIO(raw_resp.content))
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        st.dataframe(df, width="stretch", hide_index=True)
                 except requests.RequestException as e:
                     st.error(str(e))
 
@@ -217,13 +265,13 @@ def main() -> None:
         if er_entries:
             st.write("**entity_runs** (by run_id)")
             df_er = pd.DataFrame(er_entries)
-            st.dataframe(df_er, use_container_width=True, hide_index=True)
+            st.dataframe(df_er, width="stretch", hide_index=True)
         else:
             st.info("No entity_runs. Click Refresh or run Import first.")
         if lat_entries:
             st.write("**latest_entity_runs** (latest per entity_key)")
             df_lat = pd.DataFrame(lat_entries)
-            st.dataframe(df_lat, use_container_width=True, hide_index=True)
+            st.dataframe(df_lat, width="stretch", hide_index=True)
 
     with tab_artifacts:
         st.subheader("List artifacts")
@@ -237,7 +285,7 @@ def main() -> None:
                 if keys:
                     st.dataframe(
                         data.get("entries", []),
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True,
                     )
                     st.session_state["artifact_keys"] = keys
@@ -310,7 +358,7 @@ def main() -> None:
                             )
                             raw_resp.raise_for_status()
                             df = pd.read_excel(io.BytesIO(raw_resp.content), engine="openpyxl")
-                            st.dataframe(df, use_container_width=True, hide_index=True)
+                            st.dataframe(df, width="stretch", hide_index=True)
                         st.json({"status": data["status"], "artifacts_written": written})
                     except requests.RequestException as e:
                         st.error(str(e))
@@ -390,7 +438,7 @@ def main() -> None:
             event = st.dataframe(
                 df,
                 key="configs_df",
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 on_select="rerun",
                 selection_mode="single-row",

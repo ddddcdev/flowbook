@@ -334,6 +334,52 @@ def register_cli(app: Typer) -> None:
 
     app.add_typer(fixture_app, name="fixture")
 
+    # ---- steps ----
+    steps_app = t.Typer(help="List and show step (op) specs. Use for plan composition.")
+
+    @steps_app.command("list")
+    def steps_list() -> None:
+        """List all registered op names."""
+        from flowbook import Registry, discover_steps
+
+        registry = Registry()
+        discover_steps(registry)
+        ops = registry.list_ops()
+        for name in ops:
+            t.echo(name)
+
+    @steps_app.command("show")
+    def steps_show(
+        op_name: str = t.Argument(..., help="Op name (e.g. add, read_excel_detect_region)"),
+    ) -> None:
+        """Show op docstring, inputs (required/optional), outputs."""
+        from flowbook import Registry, UnknownOp, discover_steps
+
+        registry = Registry()
+        discover_steps(registry)
+        try:
+            spec = registry.get_op_spec(op_name)
+        except UnknownOp as e:
+            t.echo(f"Unknown op: {op_name}", err=True)
+            raise t.Exit(1) from e
+        t.echo(f"# {spec.op_name}")
+        if spec.docstring:
+            t.echo()
+            t.echo(spec.docstring)
+        t.echo()
+        t.echo("## Inputs")
+        if spec.required_inputs:
+            t.echo("  Required: " + ", ".join(spec.required_inputs))
+        if spec.optional_inputs:
+            t.echo("  Optional: " + ", ".join(spec.optional_inputs))
+        if not spec.required_inputs and not spec.optional_inputs:
+            t.echo("  (none)")
+        t.echo()
+        t.echo("## Outputs")
+        t.echo("  " + (", ".join(spec.output_keys) if spec.output_keys else "(none)"))
+
+    app.add_typer(steps_app, name="steps")
+
     # ---- streamlit ----
     streamlit_app = t.Typer(help="Streamlit UI: run (venv), up/down (Docker, same UX as flowbook db).")
 

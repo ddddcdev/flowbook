@@ -32,6 +32,8 @@ flowbook db up      # Start Postgres (Docker, optional)
 flowbook api       # Run API (uvicorn)
 flowbook streamlit # Streamlit UI (venv)
 flowbook hands-on   # API hands-on flow
+flowbook steps list # List available steps (ops)
+flowbook steps show <op_name>  # Show step spec (inputs, outputs)
 ```
 
 `flowbook doctor` prints Python/OS/flowbook version and suggests `pip install "flowbook[excel]"`, `"flowbook[postgres]"`, `"flowbook[fastapi]"`, or `"flowbook[full]"` for missing extensions.
@@ -39,6 +41,7 @@ flowbook hands-on   # API hands-on flow
 ## Concept
 
 - **Config-driven**: Which steps run, in what order, and how inputs are bound—all come from **config** (plan config, ConfigStore, plan templates). Change the flow without changing framework code.
+- **Steps (ops)**: Flowbook uses pluggable **steps** (ops). Each step has inputs and outputs; plans compose steps. List available steps: `flowbook steps list`. Show step details (docstring, inputs, outputs): `flowbook steps show <op_name>`. API: `GET /steps`, `GET /steps/{op_name}`. Streamlit: Steps tab.
 - **Extend via extensions**: The **behavior** of each step is an **op** registered in a `Registry`. Add new ops in your own package; the framework only resolves `op name → run op`. No need to touch the core.
 - **Single data rule**: Data lives only in **Artifacts**; steps receive resolved values and return a dict. Contracts are explicit (e.g. `PortSpec` for inputs).
 - **AI-friendly**: Config (templates, rules, mappings) is easy for LLMs to generate or choose. New ops (including AI-backed ones) plug in the same way. You can call LLMs inside an op; the engine stays agnostic.
@@ -50,7 +53,7 @@ flowbook hands-on   # API hands-on flow
 3. Optionally run a **planner** first (e.g. `plan_from_template`); it produces a plan config that you then execute in the same session.
 4. Steps read from the store (via resolved inputs) and write outputs back; later steps can depend on them. All orchestration is driven by config; new capabilities are new ops in your extensions.
 
-To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points). To add CLI commands: see [Adding custom CLI](docs/adding-custom-cli.md).
+To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (minimal: one module + one line at startup; optional: package with entry points). To compose plans from steps: see [Plan from steps](docs/steps/plan-from-steps.md). To add CLI commands: see [Adding custom CLI](docs/adding-custom-cli.md).
 
 ## Development
 
@@ -109,7 +112,7 @@ flowbook streamlit
 
 Runs in a separate venv (pandas version compatibility). Requires the API. If you see `ModuleNotFoundError: altair.vegalite.v4`, remove `.venv-ui` and run again.
 
-Tabs: Health, Inspect, Import, Artifacts, Export, Download, Configs.
+Tabs: Steps, Inspect, Import, Artifacts, Export, Download, Configs.
 
 Docker: `flowbook streamlit up` / `flowbook streamlit down` (uses infra/.env.streamlit). Cloud deploy: `docker build -f infra/Dockerfile.streamlit -t flowbook-streamlit .` — set `FLOWBOOK_API_URL` via env/secrets.
 
