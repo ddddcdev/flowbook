@@ -64,6 +64,7 @@ async def import_file(
 
             # Store file bytes and register bindings
             session.put_input_bytes("src_excel_bytes", contents)
+            session.put_input("src_excel_filename", file.filename or "")
             session.put_input("input_profile_name", input_profile_name)
             session.put_input("template_name", template_name)
 

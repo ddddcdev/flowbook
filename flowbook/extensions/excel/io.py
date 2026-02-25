@@ -1,11 +1,41 @@
 from __future__ import annotations
 
+import io
 from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
 
 from flowbook.extensions.excel.errors import MissingRequiredColumnsError
+
+
+def excel_engine_from_filename(filename: str | None) -> str:
+    """
+    Infer pandas read_excel engine from file extension.
+    Returns 'xlrd' for .xls, 'openpyxl' for .xlsx/.xlsm, else 'openpyxl'.
+    """
+    if not filename:
+        return "openpyxl"
+    lower = filename.lower()
+    if lower.endswith(".xls") and not (lower.endswith(".xlsx") or lower.endswith(".xlsm")):
+        return "xlrd"
+    return "openpyxl"
+
+
+def read_sheet_to_raw_df(
+    source: str | Path | bytes,
+    sheet: str | int = 0,
+    engine: str | None = "openpyxl",
+) -> pd.DataFrame:
+    """
+    Read entire sheet as raw DataFrame (header=None).
+    Use for format-agnostic region detection; engine selection is separate.
+    """
+    if isinstance(source, bytes):
+        io_obj: Path | io.BytesIO = io.BytesIO(source)
+    else:
+        io_obj = Path(source)
+    return pd.read_excel(io_obj, sheet_name=sheet, header=None, engine=engine)
 
 
 def read_excel_to_df(
