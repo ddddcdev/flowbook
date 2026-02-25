@@ -13,5 +13,8 @@
         }
       }
     ]
-  }
+  },
+  "result_artifacts": [
+    {"step": "read", "key": "df", "label": "Detail table"}
+  ]
 }

@@ -161,12 +161,12 @@ def run(
         # entity_runs for this run (Postgres only; InMemory returns empty)
         r_er = httpx.get(f"{base}/entity_runs", params={"run_id": run_id}, timeout=10.0)
         if r_er.status_code == 200 and r_er.json().get("entries"):
-            print("entity_runs (this run):")
+            print("entity_runs (this run) - result_artifacts = main result paths from plan:")
             for ent in r_er.json()["entries"]:
                 ra = ent.get("result_artifacts") or []
-                ap = ra[0]["path"] if ra else ""
                 ri, ek, st = ent["run_id"], ent["entity_key"], ent["status"]
-                print(f"  - {ri}/{ek} status={st} result_artifacts={ap or '(none)'}")
+                ra_str = ", ".join(f"{x['path']}" + (f" ({x['label']})" if x.get("label") else "") for x in ra) if ra else "(none)"
+                print(f"  - {ri}/{ek} status={st} result_artifacts=[{ra_str}]")
             # Get details to confirm result_artifacts
             r_er_get = httpx.get(f"{base}/entity_runs/{run_id}/{entity_key}", timeout=10.0)
             if r_er_get.status_code == 200:
@@ -175,7 +175,7 @@ def run(
                 ap = ra[0]["path"] if ra else None
                 if ap:
                     read_df_key = f"{run_id}/{entity_key}/{ap}"
-                    print(f"  -> read_df_key from entity_run: {read_df_key}")
+                    print(f"  -> read_df_key from entity_run result_artifacts[0]: {read_df_key}")
         else:
             print("entity_runs: (empty or not available; using import response)")
         # Artifacts for this run
@@ -247,8 +247,8 @@ def run(
                 print(f"entity_runs (run_id={rid}):")
                 for ent in r_er.json()["entries"]:
                     ra = ent.get("result_artifacts") or []
-                    ap = ra[0]["path"] if ra else ""
-                    print(f"  - {ent['entity_key']} status={ent['status']} result_artifacts={ap or '(none)'}")
+                    ra_str = ", ".join(f"{x['path']}" + (f" ({x['label']})" if x.get("label") else "") for x in ra) if ra else "(none)"
+                    print(f"  - {ent['entity_key']} status={ent['status']} result_artifacts=[{ra_str}]")
             r_art = httpx.get(f"{base}/artifacts", params={"prefix": f"{rid}/"}, timeout=10.0)
             r_art.raise_for_status()
             keys = r_art.json().get("keys", [])
