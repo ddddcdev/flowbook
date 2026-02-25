@@ -144,8 +144,16 @@ def _result_artifacts_from_plan(
                 produced.add(f"{s.name}/{out_name}")
     out: list[dict[str, str | None]] = []
     for item in ra:
-        path = getattr(item, "path", None) if hasattr(item, "path") else (item.get("path") if isinstance(item, dict) else None)
-        label = getattr(item, "label", None) if hasattr(item, "label") else (item.get("label") if isinstance(item, dict) else None)
+        path = (
+            getattr(item, "path", None)
+            if hasattr(item, "path")
+            else (item.get("path") if isinstance(item, dict) else None)
+        )
+        label = (
+            getattr(item, "label", None)
+            if hasattr(item, "label")
+            else (item.get("label") if isinstance(item, dict) else None)
+        )
         if not path:
             continue
         if path not in produced:

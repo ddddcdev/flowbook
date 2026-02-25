@@ -36,7 +36,7 @@ def register_cli(app: Typer) -> None:
 
     @db_app.command("init")
     def db_init() -> None:
-        """Create schema (entities, runs, entity_runs, artifacts, configs) for first-time setup. Needs FLOWBOOK_DB_RESET=1."""
+        """Create schema for first-time setup. Needs FLOWBOOK_DB_RESET=1."""
         from flowbook.extensions.cli.db import init_db_schema
 
         code = init_db_schema()
@@ -381,7 +381,7 @@ def register_cli(app: Typer) -> None:
     app.add_typer(steps_app, name="steps")
 
     # ---- streamlit ----
-    streamlit_app = t.Typer(help="Streamlit UI: run (venv), up/down (Docker, same UX as flowbook db).")
+    streamlit_app = t.Typer(help="Streamlit UI: run (venv), up/down (Docker).")
 
     def _find_streamlit_compose_root() -> Path:
         p = Path(__file__).resolve()

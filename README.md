@@ -8,7 +8,7 @@ flowbook --version
 flowbook doctor
 ```
 
-Core-only install has no heavy dependencies. For Excel, Postgres, and FastAPI extensions:
+Core-only install has no heavy dependencies. For Excel (.xlsx, .xls), Postgres, and FastAPI extensions:
 
 ```sh
 pip install "flowbook[full]"
@@ -135,7 +135,7 @@ FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
 flowbook hands-on
 ```
 
-Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download (interactive). Requires API up and a fixture. Generate fixture:
+Runs Health -> Inspect -> Import -> Artifacts -> Export -> Download (interactive). Requires API up and a fixture. Excel import supports .xlsx and .xls (region-based import uses df-based detection). Generate fixture:
 
 ```sh
 flowbook fixture generate -o tests/fixtures/excel

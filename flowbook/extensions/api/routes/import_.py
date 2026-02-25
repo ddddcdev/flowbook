@@ -50,7 +50,7 @@ async def import_file(
     """
     Import an uploaded Excel file using a named plan template.
 
-    - **file**: Excel file (.xlsx)
+    - **file**: Excel file (.xlsx, .xls)
     - **template_name**: plan template (e.g. import_excel or import_excel_region)
     - **input_profile_name**: config profile for input handling
     - **sheet_name**: sheet to read (default: "data")

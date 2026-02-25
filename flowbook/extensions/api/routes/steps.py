@@ -28,8 +28,8 @@ def get_step(op_name: str) -> dict:
     engine = get_engine()
     try:
         spec = engine.registry.get_op_spec(op_name)
-    except UnknownOp:
-        raise HTTPException(status_code=404, detail=f"Unknown op: {op_name}", headers=None)
+    except UnknownOp as err:
+        raise HTTPException(status_code=404, detail=f"Unknown op: {op_name}", headers=None) from err
     return {
         "op_name": spec.op_name,
         "docstring": spec.docstring,

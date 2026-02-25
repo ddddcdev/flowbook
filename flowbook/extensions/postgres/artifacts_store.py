@@ -544,7 +544,9 @@ class PostgresArtifactsStore(ArtifactsStore):
         entity_key: str | None = None,
     ) -> list[dict[str, Any]]:
         """List latest entity_run per entity_key (updated_at max). No new table."""
-        cols_str = "run_id, entity_key, result_artifacts_json, status, config_json, created_at, updated_at"
+        cols_str = (
+            "run_id, entity_key, result_artifacts_json, status, config_json, created_at, updated_at"
+        )
         raw_sql = (
             f"SELECT {cols_str} FROM ("
             f"SELECT DISTINCT ON (entity_key) {cols_str} "

@@ -273,7 +273,7 @@ def init_db_schema() -> int:
 
     if "localhost" not in database_url and "127.0.0.1" not in database_url:
         print(
-            "Refusing to run: DSN does not look like localhost. Only local/dev DBs may be modified.",
+            "Refusing to run: DSN does not look like localhost. Only local/dev DBs may be modified.",  # noqa: E501
             file=sys.stderr,
         )
         return 1

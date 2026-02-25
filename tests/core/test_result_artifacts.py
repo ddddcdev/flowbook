@@ -121,7 +121,9 @@ def test_exec_plan_result_artifacts_path_not_produced_raises() -> None:
     with engine.create_run() as run:
         run.put_input("x", 2)
         run.put_input("y", 3)
-        with pytest.raises(ResultArtifactsValidationError, match="result_artifacts path .* not produced"):
+        with pytest.raises(
+            ResultArtifactsValidationError, match="result_artifacts path .* not produced"
+        ):
             run.exec_plan(plan_config=plan_config)
 
 
