@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0a5] - 2026-02-28
+
+### Fixed
+
+- **Streamlit runner**: Require pyproject.toml for repo root (avoids site-packages being mistaken, .venv-ui in deep paths, WSL/Windows 260-char limit).
+- **Streamlit runner**: Two-stage pip install to avoid KeyError during editable build.
+- **Streamlit runner**: Use flowbook.__file__ for app_path when not in repo (avoids ModuleNotFoundError for streamlit/requests in main venv).
+- **Docker**: Pin setuptools<69 before pip install (pkg_resources removed in 69+).
+- **Docker**: Two-stage Streamlit install; add .dockerignore.
+- **Excel io**: ExcelEngine Literal type for pyright read_excel compatibility.
+
+### Documentation
+
+- **infra**: Add README for flowbook vs project usage (flowbook-demo, etc.).
+
 ## [0.1.0a4] - 2026-02-25
 
 ### Added
@@ -92,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.
 
+[0.1.0a5]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a5
 [0.1.0a4]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a4
 [0.1.0a3]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a3
 [0.1.0a2]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a2

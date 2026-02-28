@@ -8,8 +8,10 @@ import pandas as pd
 
 from flowbook.extensions.excel.errors import MissingRequiredColumnsError
 
+ExcelEngine = Literal["xlrd", "openpyxl", "odf", "pyxlsb", "calamine"]
 
-def excel_engine_from_filename(filename: str | None) -> str:
+
+def excel_engine_from_filename(filename: str | None) -> Literal["xlrd", "openpyxl"]:
     """
     Infer pandas read_excel engine from file extension.
     Returns 'xlrd' for .xls, 'openpyxl' for .xlsx/.xlsm, else 'openpyxl'.
@@ -25,7 +27,7 @@ def excel_engine_from_filename(filename: str | None) -> str:
 def read_sheet_to_raw_df(
     source: str | Path | bytes,
     sheet: str | int = 0,
-    engine: str | None = "openpyxl",
+    engine: ExcelEngine | None = "openpyxl",
 ) -> pd.DataFrame:
     """
     Read entire sheet as raw DataFrame (header=None).
@@ -43,7 +45,7 @@ def read_excel_to_df(
     sheet: str | int = 0,
     header: int = 0,
     dtype: dict[str, Any] | None = None,
-    engine: str | None = "openpyxl",
+    engine: ExcelEngine | None = "openpyxl",
 ) -> pd.DataFrame:
     kwargs: dict[str, Any] = {
         "sheet_name": sheet,
@@ -76,7 +78,7 @@ def read_excel_table(
     header: int,
     required_cols: list[str],
     dtype: dict[str, Any] | None = None,
-    engine: str | None = "openpyxl",
+    engine: ExcelEngine | None = "openpyxl",
 ) -> pd.DataFrame:
     df = read_excel_to_df(path=path, sheet=sheet, header=header, dtype=dtype, engine=engine)
 
