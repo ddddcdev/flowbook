@@ -9,6 +9,7 @@ Run with API up:
 from __future__ import annotations
 
 import io
+import json
 import os
 import re
 
@@ -16,7 +17,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from flowbook.core.artifacts.key_utils import parse_artifact_key
+from flowbook.core.artifacts.key_utils import build_artifact_key, parse_artifact_key
 
 DEFAULT_BASE = os.environ.get("FLOWBOOK_API_URL", "http://localhost:8000")
 
@@ -25,13 +26,48 @@ def api(base: str, path: str) -> str:
     return f"{base.rstrip('/')}{path}"
 
 
-def _filename_from_response(r: requests.Response, fallback: str) -> str:
-    """Extract filename from Content-Disposition header."""
-    cd = r.headers.get("content-disposition")
-    if not cd or "filename=" not in cd:
-        return fallback
-    m = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\s]+)', cd, re.I)
-    return m.group(1).strip() if m else fallback
+def _filename_from_artifact_key(key: str, fallback: str = "artifact.bin") -> str:
+    """Derive download filename from artifact key."""
+    parts = key.split("/")
+    base = parts[-1] if parts else "artifact"
+    safe = re.sub(r'[<>:"|?*\x00-\x1f/\\]', "_", base) or "artifact"
+    return f"{safe}.bin" if "." not in safe else safe
+
+
+def _filename_from_meta(meta: dict | None) -> str | None:
+    """Extract filename from meta. Expects meta like {"filename": "demo_excel_exported.xlsx"}."""
+    if not meta:
+        return None
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(meta, dict):
+        return None
+    fn = meta.get("filename")
+    if not isinstance(fn, str) or not fn.strip():
+        return None
+    safe = re.sub(r'[<>:"|?*\x00-\x1f/\\]', "_", fn.strip()) or None
+    return safe
+
+
+def _download_button(
+    content: bytes,
+    artifact_key: str,
+    widget_key: str,
+    filename_override: str | None = None,
+) -> None:
+    """Render a download button for binary content with filename display."""
+    filename = filename_override or _filename_from_artifact_key(artifact_key)
+    st.caption(f"Download as: `{filename}`")
+    st.download_button(
+        label="Download",
+        data=content,
+        file_name=filename,
+        mime="application/octet-stream",
+        key=widget_key,
+    )
 
 
 def _entity_key_from_artifact_key(key: str) -> str:
@@ -41,6 +77,144 @@ def _entity_key_from_artifact_key(key: str) -> str:
         return entity_key or "default"
     except ValueError:
         return "default"
+
+
+def _created_at_for_sort(e: object) -> str:
+    """Extract created_at for ascending sort. Empty string for missing."""
+    if isinstance(e, dict):
+        return e.get("created_at") or ""
+    return getattr(e, "created_at", None) or ""
+
+
+def _entity_run_entry_for_display(entry: dict) -> dict:
+    """Convert result_artifacts to JSON string for readable DataFrame preview."""
+    out = dict(entry)
+    if "result_artifacts" in out and out["result_artifacts"] is not None:
+        out["result_artifacts"] = json.dumps(out["result_artifacts"], ensure_ascii=False)
+    return out
+
+
+def _entity_runs_preview(base: str, entries: list[dict], event: object) -> None:
+    """Show artifact preview when entity_run row is selected (from result_artifacts)."""
+    row_idx = None
+    sel = getattr(event, "selection", None)
+    if sel and getattr(sel, "rows", None):
+        row_idx = sel.rows[0]
+    if row_idx is None or row_idx >= len(entries):
+        return
+    entry = entries[row_idx]
+    ra = entry.get("result_artifacts")
+    if not ra:
+        return
+    # Parse result_artifacts: list from API or JSON string from display
+    if isinstance(ra, str):
+        try:
+            ra = json.loads(ra)
+        except json.JSONDecodeError:
+            return
+    if not isinstance(ra, list) or not ra:
+        return
+    first = ra[0] if isinstance(ra[0], dict) else {"path": str(ra[0])}
+    path = first.get("path") if isinstance(first, dict) else None
+    if not path:
+        return
+    run_id = entry.get("run_id", "")
+    entity_key = entry.get("entity_key", "")
+    artifact_key = build_artifact_key(run_id, entity_key, path)
+    st.subheader(f"Preview: `{artifact_key}`")
+    meta = None
+    try:
+        meta_resp = requests.get(
+            api(base, f"/artifacts/{artifact_key}"),
+            params={"meta_only": "true"},
+            timeout=10,
+        )
+        if meta_resp.status_code == 200:
+            meta_val = meta_resp.json().get("value")
+            if isinstance(meta_val, dict):
+                meta = meta_val.get("meta")
+    except Exception:
+        pass
+    raw_content = None
+    content_type = None
+    try:
+        raw_resp = requests.get(
+            api(base, f"/artifacts/{artifact_key}/raw"), timeout=30
+        )
+        raw_resp.raise_for_status()
+        raw_content = raw_resp.content
+        content_type = raw_resp.headers.get("content-type", "").split(";")[0]
+    except requests.RequestException:
+        pass
+    if meta and isinstance(meta, dict):
+        st.caption("Meta")
+        st.json(meta, expanded=False)
+    if raw_content is not None:
+        _preview_artifact_content(
+            artifact_key,
+            raw_content,
+            content_type or "",
+            "dl_entity_runs_preview",
+            meta=meta,
+        )
+
+
+def _preview_artifact_content(
+    key: str,
+    content: bytes,
+    content_type: str | None,
+    download_key: str = "dl_preview",
+    meta: dict | None = None,
+) -> None:
+    """Preview artifact content. API response as-is. Download button for octet-stream."""
+    if content_type and "octet-stream" in content_type:
+        _download_button(content, key, download_key, _filename_from_meta(meta))
+    buf = io.BytesIO(content)
+    if key.endswith("/read/df"):
+        try:
+            df = pd.read_parquet(buf)
+            st.dataframe(df, width="stretch", hide_index=True)
+            return
+        except Exception:
+            pass
+    if (
+        key.endswith("/write/bytes")
+        or "input/src_excel_bytes" in key
+        or (content_type and ("spreadsheet" in content_type or "excel" in content_type))
+    ):
+        try:
+            df = pd.read_excel(buf, engine="openpyxl")
+            st.dataframe(df, width="stretch", hide_index=True)
+            return
+        except Exception:
+            pass
+    # Try parquet (generic)
+    try:
+        buf.seek(0)
+        df = pd.read_parquet(buf)
+        st.dataframe(df, width="stretch", hide_index=True)
+        return
+    except Exception:
+        pass
+    # Try JSON (API may return application/json)
+    try:
+        parsed = json.loads(content.decode("utf-8"))
+        if isinstance(parsed, (dict, list)):
+            st.json(parsed, expanded=True)
+        else:
+            st.write(parsed)
+        return
+    except Exception:
+        pass
+    # Fallback: text or binary
+    try:
+        text = content.decode("utf-8", errors="replace")
+        if len(text) > 10000:
+            st.code(text[:10000] + "\n... (truncated)", language="text")
+        else:
+            st.code(text, language="text")
+    except Exception:
+        st.caption(f"Binary ({len(content)} bytes).")
 
 
 def health(base: str) -> bool:
@@ -82,18 +256,17 @@ def main() -> None:
     entity_key_opts = _entity_key_options(base)
 
     tab_names = [
-        "Steps", "Inspect", "Import", "Entity runs", "Artifacts", "Export", "Download",
-        "Configs",
+        "Inspect", "Import", "Export", "Artifacts", "Entity runs",
+        "Configs", "Steps",
     ]
     tabs = st.tabs(tab_names)
-    tab_steps = tabs[0]
-    tab_inspect = tabs[1]
-    tab_import = tabs[2]
-    tab_entity_runs = tabs[3]
-    tab_artifacts = tabs[4]
-    tab_export = tabs[5]
-    tab_download = tabs[6]
-    tab_configs = tabs[7]
+    tab_inspect = tabs[0]
+    tab_import = tabs[1]
+    tab_export = tabs[2]
+    tab_artifacts = tabs[3]
+    tab_entity_runs = tabs[4]
+    tab_configs = tabs[5]
+    tab_steps = tabs[6]
 
     with tab_steps:
         st.subheader("Steps (ops)")
@@ -262,39 +435,137 @@ def main() -> None:
                 st.error(str(e))
         er_entries = st.session_state.get("entity_runs", [])
         lat_entries = st.session_state.get("latest_entity_runs", [])
-        if er_entries:
-            st.write("**entity_runs** (by run_id)")
-            df_er = pd.DataFrame(er_entries)
-            st.dataframe(df_er, width="stretch", hide_index=True)
+        if er_entries or lat_entries:
+            show_latest_only = st.toggle(
+                "latest_entity_runs only (latest per entity_key)",
+                value=False,
+                key="er_show_latest_only",
+            )
+            if show_latest_only and lat_entries:
+                st.write("**latest_entity_runs** (latest per entity_key)")
+                entries = lat_entries
+                df_key = "latest_entity_runs_df"
+            else:
+                st.write("**entity_runs** (full list)")
+                entries = er_entries
+                df_key = "entity_runs_df"
+            if entries:
+                sorted_entries = sorted(
+                    entries,
+                    key=lambda e: (_created_at_for_sort(e) == "", _created_at_for_sort(e)),
+                )
+                df = pd.DataFrame([_entity_run_entry_for_display(e) for e in sorted_entries])
+                event = st.dataframe(
+                    df,
+                    key=df_key,
+                    width="stretch",
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                )
+                _entity_runs_preview(base, sorted_entries, event)
+            elif show_latest_only:
+                st.info("No latest_entity_runs.")
         else:
             st.info("No entity_runs. Click Refresh or run Import first.")
-        if lat_entries:
-            st.write("**latest_entity_runs** (latest per entity_key)")
-            df_lat = pd.DataFrame(lat_entries)
-            st.dataframe(df_lat, width="stretch", hide_index=True)
 
     with tab_artifacts:
         st.subheader("List artifacts")
-        st.caption("Artifact keys for Export (read/df) and Download.")
-        if st.button("Refresh list"):
+        st.caption("Select a row to preview artifact content. Supports parquet, xlsx, json.")
+        if st.button("Refresh list", key="artifacts_refresh"):
             try:
                 r = requests.get(api(base, "/artifacts"), timeout=10)
                 r.raise_for_status()
                 data = r.json()
                 keys = data.get("keys", [])
+                entries = data.get("entries", [])
                 if keys:
-                    st.dataframe(
-                        data.get("entries", []),
-                        width="stretch",
-                        hide_index=True,
-                    )
                     st.session_state["artifact_keys"] = keys
+                    st.session_state["artifact_entries"] = entries
                 else:
                     st.info("No artifacts. Run Import first.")
             except requests.RequestException as e:
                 st.error(str(e))
-        if "artifact_keys" in st.session_state:
-            st.caption("Keys available for Export (use read/df) or Download below.")
+        entries = st.session_state.get("artifact_entries", [])
+        if entries:
+            sorted_entries = sorted(
+                entries,
+                key=lambda e: (_created_at_for_sort(e) == "", _created_at_for_sort(e)),
+            )
+            display_entries = []
+            for e in sorted_entries:
+                d = (
+                    dict(e)
+                    if isinstance(e, dict)
+                    else (e.model_dump() if hasattr(e, "model_dump") else dict(e))
+                )
+                d.pop("meta", None)
+                display_entries.append(d)
+            df = pd.DataFrame(display_entries)
+            event = st.dataframe(
+                df,
+                key="artifacts_df",
+                width="stretch",
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+            )
+            row_idx = None
+            if event.selection and event.selection.rows:
+                row_idx = event.selection.rows[0]
+            if row_idx is not None and 0 <= row_idx < len(sorted_entries):
+                entry = sorted_entries[row_idx]
+                key = entry.get("key") if isinstance(entry, dict) else getattr(entry, "key", None)
+                if key:
+                    st.subheader(f"Preview: `{key}`")
+                    meta = (
+                        entry.get("meta")
+                        if isinstance(entry, dict)
+                        else getattr(entry, "meta", None)
+                    )
+                    if meta is None:
+                        try:
+                            meta_resp = requests.get(
+                                api(base, f"/artifacts/{key}"),
+                                params={"meta_only": "true"},
+                                timeout=10,
+                            )
+                            if meta_resp.status_code == 200:
+                                meta_val = meta_resp.json().get("value")
+                                meta = (
+                                    meta_val.get("meta")
+                                    if isinstance(meta_val, dict)
+                                    else None
+                                )
+                        except Exception:
+                            pass
+                    raw_content = None
+                    content_type = None
+                    try:
+                        raw_resp = requests.get(
+                            api(base, f"/artifacts/{key}/raw"),
+                            timeout=30,
+                        )
+                        raw_resp.raise_for_status()
+                        raw_content = raw_resp.content
+                        content_type = raw_resp.headers.get(
+                            "content-type", ""
+                        ).split(";")[0]
+                    except requests.RequestException:
+                        pass
+                    if meta and isinstance(meta, dict):
+                        st.caption("Meta")
+                        st.json(meta, expanded=False)
+                    if raw_content is not None:
+                        _preview_artifact_content(
+                            key,
+                            raw_content,
+                            content_type or "",
+                            "dl_artifacts_preview",
+                            meta=meta,
+                        )
+        elif "artifact_keys" in st.session_state:
+            st.caption("Keys available. Click Refresh list to load.")
 
     with tab_export:
         st.subheader("Export (filter/map -> xlsx)")
@@ -362,64 +633,6 @@ def main() -> None:
                         st.json({"status": data["status"], "artifacts_written": written})
                     except requests.RequestException as e:
                         st.error(str(e))
-
-    with tab_download:
-        st.subheader("Download artifact")
-        st.caption("Pick artifact; filename comes from Content-Disposition (entity_key-based).")
-        keys = st.session_state.get("artifact_keys", [])
-        if not keys:
-            if st.button("Load keys to download"):
-                try:
-                    r = requests.get(api(base, "/artifacts"), timeout=10)
-                    r.raise_for_status()
-                    keys = r.json().get("keys", [])
-                    st.session_state["artifact_keys"] = keys
-                    st.rerun()
-                except requests.RequestException as e:
-                    st.error(str(e))
-            else:
-                st.info("No keys. List artifacts or run Import/Export first.")
-        else:
-            key = st.selectbox("Artifact key", options=keys, key="dl_key")
-            if key.endswith("/read/df"):
-                suffix = "as_excel"
-                label = "Download as Excel (imported table)"
-                fallback_name = "imported.xlsx"
-            else:
-                suffix = "raw"
-                label = "Download raw (exported xlsx or parquet)"
-                fallback_name = "exported.xlsx"
-            url = api(base, f"/artifacts/{key}/{suffix}")
-            if st.button("Prepare download", key="prepare_dl"):
-                with st.spinner("Fetching..."):
-                    try:
-                        r = requests.get(url, timeout=30)
-                        r.raise_for_status()
-                        file_name = _filename_from_response(r, fallback_name)
-                        st.session_state["dl_key"] = key
-                        st.session_state["dl_bytes"] = r.content
-                        st.session_state["dl_file_name"] = file_name
-                        st.session_state["dl_mime"] = (
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            if suffix == "as_excel"
-                            else "application/octet-stream"
-                        )
-                        st.session_state["dl_label"] = label
-                        st.success("Ready. Click the download button below.")
-                    except requests.RequestException as e:
-                        st.error(str(e))
-            if (
-                "dl_bytes" in st.session_state
-                and st.session_state.get("dl_key") == key
-            ):
-                st.download_button(
-                    label=st.session_state.get("dl_label", label),
-                    data=st.session_state["dl_bytes"],
-                    file_name=st.session_state["dl_file_name"],
-                    mime=st.session_state["dl_mime"],
-                    key="dl_btn",
-                )
-            st.caption(f"URL: `{url}` (open in browser or use curl).")
 
     with tab_configs:
         st.subheader("Configs (input_profiles, mappings, templates, routing)")

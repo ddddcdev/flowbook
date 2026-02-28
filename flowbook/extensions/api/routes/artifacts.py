@@ -13,6 +13,7 @@ from typing import Any, cast
 
 from fastapi import APIRouter, Query, Response
 
+from flowbook.core.artifacts.key_utils import parse_artifact_key
 from flowbook.core.artifacts.store import ArtifactNotFound
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
@@ -25,10 +26,15 @@ from flowbook.extensions.api.schemas import (
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
 
-def _key_parts(key: str) -> tuple[str, str]:
-    """Return (run_id, step_output). run_id is first path segment."""
-    parts = key.split("/", 1)
-    return (parts[0], parts[1]) if len(parts) == 2 else (key, "")
+def _parse_key(key: str) -> tuple[str, str, str]:
+    """Return (run_id, entity_key, artifact_path). Falls back on split if parse fails."""
+    try:
+        return parse_artifact_key(key)
+    except ValueError:
+        parts = key.split("/", 1)
+        run_id = parts[0] if parts else key
+        rest = parts[1] if len(parts) == 2 else ""
+        return (run_id, rest, "")
 
 
 def _filename_safe(name: str) -> str:
@@ -68,27 +74,33 @@ def list_artifacts(prefix: str | None = None) -> ArtifactsListResponse:
         if callable(list_with_meta):
             items = cast(list[dict[str, Any]], list_with_meta(prefix=prefix))
             keys = [i["key"] for i in items]
-            entries = [
-                ArtifactEntry(
-                    key=i["key"],
-                    run_id=_key_parts(i["key"])[0],
-                    step_output=_key_parts(i["key"])[1],
-                    content_type=i.get("content_type"),
-                    meta=i.get("meta"),
-                    created_at=i.get("created_at"),
+            entries = []
+            for i in items:
+                run_id, entity_key, artifact_path = _parse_key(i["key"])
+                entries.append(
+                    ArtifactEntry(
+                        key=i["key"],
+                        run_id=run_id,
+                        entity_key=entity_key,
+                        artifact_path=artifact_path,
+                        content_type=i.get("content_type"),
+                        meta=i.get("meta"),
+                        created_at=i.get("created_at"),
+                    )
                 )
-                for i in items
-            ]
         else:
             keys = store.list(prefix=prefix)
-            entries = [
-                ArtifactEntry(
-                    key=k,
-                    run_id=_key_parts(k)[0],
-                    step_output=_key_parts(k)[1],
+            entries = []
+            for k in keys:
+                run_id, entity_key, artifact_path = _parse_key(k)
+                entries.append(
+                    ArtifactEntry(
+                        key=k,
+                        run_id=run_id,
+                        entity_key=entity_key,
+                        artifact_path=artifact_path,
+                    )
                 )
-                for k in keys
-            ]
         return ArtifactsListResponse(keys=keys, entries=entries)
     except Exception as e:
         raise to_http_error(e) from e

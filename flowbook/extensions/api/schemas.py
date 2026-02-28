@@ -58,7 +58,8 @@ class ExportRequest(BaseModel):
 class ArtifactEntry(BaseModel):
     key: str
     run_id: str
-    step_output: str
+    entity_key: str
+    artifact_path: str
     content_type: str | None = None
     meta: dict[str, Any] | None = None
     created_at: str | None = None

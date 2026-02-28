@@ -4,6 +4,8 @@
 # Cloud (Cloud Run, ECS, Container Apps, etc.): Set FLOWBOOK_DATABASE_URL via env/secrets.
 #   Cloud Run sets PORT (default 8080); we use ${PORT:-8000} for local compatibility.
 #
+# Dependencies: pyproject.toml + uv.lock. --no-sources for consistency with flowbook-demo.
+#
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
@@ -11,13 +13,12 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml uv.lock README.md ./
 COPY flowbook ./flowbook
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system -e ".[full]"
+    uv pip install --system -e ".[full]" --no-sources
 
 EXPOSE 8000
 
-# PORT from env (Cloud Run etc.); fallback 8000 for local
 CMD ["sh", "-c", "uvicorn flowbook.extensions.api.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

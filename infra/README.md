@@ -20,7 +20,7 @@ docker compose -f infra/compose.api.yml up -d
 docker compose -f infra/compose.streamlit.yml up -d
 ```
 
-Build context is `..` (repo root). The Dockerfiles expect `pyproject.toml` and `flowbook/` at context root.
+Build context is `..` (repo root). The Dockerfiles expect `pyproject.toml`, `uv.lock`, and `flowbook/` at context root. Dependencies via `uv pip install -e ".[full]" --no-sources` (lock file pins versions).
 
 ## Usage from another project (flowbook-demo, watt-pmr-api-demo, etc.)
 

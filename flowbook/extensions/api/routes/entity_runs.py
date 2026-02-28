@@ -27,15 +27,21 @@ router = APIRouter(tags=["entity_runs"])
 
 
 def _result_artifacts_to_entries(
-    ra: list[dict[str, Any]] | None,
+    ra: list[dict[str, Any]] | str | None,
 ) -> list[ResultArtifactEntry] | None:
-    if not ra:
+    """Normalize result_artifacts to list. Handles scalar (legacy path string) as [path]."""
+    if ra is None:
         return None
-    return [
+    if isinstance(ra, str) and ra.strip():
+        return [ResultArtifactEntry(path=ra.strip(), label=None)]
+    if not isinstance(ra, list):
+        return None
+    entries = [
         ResultArtifactEntry(path=item.get("path", ""), label=item.get("label"))
         for item in ra
         if isinstance(item, dict) and item.get("path")
-    ] or None
+    ]
+    return entries if entries else None
 
 
 def _dict_to_entry(d: dict) -> EntityRunEntry:
