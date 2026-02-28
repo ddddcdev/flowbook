@@ -12,9 +12,13 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY flowbook ./flowbook
 
+# pkg_resources removed in setuptools 69+; some deps still need it. Pin before install.
+RUN pip install --no-cache-dir "setuptools<69"
+
 # flowbook[full] requires pandas>=3, which conflicts with streamlit's pandas<3.
-# Install core + streamlit stack (streamlit brings pandas 2.x).
-RUN pip install --no-cache-dir -e . streamlit requests "altair>=4,<5" openpyxl
+# Two-stage install avoids KeyError: '__version__' during editable build.
+RUN pip install --no-cache-dir streamlit requests "altair>=4,<5" openpyxl
+RUN pip install --no-cache-dir -e .
 
 EXPOSE 8501
 

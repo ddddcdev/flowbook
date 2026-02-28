@@ -11,6 +11,8 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY flowbook ./flowbook
 
+# pkg_resources removed in setuptools 69+; some deps still need it. Pin before install.
+RUN pip install --no-cache-dir "setuptools<69"
 RUN pip install --no-cache-dir -e ".[full]"
 
 EXPOSE 8000

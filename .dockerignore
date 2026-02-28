@@ -1,0 +1,18 @@
+# Reduce build context; avoid copying venvs and caches
+.venv
+.venv-ui
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+node_modules
+.git
+.gitignore
+*.md
+!README.md
+.local
+dist
+*.egg-info
+.eggs
