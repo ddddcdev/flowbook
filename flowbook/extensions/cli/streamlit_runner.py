@@ -11,10 +11,12 @@ from pathlib import Path
 def _find_repo_root() -> Path:
     """Find repo root (where pyproject.toml or flowbook package lives).
 
-    Prefer pyproject.toml; flowbook/extensions/ui alone matches site-packages when
-    installed, so we require pyproject.toml for that path too (avoids .venv-ui in
-    site-packages and WSL/Windows 260-char path limits).
+    Prefer cwd when it has pyproject.toml (avoids .venv-ui in site-packages when
+    flowbook is installed and cwd was wrong). Then search from __file__ up.
     """
+    cwd = Path.cwd()
+    if (cwd / "pyproject.toml").exists():
+        return cwd
     p = Path(__file__).resolve()
     for parent in [p] + list(p.parents):
         if (parent / "pyproject.toml").exists():
@@ -25,7 +27,7 @@ def _find_repo_root() -> Path:
             and (parent / "pyproject.toml").exists()
         ):
             return parent
-    return Path.cwd()
+    return cwd
 
 
 def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) -> int:
@@ -37,7 +39,9 @@ def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) 
 
     def _ensure_deps() -> None:
         pip = venv / "bin" / "pip" if os.name != "nt" else venv / "Scripts" / "pip.exe"
-        pkgs = ["streamlit", "requests", "altair>=4,<5", "-q"]
+        subprocess.run([str(pip), "install", "-q", "--upgrade", "pip"], check=True)
+        # st.dataframe(key=, on_select=, selection_mode=) requires streamlit>=1.35.0
+        pkgs = ["streamlit>=1.35.0", "requests", "altair>=4,<5", "-q"]
         if sys.version_info >= (3, 13):
             pkgs.insert(-1, "standard-imghdr")  # imghdr removed in 3.13
         if (repo / "pyproject.toml").exists():
@@ -70,6 +74,14 @@ def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) 
         import flowbook
 
         app_path = Path(flowbook.__file__).resolve().parent / "extensions" / "ui" / "app.py"
+        # Ensure flowbook is in venv (app imports flowbook; venv may have only streamlit)
+        venv_py = venv / "bin" / "python" if os.name != "nt" else venv / "Scripts" / "python.exe"
+        check = subprocess.run(
+            [str(venv_py), "-c", "import flowbook"],
+            capture_output=True,
+        )
+        if check.returncode != 0:
+            _ensure_deps()
     args = [str(streamlit_exe), "run", str(app_path)]
     if extra_args:
         args.extend(extra_args)
