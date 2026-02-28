@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.0a5] - 2026-02-28
 
+### Added
+
+- **Chore**: Migrate from Poetry to uv.
+
+### Changed
+
+- **Streamlit UI**: Tab order: Inspect, Import, Export, Artifacts, Entity runs, Configs, Steps. Export tab moved right of Import.
+- **Streamlit UI**: Remove Download tab; keep download button in artifact preview for octet-stream.
+- **Streamlit UI**: Meta hidden when empty `{}`; JSON value always expanded.
+- **Streamlit UI**: Entity runs and Artifacts DataFrames sorted by `created_at` ascending.
+- **API**: `entity_key`, `artifact_path` in ArtifactEntry; `result_artifacts` scalar normalization.
+
 ### Fixed
 
 - **Streamlit runner**: Require pyproject.toml for repo root (avoids site-packages being mistaken, .venv-ui in deep paths, WSL/Windows 260-char limit).
