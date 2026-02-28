@@ -59,11 +59,11 @@ To add your own steps: see [Adding custom steps](docs/adding-custom-steps.md) (m
 
 - **CI before commit**: `npm run ci` (lint, typecheck, test) runs automatically via [pre-commit](https://pre-commit.com/). It runs only unit (and smoke) tests; integration and e2e are skipped so CI does not require Postgres. After clone, run:
   ```sh
-  poetry install
+  uv sync
   pre-commit install
   ```
   (The dev group includes full extras so tests can run; for a minimal env use `pip install flowbook` only.)
-- **Full test suite** (integration + e2e): Start Postgres (see below), then `npm run test` or `poetry run pytest`. To run only integration: `poetry run pytest -m integration`.
+- **Full test suite** (integration + e2e): Start Postgres (see below), then `npm run test` or `uv run pytest`. To run only integration: `uv run pytest -m integration`.
 - **Releasing**: See [Releasing](docs/releasing.md). Publish = tag + twine upload. Pre-release (alpha/beta) = push to dev branch only.
 
 ## License
@@ -75,6 +75,8 @@ Apache License 2.0
 ## Dev commands
 
 The commands below are for **local development**. The Docker subcommands (`flowbook db up`, `flowbook api up`, `flowbook streamlit up`) require an `infra/` directory (compose files, env files). Clone this repo or copy `infra/` to use them.
+
+**`.env`**: uv does not auto-load `.env`. Use `uv run --env-file .env flowbook ...` or `export UV_ENV_FILE=.env`. Or use `npm run api` / `npm run hands-on` which pass `--env-file .env`.
 
 ## Dev / Demo
 
@@ -97,7 +99,10 @@ Use `--env-file PATH` / `--no-env-file` to override. Or run Postgres yourself an
 ### API
 
 ```sh
-FLOWBOOK_DATABASE_URL=postgresql+psycopg://flowbook:flowbook@localhost:5432/flowbook poetry run flowbook api
+# With .env: cp .env.example .env, then:
+npm run api
+# Or: uv run --env-file .env flowbook api
+# Or: UV_ENV_FILE=.env uv run flowbook api
 ```
 
 API docs: <http://localhost:8000/docs>

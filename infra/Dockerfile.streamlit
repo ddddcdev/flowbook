@@ -4,21 +4,21 @@
 # Cloud (Cloud Run, ECS, Container Apps, etc.): Set FLOWBOOK_API_URL via env/secrets.
 #   Platform sets PORT (default 8080); we use ${PORT:-8501} for local compatibility.
 #
-FROM python:3.12-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
-# Copy package and install (build from repo root)
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
 COPY pyproject.toml README.md ./
 COPY flowbook ./flowbook
 
-# pkg_resources removed in setuptools 69+; some deps still need it. Pin before install.
-RUN pip install --no-cache-dir "setuptools<69"
-
 # flowbook[full] requires pandas>=3, which conflicts with streamlit's pandas<3.
-# Two-stage install avoids KeyError: '__version__' during editable build.
-RUN pip install --no-cache-dir streamlit requests "altair>=4,<5" openpyxl
-RUN pip install --no-cache-dir -e .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system streamlit "altair>=4,<5" requests openpyxl
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system -e .
 
 EXPOSE 8501
 

@@ -3,7 +3,7 @@
 ## Publish (official / pre-release)
 
 1. `npm run ci` passes
-2. `poetry build` → `dist/flowbook-*.whl`
+2. `uv build` → `dist/flowbook-*.whl`
 3. `flowbook verify wheel` (optional)
 4. **Tag** the release: `git tag v0.1.0a3`
 5. **Publish** to PyPI: `twine upload dist/flowbook-0.1.0a3*`

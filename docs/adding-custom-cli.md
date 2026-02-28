@@ -38,7 +38,7 @@ def register_cli(app: typer.Typer) -> None:
 my_project = "my_project.cli_plugin:register_cli"
 ```
 
-3. **Install** your package in the same environment as flowbook (`pip install -e .` or `poetry install`).
+3. **Install** your package in the same environment as flowbook (`pip install -e .` or `uv sync`).
 
 4. **Run** `flowbook myproject hello` — your command is available alongside flowbook's built-in commands.
 

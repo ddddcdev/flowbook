@@ -39,8 +39,26 @@ full = [
 # No extra deps; adds package data for flowbook db reset --config-dir bundled
 demo = []
 
-# Dev CLI (Typer/Rich). Install with: pip install "flowbook[dev]"
-dev = ["typer>=0.12.0", "rich>=13.0.0", "httpx>=0.28.0", "openpyxl>=3.1.5,<4.0.0"]
+# Dev CLI (Typer/Rich). Install with: pip install "flowbook[dev]" or uv sync --group dev
+dev = [
+    "pandas>=3.0.0,<4.0.0",
+    "openpyxl>=3.1.5,<4.0.0",
+    "psycopg[binary]>=3.3.2,<4.0.0",
+    "sqlalchemy>=2.0.46,<3.0.0",
+    "pyarrow>=23.0.0,<24.0.0",
+    "fastapi>=0.128.0",
+    "uvicorn>=0.40.0",
+    "python-multipart>=0.0.22",
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "httpx>=0.28.0",
+    "pre-commit>=4.0.0",
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
+    "psycopg2-binary>=2.9.11",
+    "twine>=6.2.0",
+    "keyrings-alt>=5.0.2",
+]
 
 [project.scripts]
 flowbook = "flowbook.cli:main"
@@ -52,30 +70,14 @@ flowbook = "flowbook.core.registry.extensions:register_steps"
 flowbook = "flowbook.extensions.cli.cli:register_cli"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.group.dev.dependencies]
-# full extras (for running tests in repo)
-pandas = ">=3.0.0,<4.0.0"
-openpyxl = ">=3.1.5,<4.0.0"
-psycopg = { extras = ["binary"], version = ">=3.3.2,<4.0.0" }
-sqlalchemy = ">=2.0.46,<3.0.0"
-pyarrow = ">=23.0.0,<24.0.0"
-fastapi = "^0.128.0"
-uvicorn = "^0.40.0"
-# CLI (flowbook db, hands-on, etc.)
-typer = ">=0.12.0"
-rich = ">=13.0.0"
-# test/lint
-httpx = "^0.28.1"
-pre-commit = "^4.0.0"
-pytest = "^9.0.2"
-ruff = "^0.14.14"
-python-multipart = "^0.0.22"
-psycopg2-binary = "^2.9.11"
-twine = "^6.2.0"
-keyrings-alt = "^5.0.2"
+[tool.hatch.build.targets.wheel]
+packages = ["flowbook"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [".venv", ".venv-ui", ".venv-*"]
 
 [tool.pytest.ini_options]
 markers = [

@@ -99,7 +99,7 @@ def register_cli(app: Typer) -> None:
         no_env_file: bool = t.Option(
             False,
             "--no-env-file",
-            help="Use host env (e.g. poetry's .env) instead of --env-file",
+            help="Use host env (e.g. .env) instead of --env-file",
         ),
     ) -> None:
         """Start Postgres via docker compose (uses infra/.env.postgres)."""
@@ -136,7 +136,7 @@ def register_cli(app: Typer) -> None:
         no_env_file: bool = t.Option(
             False,
             "--no-env-file",
-            help="Use host env (e.g. poetry's .env) instead of --env-file",
+            help="Use host env (e.g. .env) instead of --env-file",
         ),
     ) -> None:
         """Stop Postgres via docker compose (uses infra/.env.postgres)."""
@@ -211,7 +211,7 @@ def register_cli(app: Typer) -> None:
         no_env_file: bool = t.Option(
             False,
             "--no-env-file",
-            help="Use host env (e.g. poetry's .env) instead of --env-file",
+            help="Use host env (e.g. .env) instead of --env-file",
         ),
     ) -> None:
         """Start API via Docker (template for GCP etc.)."""
@@ -250,7 +250,7 @@ def register_cli(app: Typer) -> None:
         no_env_file: bool = t.Option(
             False,
             "--no-env-file",
-            help="Use host env (e.g. poetry's .env) instead of --env-file",
+            help="Use host env (e.g. .env) instead of --env-file",
         ),
     ) -> None:
         """Stop API Docker container."""
@@ -416,7 +416,7 @@ def register_cli(app: Typer) -> None:
         no_env_file: bool = t.Option(
             False,
             "--no-env-file",
-            help="Use host env (e.g. poetry's .env) instead of --env-file",
+            help="Use host env (e.g. .env) instead of --env-file",
         ),
     ) -> None:
         """Start Streamlit via Docker (same UX as flowbook db up)."""
@@ -455,7 +455,7 @@ def register_cli(app: Typer) -> None:
         no_env_file: bool = t.Option(
             False,
             "--no-env-file",
-            help="Use host env (e.g. poetry's .env) instead of --env-file",
+            help="Use host env (e.g. .env) instead of --env-file",
         ),
     ) -> None:
         """Stop Streamlit Docker container (same UX as flowbook db down)."""

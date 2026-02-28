@@ -2,8 +2,8 @@
 Streamlit demo: hands-on flow via API (Inspect -> Import -> Entity runs -> Export -> Download).
 
 Run with API up:
-  poetry run uvicorn flowbook.extensions.api.app:app --reload
-  poetry run streamlit run flowbook/extensions/ui/app.py
+  uv run uvicorn flowbook.extensions.api.app:app --reload
+  uv run flowbook streamlit
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ def main() -> None:
     )
     if not health(base):
         st.sidebar.error(
-            "API not reachable. Start: poetry run uvicorn flowbook.extensions.api.app:app --reload"
+            "API not reachable. Start: uv run uvicorn flowbook.extensions.api.app:app --reload"
         )
     else:
         st.sidebar.success("API OK")

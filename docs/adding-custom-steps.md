@@ -84,7 +84,7 @@ If you want your steps in an installable package and discovered automatically (n
    my_project = "my_project.steps:register"
    ```
 
-3. **Install** your package in the same environment as the app (`pip install -e .` or `poetry install`).
+3. **Install** your package in the same environment as the app (`pip install -e .` or `uv sync`).
 4. **App code** only needs `discover_steps(registry)`; your steps are loaded from the entry point.
 
 After the first install, **code changes** in your step modules are picked up on the next run (editable install). Run install again only if you **change** `pyproject.toml` (e.g. add or edit the entry point).

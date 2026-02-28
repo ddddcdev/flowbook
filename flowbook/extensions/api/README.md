@@ -7,13 +7,12 @@ extend for project-specific APIs.
 
 ### With Postgres (production / field use)
 
-Option A — use a `.env` file (recommended). Install the plugin once, then `.env` is loaded for every `poetry run`:
+Option A — use a `.env` file (recommended). Pass `--env-file` or set `UV_ENV_FILE=.env`:
 
 ```bash
-poetry self add poetry-dotenv-plugin
 cp .env.example .env
-# Then start (plugin loads .env automatically)
-poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+uv run --env-file .env uvicorn flowbook.extensions.api.app:app --reload --port 8000
+# Or: export UV_ENV_FILE=.env  (then uv run picks it up)
 ```
 
 Option B — set in the shell:
@@ -21,13 +20,13 @@ Option B — set in the shell:
 ```bash
 # Requires: docker compose -f infra/compose.postgres.yml up -d
 FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
-  poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+  uv run uvicorn flowbook.extensions.api.app:app --reload --port 8000
 ```
 
 ### Without Postgres (development / smoke test)
 
 ```bash
-poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+uv run uvicorn flowbook.extensions.api.app:app --reload --port 8000
 ```
 
 Health check:
@@ -53,7 +52,7 @@ API docs (auto-generated): <http://localhost:8000/docs>
 
    ```bash
    FLOWBOOK_DATABASE_URL=postgresql://flowbook:flowbook@localhost:5432/flowbook \
-     poetry run uvicorn flowbook.extensions.api.app:app --reload --port 8000
+     uv run uvicorn flowbook.extensions.api.app:app --reload --port 8000
    ```
 
 3. **List artifacts**:

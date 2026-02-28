@@ -8,10 +8,12 @@
   },
   "scripts": {
     "typecheck": "pyright",
-    "lint": "poetry run ruff check .",
-    "fmt": "poetry run ruff format .",
-    "test": "poetry run pytest -q",
-    "test:ci": "FLOWBOOK_DATABASE_URL= poetry run pytest -q -m \"not integration and not e2e\"",
+    "lint": "uv run ruff check .",
+    "fmt": "uv run ruff format .",
+    "test": "uv run pytest -q",
+    "test:ci": "FLOWBOOK_DATABASE_URL= uv run pytest -q -m \"not integration and not e2e\"",
+    "hands-on": "uv run --env-file .env flowbook hands-on",
+    "api": "uv run --env-file .env flowbook api",
     "ci": "npm run lint && npm run typecheck && npm run test:ci",
     "ci:fix": "npm run fmt && npm run lint && npm run typecheck && npm run test:ci"
   },

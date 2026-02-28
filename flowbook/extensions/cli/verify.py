@@ -77,7 +77,7 @@ def verify_wheel(wheel_dir: str | Path, venv_dir: str | Path) -> int:
     )
     if not wheels:
         print("Building wheel...")
-        subprocess.run([sys.executable, "-m", "poetry", "build"], check=False, cwd=Path.cwd())
+        subprocess.run([sys.executable, "-m", "uv", "build"], check=False, cwd=Path.cwd())
         wheels = sorted(
             wdir.glob("flowbook-*-py3-none-any.whl"),
             key=lambda p: p.stat().st_mtime,

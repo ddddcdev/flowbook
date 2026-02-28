@@ -3,9 +3,22 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+
+def _find_uv() -> str:
+    """Return uv executable path; exit with hint if not found."""
+    uv = shutil.which("uv")
+    if not uv:
+        print(
+            "uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return uv
 
 
 def _find_repo_root() -> Path:
@@ -38,23 +51,33 @@ def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) 
         venv = repo / venv
 
     def _ensure_deps() -> None:
-        pip = venv / "bin" / "pip" if os.name != "nt" else venv / "Scripts" / "pip.exe"
-        subprocess.run([str(pip), "install", "-q", "--upgrade", "pip"], check=True)
+        uv = _find_uv()
+        venv_arg = str(venv)
         # st.dataframe(key=, on_select=, selection_mode=) requires streamlit>=1.35.0
-        pkgs = ["streamlit>=1.35.0", "requests", "altair>=4,<5", "-q"]
+        pkgs = ["streamlit>=1.35.0", "requests", "altair>=4,<5"]
         if sys.version_info >= (3, 13):
-            pkgs.insert(-1, "standard-imghdr")  # imghdr removed in 3.13
+            pkgs.append("standard-imghdr")  # imghdr removed in 3.13
         if (repo / "pyproject.toml").exists():
-            # Two-stage install: pip install -e . + pkgs in one call can cause
-            # KeyError: '__version__' during editable build. Install deps first.
-            subprocess.run([str(pip), "install"] + pkgs, check=True, cwd=repo)
-            subprocess.run([str(pip), "install", "-e", str(repo)], check=True, cwd=repo)
+            subprocess.run(
+                [uv, "pip", "install", "--python", venv_arg] + pkgs,
+                check=True,
+                cwd=repo,
+            )
+            subprocess.run(
+                [uv, "pip", "install", "--python", venv_arg, "-e", str(repo)],
+                check=True,
+                cwd=repo,
+            )
         else:
-            subprocess.run([str(pip), "install", "flowbook[full]"] + pkgs, check=True)
+            subprocess.run(
+                [uv, "pip", "install", "--python", venv_arg, "flowbook[full]"] + pkgs,
+                check=True,
+                cwd=repo,
+            )
 
     if not venv.exists():
         print(f"Creating {venv} (streamlit + requests)...")
-        subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True, cwd=repo)
+        subprocess.run([_find_uv(), "venv", str(venv)], check=True, cwd=repo)
         _ensure_deps()
     else:
         streamlit_exe = (
