@@ -331,10 +331,7 @@ def reset_db(config_dir: str | Path) -> int:
     config_store = PostgresConfigStore(database_url=database_url)
 
     with artifacts_store.engine.begin() as conn:
-        conn.execute(text("TRUNCATE artifacts"))
-        conn.execute(text("TRUNCATE results"))
-        conn.execute(text("TRUNCATE runs"))
-        conn.execute(text("TRUNCATE entities"))
+        conn.execute(text("TRUNCATE artifacts, results, runs, entities CASCADE"))
     print("Cleared artifacts, results, runs, entities.", flush=True)
 
     with config_store.engine.begin() as conn:
