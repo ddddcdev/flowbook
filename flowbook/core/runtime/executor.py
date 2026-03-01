@@ -213,6 +213,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
     logger.info("plan started", extra=extra)
 
     info = RunInfo(run_id=ctx.run_id, status="running")
+    result_artifacts_list: list[dict[str, str | None]] | None = None
     _upsert_entity_run(
         ctx.store,
         ctx.run_id,
@@ -311,7 +312,6 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
             }
             logger.debug("step completed", extra=step_extra_done)
 
-        result_artifacts_list: list[dict[str, str | None]] | None = None
         if plan.result_artifacts and info.steps:
             result_artifacts_list = _result_artifacts_from_plan(plan, info)
         if result_artifacts_list is None and info.steps:
@@ -344,7 +344,6 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
         if info.steps:
             info.steps[-1].status = "failed"
             info.steps[-1].error = msg
-        result_artifacts_list: list[dict[str, str | None]] | None = None
         if plan.result_artifacts and info.steps:
             try:
                 result_artifacts_list = _result_artifacts_from_plan(plan, info)
