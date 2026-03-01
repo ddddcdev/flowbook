@@ -1,6 +1,6 @@
 [project]
 name = "flowbook"
-version = "0.1.0a5"
+version = "0.1.0a6"
 description = "Config-driven data flow framework with pluggable ops and extensions (Excel, Postgres, FastAPI)."
 authors = [{ name = "d4c.dev", email = "info@d4c.dev" }]
 readme = "README.md"
@@ -39,7 +39,7 @@ full = [
 # No extra deps; adds package data for flowbook db reset --config-dir bundled
 demo = []
 
-# Dev CLI (Typer/Rich). Install with: pip install "flowbook[dev]" or uv sync --group dev
+# Dev CLI (Typer/Rich). Install with: pip install "flowbook[dev]" or uv sync --extra dev
 dev = [
     "pandas>=3.0.0,<4.0.0",
     "openpyxl>=3.1.5,<4.0.0",
@@ -68,6 +68,30 @@ flowbook = "flowbook.core.registry.extensions:register_steps"
 
 [project.entry-points."flowbook.cli"]
 flowbook = "flowbook.extensions.cli.cli:register_cli"
+
+[dependency-groups]
+dev = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "httpx>=0.28.0",
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
+    "pre-commit>=4.0.0",
+    "twine>=6.2.0",
+    "keyrings-alt>=5.0.2",
+    "pandas>=3.0.0,<4.0.0",
+    "openpyxl>=3.1.5,<4.0.0",
+    "psycopg[binary]>=3.3.2,<4.0.0",
+    "psycopg2-binary>=2.9.11",
+    "sqlalchemy>=2.0.46,<3.0.0",
+    "pyarrow>=23.0.0,<24.0.0",
+    "fastapi>=0.128.0",
+    "uvicorn>=0.40.0",
+    "python-multipart>=0.0.22",
+]
+
+[tool.uv]
+default-groups = ["dev"]
 
 [build-system]
 requires = ["hatchling"]

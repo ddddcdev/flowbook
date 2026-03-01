@@ -6,9 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0a6] - 2026-03-01
+
+### Added
+
+- **Entities API**: `GET /entities` lists registered entities (entity_key, meta, created_at, updated_at). Postgres only.
+- **Entities tab**: Streamlit UI tab for entities (before Configs). Displays entity_key, display_name, desc.
+- **Entity seed**: `desc` added to meta for demo, demo/excel in schema, initdb, and db reset.
+
 ### Changed
 
-- **Breaking**: Renamed `entity_runs` table and API to `results`. API endpoints `/entity_runs` and `/latest_entity_runs` are now `/results` and `/latest_results`.
+- **artifacts_store**: Skip entity_keys containing `:` in upsert_entity (e.g. artifact:input).
+- **hands-on**: `--run-through` / `-y` now runs reset_db for consistent state (entities reset).
+- **Streamlit**: About popover with demo flow and file path; Results/Export download guidance; entity_key selectbox help.
+- **Streamlit**: Tab order Health, Inspect, Import, Export, Results, Artifacts, Entities, Configs, Steps.
 
 ## [0.1.0a5] - 2026-02-28
 
@@ -123,6 +134,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Layout: `flowbook/core/` for engine, registry, runtime, configs, artifacts; `flowbook/extensions/` for Excel, Postgres, FastAPI, steps.
 - Version from `importlib.metadata.version("flowbook")` with fallback.
 
+[0.1.0a6]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a6
 [0.1.0a5]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a5
 [0.1.0a4]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a4
 [0.1.0a3]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a3

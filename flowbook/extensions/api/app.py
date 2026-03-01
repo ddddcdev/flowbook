@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="flowbook-api", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="flowbook-api", version="0.1.0a6", lifespan=lifespan)
 
 
 @app.get("/health")
