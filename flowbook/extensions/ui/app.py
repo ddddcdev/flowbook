@@ -148,49 +148,60 @@ def _results_preview(base: str, entries: list[dict], event: object) -> None:
             return
     if not isinstance(ra, list) or not ra:
         return
-    first = ra[0] if isinstance(ra[0], dict) else {"path": str(ra[0])}
-    path = first.get("path") if isinstance(first, dict) else None
-    if not path:
+    # Normalize each item to dict, filter out items without path
+    items = []
+    for x in ra:
+        item = x if isinstance(x, dict) else {"path": str(x)}
+        path = item.get("path") if isinstance(item, dict) else None
+        if path:
+            items.append(item)
+    if not items:
         return
     run_id = entry.get("run_id", "")
     entity_key = entry.get("entity_key", "")
-    artifact_key = build_artifact_key(run_id, entity_key, path)
-    st.subheader(f"Preview: `{artifact_key}`")
-    meta = None
-    try:
-        meta_resp = requests.get(
-            api(base, f"/artifacts/{artifact_key}"),
-            params={"meta_only": "true"},
-            timeout=10,
-        )
-        if meta_resp.status_code == 200:
-            meta_val = meta_resp.json().get("value")
-            if isinstance(meta_val, dict):
-                meta = meta_val.get("meta")
-    except Exception:
-        pass
-    raw_content = None
-    content_type = None
-    try:
-        raw_resp = requests.get(
-            api(base, f"/artifacts/{artifact_key}/raw"), timeout=30
-        )
-        raw_resp.raise_for_status()
-        raw_content = raw_resp.content
-        content_type = raw_resp.headers.get("content-type", "").split(";")[0]
-    except requests.RequestException:
-        pass
-    if meta and isinstance(meta, dict):
-        st.caption("Meta")
-        st.json(meta, expanded=False)
-    if raw_content is not None:
-        _preview_artifact_content(
-            artifact_key,
-            raw_content,
-            content_type or "",
-            "dl_results_preview",
-            meta=meta,
-        )
+    st.subheader(f"{run_id}/{entity_key}")
+    tab_labels = [item.get("label") or item.get("path") or str(item) for item in items]
+    tabs = st.tabs(tab_labels)
+    for i, item in enumerate(items):
+        path = item.get("path")
+        artifact_key = build_artifact_key(run_id, entity_key, path)
+        with tabs[i]:
+            st.caption(f"Preview: `{artifact_key}`")
+            meta = None
+            try:
+                meta_resp = requests.get(
+                    api(base, f"/artifacts/{artifact_key}"),
+                    params={"meta_only": "true"},
+                    timeout=10,
+                )
+                if meta_resp.status_code == 200:
+                    meta_val = meta_resp.json().get("value")
+                    if isinstance(meta_val, dict):
+                        meta = meta_val.get("meta")
+            except Exception:
+                pass
+            raw_content = None
+            content_type = None
+            try:
+                raw_resp = requests.get(
+                    api(base, f"/artifacts/{artifact_key}/raw"), timeout=30
+                )
+                raw_resp.raise_for_status()
+                raw_content = raw_resp.content
+                content_type = raw_resp.headers.get("content-type", "").split(";")[0]
+            except requests.RequestException:
+                pass
+            if meta and isinstance(meta, dict):
+                st.caption("Meta")
+                st.json(meta, expanded=False)
+            if raw_content is not None:
+                _preview_artifact_content(
+                    artifact_key,
+                    raw_content,
+                    content_type or "",
+                    f"dl_results_preview_{i}",
+                    meta=meta,
+                )
 
 
 def _preview_artifact_content(

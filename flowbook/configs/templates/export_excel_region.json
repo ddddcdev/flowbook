@@ -20,6 +20,6 @@
     ]
   },
   "result_artifacts": [
-    {"step": "write", "key": "bytes", "label": "Excel file"}
+    {"step": "write", "key": "bytes", "label": "Excel export"}
   ]
 }

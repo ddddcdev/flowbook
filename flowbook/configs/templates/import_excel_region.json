@@ -16,6 +16,6 @@
     ]
   },
   "result_artifacts": [
-    {"step": "read", "key": "df", "label": "Detail table"}
+    {"step": "read", "key": "df", "label": "Imported table"}
   ]
 }

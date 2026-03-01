@@ -90,7 +90,7 @@ Bindings: `put_input("x", 1)`, `put_input("y", 2)`.
       }
     }
   ],
-  "result_artifacts": [{"step": "read", "key": "df", "label": "Detail table"}]
+  "result_artifacts": [{"step": "read", "key": "df", "label": "Imported table"}]
 }
 ```
 
