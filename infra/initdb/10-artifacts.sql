@@ -1,8 +1,29 @@
--- entities: entity_key is the scoping key (opaque string, exact-match only)
+-- entities: entity_key is the scoping key (slash-separated hierarchy allowed)
+-- meta: jsonb for display_name, description, etc.
 CREATE TABLE IF NOT EXISTS entities (
-  entity_key text PRIMARY KEY,
-  meta_json  text
+  entity_key   text PRIMARY KEY,
+  meta         jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now()
 );
+
+-- Migrate from meta_json if present (existing DBs)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='meta_json') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='meta') THEN
+      ALTER TABLE entities ADD COLUMN meta jsonb NOT NULL DEFAULT '{}'::jsonb;
+      UPDATE entities SET meta = COALESCE(meta_json::jsonb, '{}'::jsonb) WHERE meta_json IS NOT NULL;
+    END IF;
+    ALTER TABLE entities DROP COLUMN meta_json;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='created_at') THEN
+    ALTER TABLE entities ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='updated_at') THEN
+    ALTER TABLE entities ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+  END IF;
+END $$;
 
 -- runs: already exists conceptually
 CREATE TABLE IF NOT EXISTS runs (
@@ -76,3 +97,14 @@ CREATE TRIGGER results_set_updated_at
 BEFORE UPDATE ON results
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS entities_set_updated_at ON entities;
+CREATE TRIGGER entities_set_updated_at
+BEFORE UPDATE ON entities
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+-- Seed initial entities
+INSERT INTO entities (entity_key, meta, created_at, updated_at)
+VALUES ('demo', '{}'::jsonb, now(), now()), ('demo/excel', '{}'::jsonb, now(), now())
+ON CONFLICT (entity_key) DO NOTHING;

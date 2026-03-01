@@ -332,7 +332,14 @@ def reset_db(config_dir: str | Path) -> int:
 
     with artifacts_store.engine.begin() as conn:
         conn.execute(text("TRUNCATE artifacts, results, runs, entities CASCADE"))
-    print("Cleared artifacts, results, runs, entities.", flush=True)
+        conn.execute(
+            text(
+                "INSERT INTO entities (entity_key, meta, created_at, updated_at) "
+                "VALUES ('demo', '{}'::jsonb, now(), now()), ('demo/excel', '{}'::jsonb, now(), now()) "
+                "ON CONFLICT (entity_key) DO NOTHING"
+            )
+        )
+    print("Cleared artifacts, results, runs, entities. Seeded demo, demo/excel.", flush=True)
 
     with config_store.engine.begin() as conn:
         conn.execute(text("TRUNCATE configs"))
