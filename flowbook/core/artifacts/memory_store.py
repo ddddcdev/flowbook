@@ -18,7 +18,7 @@ def _pd() -> Any:
 class InMemoryArtifactsStore(ArtifactsStore):
     """In-memory artifact store for single-run execution only.
 
-    Does not support runs, entity_runs, or persistence across sessions.
+    Does not support runs, results, or persistence across sessions.
     Use for development and smoke tests only. For multi-run and history,
     use PostgresArtifactsStore with FLOWBOOK_DATABASE_URL.
     """

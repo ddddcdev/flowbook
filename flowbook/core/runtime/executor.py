@@ -178,7 +178,7 @@ def _result_artifacts_from_last_step(info: RunInfo) -> list[dict[str, str | None
     return [{"path": f"{last.name}/{first_out}", "label": None}]
 
 
-def _upsert_entity_run(
+def _upsert_result(
     store: RunStore,
     run_id: str,
     entity_key: str,
@@ -187,9 +187,9 @@ def _upsert_entity_run(
     entity_config_json: str | None = None,
     result_artifacts: list[dict[str, str | None]] | None = None,
 ) -> None:
-    """Upsert entity_runs if store supports it.
+    """Upsert results if store supports it.
     result_artifacts: list of {path, label} for main results. Always set when run has outputs."""
-    upsert = getattr(store, "upsert_entity_run", None)
+    upsert = getattr(store, "upsert_result", None)
     if callable(upsert):
         upsert(
             run_id,
@@ -214,7 +214,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
 
     info = RunInfo(run_id=ctx.run_id, status="running")
     result_artifacts_list: list[dict[str, str | None]] | None = None
-    _upsert_entity_run(
+    _upsert_result(
         ctx.store,
         ctx.run_id,
         ctx.entity_key,
@@ -317,7 +317,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
         if result_artifacts_list is None and info.steps:
             result_artifacts_list = _result_artifacts_from_last_step(info)
 
-        _upsert_entity_run(
+        _upsert_result(
             ctx.store,
             ctx.run_id,
             ctx.entity_key,
@@ -352,7 +352,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
         if result_artifacts_list is None and info.steps:
             result_artifacts_list = _result_artifacts_from_last_step(info)
 
-        _upsert_entity_run(
+        _upsert_result(
             ctx.store,
             ctx.run_id,
             ctx.entity_key,

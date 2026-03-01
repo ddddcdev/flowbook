@@ -55,8 +55,8 @@ runs = Table(
     ),
 )
 
-entity_runs = Table(
-    "entity_runs",
+results = Table(
+    "results",
     metadata,
     Column("run_id", Text, primary_key=True),
     Column("entity_key", Text, primary_key=True),
@@ -114,8 +114,8 @@ def _run_row_to_dict(row: Any) -> dict[str, Any]:
     }
 
 
-def _entity_run_row_to_dict(row: Any) -> dict[str, Any]:
-    """Convert entity_runs Row to JSON-serializable dict."""
+def _result_row_to_dict(row: Any) -> dict[str, Any]:
+    """Convert results Row to JSON-serializable dict."""
     result_artifacts = None
     if getattr(row, "result_artifacts_json", None):
         try:
@@ -410,7 +410,7 @@ class PostgresArtifactsStore(ArtifactsStore):
         status: str,
         config_json: str | None = None,
     ) -> None:
-        """Upsert runs row. Ensures run exists before entity_runs (FK)."""
+        """Upsert runs row. Ensures run exists before results (FK)."""
         set_cols: dict[str, object] = {"status": status, "updated_at": text("now()")}
         if config_json is not None:
             set_cols["config_json"] = config_json
@@ -456,7 +456,7 @@ class PostgresArtifactsStore(ArtifactsStore):
         with self.engine.begin() as conn:
             conn.execute(stmt)
 
-    def upsert_entity_run(
+    def upsert_result(
         self,
         run_id: str,
         entity_key: str,
@@ -465,7 +465,7 @@ class PostgresArtifactsStore(ArtifactsStore):
         entity_config_json: str | None = None,
         result_artifacts: list[dict[str, str | None]] | None = None,
     ) -> None:
-        """Upsert entity_runs row for (run_id, entity_key). Ensures runs and entities exist first.
+        """Upsert results row for (run_id, entity_key). Ensures runs and entities exist first.
         result_artifacts: list of {path, label} for main results. When plan has no result_artifacts,
         executor derives from last step's output.
         """
@@ -488,7 +488,7 @@ class PostgresArtifactsStore(ArtifactsStore):
         if entity_config_json is not None:
             set_cols["config_json"] = entity_config_json
         stmt = (
-            pg_insert(entity_runs)
+            pg_insert(results)
             .values(**vals)
             .on_conflict_do_update(
                 index_elements=["run_id", "entity_key"],
@@ -498,59 +498,59 @@ class PostgresArtifactsStore(ArtifactsStore):
         with self.engine.begin() as conn:
             conn.execute(stmt)
 
-    # ---- entity_runs read API ----
+    # ---- results read API ----
 
-    def list_entity_runs(
+    def list_results(
         self,
         run_id: str | None = None,
         entity_key: str | None = None,
     ) -> list[dict[str, Any]]:
-        """List entity_runs with optional run_id and entity_key filters.
+        """List results with optional run_id and entity_key filters.
 
-        - run_id: entity_runs within a run.
+        - run_id: results within a run.
         - entity_key: history of runs for that entity across runs.
         """
-        stmt = select(entity_runs)
+        stmt = select(results)
         conditions = []
         if run_id is not None:
-            conditions.append(entity_runs.c.run_id == run_id)
+            conditions.append(results.c.run_id == run_id)
         if entity_key is not None:
-            conditions.append(entity_runs.c.entity_key == entity_key)
+            conditions.append(results.c.entity_key == entity_key)
         if conditions:
             stmt = stmt.where(and_(*conditions))
-        stmt = stmt.order_by(entity_runs.c.updated_at.desc())
+        stmt = stmt.order_by(results.c.updated_at.desc())
 
         with self.engine.begin() as conn:
             rows = conn.execute(stmt).all()
 
-        return [_entity_run_row_to_dict(row) for row in rows]
+        return [_result_row_to_dict(row) for row in rows]
 
-    def get_entity_run(self, run_id: str, entity_key: str) -> dict[str, Any] | None:
-        """Get single entity_run by (run_id, entity_key). Returns None if not found."""
-        stmt = select(entity_runs).where(
+    def get_result(self, run_id: str, entity_key: str) -> dict[str, Any] | None:
+        """Get single result by (run_id, entity_key). Returns None if not found."""
+        stmt = select(results).where(
             and_(
-                entity_runs.c.run_id == run_id,
-                entity_runs.c.entity_key == entity_key,
+                results.c.run_id == run_id,
+                results.c.entity_key == entity_key,
             )
         )
         with self.engine.begin() as conn:
             row = conn.execute(stmt).one_or_none()
         if row is None:
             return None
-        return _entity_run_row_to_dict(row)
+        return _result_row_to_dict(row)
 
-    def list_latest_entity_runs(
+    def list_latest_results(
         self,
         entity_key: str | None = None,
     ) -> list[dict[str, Any]]:
-        """List latest entity_run per entity_key (updated_at max). No new table."""
+        """List latest result per entity_key (updated_at max). No new table."""
         cols_str = (
             "run_id, entity_key, result_artifacts_json, status, config_json, created_at, updated_at"
         )
         raw_sql = (
             f"SELECT {cols_str} FROM ("
             f"SELECT DISTINCT ON (entity_key) {cols_str} "
-            "FROM entity_runs"
+            "FROM results"
             + (" WHERE entity_key = :entity_key" if entity_key else "")
             + " ORDER BY entity_key, updated_at DESC"
             ") sub"
@@ -583,7 +583,7 @@ class PostgresArtifactsStore(ArtifactsStore):
             result.append(d)
         return result
 
-    def get_latest_entity_run(self, entity_key: str) -> dict[str, Any] | None:
-        """Get latest entity_run for entity_key (updated_at max). Returns None if not found."""
-        rows = self.list_latest_entity_runs(entity_key=entity_key)
+    def get_latest_result(self, entity_key: str) -> dict[str, Any] | None:
+        """Get latest result for entity_key (updated_at max). Returns None if not found."""
+        rows = self.list_latest_results(entity_key=entity_key)
         return rows[0] if rows else None

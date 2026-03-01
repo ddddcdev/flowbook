@@ -132,7 +132,7 @@ FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db init
 FLOWBOOK_DATABASE_URL=... FLOWBOOK_DB_RESET=1 flowbook db reset
 ```
 
-`flowbook db init` creates entities, runs, entity_runs, artifacts, configs. `flowbook db reset` truncates them and seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
+`flowbook db init` creates entities, runs, results, artifacts, configs. `flowbook db reset` truncates them and seeds from bundled configs (flowbook[demo]) + overlay from `configs/` (default `--config-dir configs`). Use `--config-dir bundled` for bundled only.
 
 ### Hands-on flow
 

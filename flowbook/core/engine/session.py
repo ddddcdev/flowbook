@@ -130,7 +130,7 @@ class RunSession:
         plan_config: dict[str, Any],
         entity_key: str,
     ) -> RunInfo:
-        """Execute plan, record config to entity_runs only. Internal."""
+        """Execute plan, record config to results only. Internal."""
         if self._executed:
             raise RuntimeError("RunSession already executed; create a new session")
         self._executed = True
@@ -161,7 +161,7 @@ class RunSession:
         return execute_plan(plan, run_ctx)
 
     def exec_plan(self, *, plan_config: dict[str, Any]) -> RunInfo:
-        """Execute plan. Records config to runs (entry) and entity_runs (executed)."""
+        """Execute plan. Records config to runs (entry) and results (executed)."""
         self._record_run_config(plan_config)
         return self._exec(
             plan_config=plan_config, entity_key=self.entity_key
@@ -171,7 +171,7 @@ class RunSession:
         self, *, planner_config: dict[str, Any]
     ) -> tuple[RunInfo, RunInfo]:
         """Run planner once, then execute resulting plan.
-        Records planner_config to runs; each exec to entity_runs."""
+        Records planner_config to runs; each exec to results."""
         self._record_run_config(planner_config)
         planner_info = self._exec(
             plan_config=planner_config, entity_key=self.entity_key

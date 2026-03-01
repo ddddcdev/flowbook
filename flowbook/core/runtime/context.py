@@ -28,4 +28,4 @@ class RunContext:
     meta: dict[str, Any] | None = None
     index: ArtifactIndex | None = None
     run_config_json: str | None = None  # for runs table (planner config)
-    entity_config_json: str | None = None  # for entity_runs table (exec config)
+    entity_config_json: str | None = None  # for results table (exec config)

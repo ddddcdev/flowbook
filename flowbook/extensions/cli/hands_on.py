@@ -154,8 +154,8 @@ def run(
     print(f"read/df key (from import): {read_df_key}")
     _prompt()
 
-    # Step 4: Verify runs, entity_runs, artifacts (created by import)
-    print("\n=== Step 4: Verify runs, entity_runs, artifacts ===")
+    # Step 4: Verify runs, results, artifacts (created by import)
+    print("\n=== Step 4: Verify runs, results, artifacts ===")
     print("Confirm what Import created; keys here will be used for Export and Download.")
     try:
         # runs (Postgres only; InMemory returns empty)
@@ -166,26 +166,26 @@ def run(
                 print(f"  - {rn['run_id']} status={rn['status']}")
         else:
             print("runs: (empty or not available)")
-        # entity_runs for this run (Postgres only; InMemory returns empty)
-        r_er = httpx.get(f"{base}/entity_runs", params={"run_id": run_id}, timeout=10.0)
+        # results for this run (Postgres only; InMemory returns empty)
+        r_er = httpx.get(f"{base}/results", params={"run_id": run_id}, timeout=10.0)
         if r_er.status_code == 200 and r_er.json().get("entries"):
-            print("entity_runs (this run) - result_artifacts = main result paths from plan:")
+            print("results (this run) - result_artifacts = main result paths from plan:")
             for ent in r_er.json()["entries"]:
                 ra = ent.get("result_artifacts") or []
                 ri, ek, st = ent["run_id"], ent["entity_key"], ent["status"]
                 ra_str = _fmt_result_artifacts(ra)
                 print(f"  - {ri}/{ek} status={st} result_artifacts=[{ra_str}]")
             # Get details to confirm result_artifacts
-            r_er_get = httpx.get(f"{base}/entity_runs/{run_id}/{entity_key}", timeout=10.0)
+            r_er_get = httpx.get(f"{base}/results/{run_id}/{entity_key}", timeout=10.0)
             if r_er_get.status_code == 200:
                 detail = r_er_get.json()
                 ra = detail.get("result_artifacts") or []
                 ap = ra[0]["path"] if ra else None
                 if ap:
                     read_df_key = f"{run_id}/{entity_key}/{ap}"
-                    print(f"  -> read_df_key from entity_run result_artifacts[0]: {read_df_key}")
+                    print(f"  -> read_df_key from result result_artifacts[0]: {read_df_key}")
         else:
-            print("entity_runs: (empty or not available; using import response)")
+            print("results: (empty or not available; using import response)")
         # Artifacts for this run
         r_art = httpx.get(f"{base}/artifacts", params={"prefix": f"{run_id}/"}, timeout=10.0)
         r_art.raise_for_status()
@@ -238,9 +238,9 @@ def run(
             return 1
     _prompt()
 
-    # Step 6: Verify runs, entity_runs, artifacts (before download)
+    # Step 6: Verify runs, results, artifacts (before download)
     print("\n=== Step 6: Verify before Download ===")
-    print("Confirm download targets exist in runs, entity_runs, artifacts.")
+    print("Confirm download targets exist in runs, results, artifacts.")
     run_ids_to_show = [rid for rid in (run_id, export_run_id) if rid]
     try:
         all_keys: list[str] = []
@@ -250,9 +250,9 @@ def run(
                 print(f"runs (run_id={rid}):")
                 for rn in r_runs.json()["entries"]:
                     print(f"  - {rn['run_id']} status={rn['status']}")
-            r_er = httpx.get(f"{base}/entity_runs", params={"run_id": rid}, timeout=10.0)
+            r_er = httpx.get(f"{base}/results", params={"run_id": rid}, timeout=10.0)
             if r_er.status_code == 200 and r_er.json().get("entries"):
-                print(f"entity_runs (run_id={rid}):")
+                print(f"results (run_id={rid}):")
                 for ent in r_er.json()["entries"]:
                     ra = ent.get("result_artifacts") or []
                     ra_str = _fmt_result_artifacts(ra)

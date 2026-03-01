@@ -253,7 +253,7 @@ def seed_one_artifact() -> int:
 
 
 def init_db_schema() -> int:
-    """Create tables (entities, runs, entity_runs, artifacts, configs) for first-time setup.
+    """Create tables (entities, runs, results, artifacts, configs) for first-time setup.
     Use before flowbook db reset when the DB has no schema yet.
     Returns exit code."""
     if os.environ.get("FLOWBOOK_DB_RESET") != "1":
@@ -332,10 +332,10 @@ def reset_db(config_dir: str | Path) -> int:
 
     with artifacts_store.engine.begin() as conn:
         conn.execute(text("TRUNCATE artifacts"))
-        conn.execute(text("TRUNCATE entity_runs"))
+        conn.execute(text("TRUNCATE results"))
         conn.execute(text("TRUNCATE runs"))
         conn.execute(text("TRUNCATE entities"))
-    print("Cleared artifacts, entity_runs, runs, entities.", flush=True)
+    print("Cleared artifacts, results, runs, entities.", flush=True)
 
     with config_store.engine.begin() as conn:
         conn.execute(text("TRUNCATE configs"))

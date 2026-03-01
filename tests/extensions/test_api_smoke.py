@@ -303,22 +303,22 @@ def test_runs_list_empty_with_in_memory_store(client: TestClient):
     assert r.json()["entries"] == []
 
 
-def test_entity_runs_list_empty_with_in_memory_store(client: TestClient):
-    """In-memory store returns empty list for entity_runs."""
-    r = client.get("/entity_runs")
+def test_results_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for results."""
+    r = client.get("/results")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 
 
-def test_entity_runs_get_404_with_in_memory_store(client: TestClient):
-    """In-memory store returns 404 for entity_run get."""
-    r = client.get("/entity_runs/run1/entity1")
+def test_results_get_404_with_in_memory_store(client: TestClient):
+    """In-memory store returns 404 for result get."""
+    r = client.get("/results/run1/entity1")
     assert r.status_code == 404
 
 
-def test_latest_entity_runs_list_empty_with_in_memory_store(client: TestClient):
-    """In-memory store returns empty list for latest_entity_runs."""
-    r = client.get("/latest_entity_runs")
+def test_latest_results_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for latest_results."""
+    r = client.get("/latest_results")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 

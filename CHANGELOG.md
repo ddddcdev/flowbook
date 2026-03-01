@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking**: Renamed `entity_runs` table and API to `results`. API endpoints `/entity_runs` and `/latest_entity_runs` are now `/results` and `/latest_results`.
+
 ## [0.1.0a5] - 2026-02-28
 
 ### Added

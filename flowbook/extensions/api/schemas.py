@@ -116,7 +116,7 @@ class RunGetResponse(BaseModel):
     updated_at: str | None = None
 
 
-# ---- /entity_runs, /latest_entity_runs ----
+# ---- /results, /latest_results ----
 
 
 class ResultArtifactEntry(BaseModel):
@@ -126,7 +126,7 @@ class ResultArtifactEntry(BaseModel):
     label: str | None = None
 
 
-class EntityRunEntry(BaseModel):
+class ResultEntry(BaseModel):
     run_id: str
     entity_key: str
     status: str
@@ -136,11 +136,11 @@ class EntityRunEntry(BaseModel):
     updated_at: str | None = None
 
 
-class EntityRunsListResponse(BaseModel):
-    entries: list[EntityRunEntry] = []
+class ResultsListResponse(BaseModel):
+    entries: list[ResultEntry] = []
 
 
-class EntityRunGetResponse(BaseModel):
+class ResultGetResponse(BaseModel):
     run_id: str
     entity_key: str
     status: str
@@ -150,11 +150,11 @@ class EntityRunGetResponse(BaseModel):
     updated_at: str | None = None
 
 
-class LatestEntityRunsListResponse(BaseModel):
-    entries: list[EntityRunEntry] = []
+class LatestResultsListResponse(BaseModel):
+    entries: list[ResultEntry] = []
 
 
-class LatestEntityRunGetResponse(BaseModel):
+class LatestResultGetResponse(BaseModel):
     run_id: str
     entity_key: str
     status: str

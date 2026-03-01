@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS runs (
 
 ALTER TABLE runs ADD COLUMN IF NOT EXISTS config_json text;
 
--- entity_runs: canonical result per (run_id, entity_key)
+-- results: canonical result per (run_id, entity_key)
 -- result_artifacts_json: JSON array of {path, label}. When plan has no result_artifacts,
 -- last step's first output is stored as [{"path": "step/key", "label": null}].
-CREATE TABLE IF NOT EXISTS entity_runs (
+CREATE TABLE IF NOT EXISTS results (
   run_id      text NOT NULL REFERENCES runs(run_id),
   entity_key  text NOT NULL,
   result_artifacts_json text,
@@ -28,20 +28,6 @@ CREATE TABLE IF NOT EXISTS entity_runs (
   updated_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id, entity_key)
 );
-
-ALTER TABLE entity_runs DROP COLUMN IF EXISTS summary_json;
-ALTER TABLE entity_runs DROP COLUMN IF EXISTS path;
-ALTER TABLE entity_runs ADD COLUMN IF NOT EXISTS result_artifacts_json text;
-ALTER TABLE entity_runs ADD COLUMN IF NOT EXISTS config_json text;
--- Migrate artifact_path -> result_artifacts_json, then drop artifact_path (for existing DBs)
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entity_runs' AND column_name='artifact_path') THEN
-    UPDATE entity_runs SET result_artifacts_json = json_build_array(json_build_object('path', artifact_path, 'label', null))::text
-      WHERE artifact_path IS NOT NULL AND (result_artifacts_json IS NULL OR result_artifacts_json = '');
-    ALTER TABLE entity_runs DROP COLUMN artifact_path;
-  END IF;
-END $$;
 
 -- artifacts: composite PK (run_id, entity_key, artifact_path)
 -- key format: {run_id}/{entity_key}/{artifact_path}
@@ -85,8 +71,8 @@ BEFORE UPDATE ON artifacts
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
-DROP TRIGGER IF EXISTS entity_runs_set_updated_at ON entity_runs;
-CREATE TRIGGER entity_runs_set_updated_at
-BEFORE UPDATE ON entity_runs
+DROP TRIGGER IF EXISTS results_set_updated_at ON results;
+CREATE TRIGGER results_set_updated_at
+BEFORE UPDATE ON results
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();

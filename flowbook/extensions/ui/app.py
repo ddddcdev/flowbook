@@ -1,5 +1,5 @@
 """
-Streamlit demo: hands-on flow via API (Inspect -> Import -> Entity runs -> Export -> Download).
+Streamlit demo: hands-on flow via API (Inspect -> Import -> Results -> Export -> Download).
 
 Run with API up:
   uv run uvicorn flowbook.extensions.api.app:app --reload
@@ -86,7 +86,7 @@ def _created_at_for_sort(e: object) -> str:
     return getattr(e, "created_at", None) or ""
 
 
-def _entity_run_entry_for_display(entry: dict) -> dict:
+def _result_entry_for_display(entry: dict) -> dict:
     """Convert result_artifacts to JSON string for readable DataFrame preview."""
     out = dict(entry)
     if "result_artifacts" in out and out["result_artifacts"] is not None:
@@ -94,8 +94,8 @@ def _entity_run_entry_for_display(entry: dict) -> dict:
     return out
 
 
-def _entity_runs_preview(base: str, entries: list[dict], event: object) -> None:
-    """Show artifact preview when entity_run row is selected (from result_artifacts)."""
+def _results_preview(base: str, entries: list[dict], event: object) -> None:
+    """Show artifact preview when result row is selected (from result_artifacts)."""
     row_idx = None
     sel = getattr(event, "selection", None)
     if sel and getattr(sel, "rows", None):
@@ -154,7 +154,7 @@ def _entity_runs_preview(base: str, entries: list[dict], event: object) -> None:
             artifact_key,
             raw_content,
             content_type or "",
-            "dl_entity_runs_preview",
+            "dl_results_preview",
             meta=meta,
         )
 
@@ -226,9 +226,9 @@ def health(base: str) -> bool:
 
 
 def _entity_key_options(base: str) -> list[str]:
-    """Fetch registered entity_keys from latest_entity_runs; fallback to demo/excel."""
+    """Fetch registered entity_keys from latest_results; fallback to demo/excel."""
     try:
-        r = requests.get(api(base, "/latest_entity_runs"), timeout=10)
+        r = requests.get(api(base, "/latest_results"), timeout=10)
         r.raise_for_status()
         entries = r.json().get("entries", [])
         keys = sorted({e["entity_key"] for e in entries if e.get("entity_key")})
@@ -256,7 +256,7 @@ def main() -> None:
     entity_key_opts = _entity_key_options(base)
 
     tab_names = [
-        "Inspect", "Import", "Export", "Artifacts", "Entity runs",
+        "Inspect", "Import", "Export", "Artifacts", "Results",
         "Configs", "Steps",
     ]
     tabs = st.tabs(tab_names)
@@ -264,7 +264,7 @@ def main() -> None:
     tab_import = tabs[1]
     tab_export = tabs[2]
     tab_artifacts = tabs[3]
-    tab_entity_runs = tabs[4]
+    tab_results = tabs[4]
     tab_configs = tabs[5]
     tab_steps = tabs[6]
 
@@ -402,59 +402,59 @@ def main() -> None:
                 except requests.RequestException as e:
                     st.error(str(e))
 
-    with tab_entity_runs:
-        st.subheader("Entity runs")
+    with tab_results:
+        st.subheader("Results")
         st.caption("Per-run and per-entity results. Postgres only; in-memory returns empty.")
         run_id_filter = st.text_input("Filter by run_id", key="er_run_id", placeholder="optional")
         entity_key_filter = st.text_input(
             "Filter by entity_key", key="er_entity_key", placeholder="optional"
         )
-        if st.button("Refresh", key="entity_runs_refresh"):
+        if st.button("Refresh", key="results_refresh"):
             try:
                 params = {}
                 if run_id_filter.strip():
                     params["run_id"] = run_id_filter.strip()
                 if entity_key_filter.strip():
                     params["entity_key"] = entity_key_filter.strip()
-                r = requests.get(api(base, "/entity_runs"), params=params or None, timeout=10)
+                r = requests.get(api(base, "/results"), params=params or None, timeout=10)
                 r.raise_for_status()
-                st.session_state["entity_runs"] = r.json().get("entries", [])
+                st.session_state["results"] = r.json().get("entries", [])
                 latest_params = (
                     {"entity_key": entity_key_filter.strip()}
                     if entity_key_filter.strip()
                     else None
                 )
                 r2 = requests.get(
-                    api(base, "/latest_entity_runs"),
+                    api(base, "/latest_results"),
                     params=latest_params,
                     timeout=10,
                 )
                 r2.raise_for_status()
-                st.session_state["latest_entity_runs"] = r2.json().get("entries", [])
+                st.session_state["latest_results"] = r2.json().get("entries", [])
             except requests.RequestException as e:
                 st.error(str(e))
-        er_entries = st.session_state.get("entity_runs", [])
-        lat_entries = st.session_state.get("latest_entity_runs", [])
+        er_entries = st.session_state.get("results", [])
+        lat_entries = st.session_state.get("latest_results", [])
         if er_entries or lat_entries:
             show_latest_only = st.toggle(
-                "latest_entity_runs only (latest per entity_key)",
+                "latest_results only (latest per entity_key)",
                 value=False,
                 key="er_show_latest_only",
             )
             if show_latest_only and lat_entries:
-                st.write("**latest_entity_runs** (latest per entity_key)")
+                st.write("**latest_results** (latest per entity_key)")
                 entries = lat_entries
-                df_key = "latest_entity_runs_df"
+                df_key = "latest_results_df"
             else:
-                st.write("**entity_runs** (full list)")
+                st.write("**results** (full list)")
                 entries = er_entries
-                df_key = "entity_runs_df"
+                df_key = "results_df"
             if entries:
                 sorted_entries = sorted(
                     entries,
                     key=lambda e: (_created_at_for_sort(e) == "", _created_at_for_sort(e)),
                 )
-                df = pd.DataFrame([_entity_run_entry_for_display(e) for e in sorted_entries])
+                df = pd.DataFrame([_result_entry_for_display(e) for e in sorted_entries])
                 event = st.dataframe(
                     df,
                     key=df_key,
@@ -463,11 +463,11 @@ def main() -> None:
                     on_select="rerun",
                     selection_mode="single-row",
                 )
-                _entity_runs_preview(base, sorted_entries, event)
+                _results_preview(base, sorted_entries, event)
             elif show_latest_only:
-                st.info("No latest_entity_runs.")
+                st.info("No latest_results.")
         else:
-            st.info("No entity_runs. Click Refresh or run Import first.")
+            st.info("No results. Click Refresh or run Import first.")
 
     with tab_artifacts:
         st.subheader("List artifacts")
