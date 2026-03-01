@@ -323,6 +323,13 @@ def test_latest_results_list_empty_with_in_memory_store(client: TestClient):
     assert r.json()["entries"] == []
 
 
+def test_entities_list_empty_with_in_memory_store(client: TestClient):
+    """In-memory store returns empty list for entities."""
+    r = client.get("/entities")
+    assert r.status_code == 200
+    assert r.json()["entries"] == []
+
+
 # ---- integration: same tests against Postgres ----
 
 _DB_URL = os.environ.get("FLOWBOOK_DATABASE_URL")

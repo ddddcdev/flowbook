@@ -7,24 +7,6 @@ CREATE TABLE IF NOT EXISTS entities (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
--- Migrate from meta_json if present (existing DBs)
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='meta_json') THEN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='meta') THEN
-      ALTER TABLE entities ADD COLUMN meta jsonb NOT NULL DEFAULT '{}'::jsonb;
-      UPDATE entities SET meta = COALESCE(meta_json::jsonb, '{}'::jsonb) WHERE meta_json IS NOT NULL;
-    END IF;
-    ALTER TABLE entities DROP COLUMN meta_json;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='created_at') THEN
-    ALTER TABLE entities ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='entities' AND column_name='updated_at') THEN
-    ALTER TABLE entities ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-  END IF;
-END $$;
-
 -- runs: already exists conceptually
 CREATE TABLE IF NOT EXISTS runs (
   run_id     text PRIMARY KEY,
@@ -106,5 +88,7 @@ EXECUTE FUNCTION set_updated_at();
 
 -- Seed initial entities
 INSERT INTO entities (entity_key, meta, created_at, updated_at)
-VALUES ('demo', '{}'::jsonb, now(), now()), ('demo/excel', '{}'::jsonb, now(), now())
+VALUES
+  ('demo', '{"display_name": "Demo", "desc": "Top-level demo scope"}'::jsonb, now(), now()),
+  ('demo/excel', '{"display_name": "Demo Excel", "desc": "Excel import/export demo"}'::jsonb, now(), now())
 ON CONFLICT (entity_key) DO NOTHING;

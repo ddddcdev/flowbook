@@ -66,20 +66,27 @@ def run(
         if interactive:
             input(msg)
 
-    # Optional: full init
+    # Optional: full init (reset artifacts, results, runs, entities, configs; seed demo entities + configs)
+    run_reset = False
     if interactive:
         init_ans = input("Full init DB (clear artifacts + configs, then seed)? [Y/n] ").strip()
-        if init_ans.lower() != "n":
-            from flowbook.extensions.cli.db import reset_db
-
-            if os.environ.get("FLOWBOOK_DB_RESET") != "1":
-                os.environ["FLOWBOOK_DB_RESET"] = "1"
-            code = reset_db(config_dir)
-            if code != 0:
-                return code
-            _prompt()
-        else:
+        run_reset = init_ans.lower() != "n"
+        if not run_reset:
             print("Skipping init.")
+    else:
+        # Run-through: always reset so state matches flowbook db reset
+        run_reset = True
+
+    if run_reset:
+        from flowbook.extensions.cli.db import reset_db
+
+        if os.environ.get("FLOWBOOK_DB_RESET") != "1":
+            os.environ["FLOWBOOK_DB_RESET"] = "1"
+        code = reset_db(config_dir)
+        if code != 0:
+            return code
+        if interactive:
+            _prompt()
 
     # Step 1: Health
     print("\n=== Step 1: Health ===")

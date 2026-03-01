@@ -335,7 +335,9 @@ def reset_db(config_dir: str | Path) -> int:
         conn.execute(
             text(
                 "INSERT INTO entities (entity_key, meta, created_at, updated_at) "
-                "VALUES ('demo', '{}'::jsonb, now(), now()), ('demo/excel', '{}'::jsonb, now(), now()) "
+                "VALUES "
+                "('demo', '{\"display_name\": \"Demo\", \"desc\": \"Top-level demo scope\"}'::jsonb, now(), now()), "
+                "('demo/excel', '{\"display_name\": \"Demo Excel\", \"desc\": \"Excel import/export demo\"}'::jsonb, now(), now()) "
                 "ON CONFLICT (entity_key) DO NOTHING"
             )
         )

@@ -462,8 +462,10 @@ class PostgresArtifactsStore(ArtifactsStore):
         return _run_row_to_dict(row)
 
     def upsert_entity(self, entity_key: str) -> None:
-        """Upsert entities row. Ensures entity exists when first used. ON CONFLICT DO NOTHING."""
-        if not entity_key:
+        """Upsert entities row. Ensures entity exists when first used. ON CONFLICT DO NOTHING.
+        Skips entity_keys with ':' (e.g. artifact:input) - those are logical addresses, not scopes.
+        """
+        if not entity_key or ":" in entity_key:
             return
         stmt = (
             pg_insert(entities)
@@ -472,6 +474,21 @@ class PostgresArtifactsStore(ArtifactsStore):
         )
         with self.engine.begin() as conn:
             conn.execute(stmt)
+
+    def list_entities(self) -> list[dict[str, Any]]:
+        """List all entities. Returns list of {entity_key, meta, created_at, updated_at}."""
+        stmt = select(entities).order_by(entities.c.entity_key)
+        with self.engine.begin() as conn:
+            rows = conn.execute(stmt).all()
+        return [
+            {
+                "entity_key": r.entity_key,
+                "meta": r.meta or {},
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            }
+            for r in rows
+        ]
 
     def upsert_result(
         self,

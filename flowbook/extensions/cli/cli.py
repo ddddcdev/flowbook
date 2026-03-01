@@ -298,6 +298,12 @@ def register_cli(app: Typer) -> None:
             "configs", "--config-dir", "-C", help="Config directory for init"
         ),
         no_interactive: bool = t.Option(False, "--no-interactive", help="Skip prompts"),
+        run_through: bool = t.Option(
+            False,
+            "--run-through",
+            "-y",
+            help="Run through all steps without prompts (通し実行)",
+        ),
     ) -> None:
         """Run hands-on: Health -> Inspect -> Import -> Verify -> Export -> Verify -> Download."""
         from flowbook.extensions.cli.hands_on import run as run_hands_on
@@ -306,7 +312,7 @@ def register_cli(app: Typer) -> None:
             base_url=base_url,
             fixture_path=fixture,
             config_dir=config_dir,
-            interactive=not no_interactive,
+            interactive=not (no_interactive or run_through),
         )
         raise t.Exit(code)
 

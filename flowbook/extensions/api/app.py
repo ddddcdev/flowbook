@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from flowbook.core.logging import configure_logging
 from flowbook.extensions.api.routes.artifacts import router as artifacts_router
 from flowbook.extensions.api.routes.configs import router as configs_router
+from flowbook.extensions.api.routes.entities import router as entities_router
 from flowbook.extensions.api.routes.export import router as export_router
 from flowbook.extensions.api.routes.import_ import router as import_router
 from flowbook.extensions.api.routes.inspect import router as inspect_router
@@ -42,6 +43,7 @@ app.include_router(import_router)
 app.include_router(export_router)
 app.include_router(artifacts_router)
 app.include_router(configs_router)
+app.include_router(entities_router)
 app.include_router(results_router)
 app.include_router(runs_router)
 app.include_router(steps_router)
