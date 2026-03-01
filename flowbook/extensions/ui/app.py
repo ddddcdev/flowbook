@@ -79,6 +79,40 @@ def _entity_key_from_artifact_key(key: str) -> str:
         return "default"
 
 
+def _entity_matches(
+    entry_entity_key: str | None,
+    filter_value: str | None,
+    match_mode: str,
+) -> bool:
+    """Return True if entry matches filter. match_mode: 'exact' or 'partial' (contains)."""
+    if filter_value is None or filter_value == "":
+        return True
+    if entry_entity_key is None:
+        return False
+    if match_mode == "partial":
+        return filter_value in entry_entity_key
+    return entry_entity_key == filter_value
+
+
+def _entity_key_from_entry(entry: dict | object) -> str | None:
+    """Extract entity_key from artifact entry (dict or object). Fallback: parse from key."""
+    if isinstance(entry, dict):
+        ek = entry.get("entity_key")
+        if ek is not None and ek != "":
+            return ek
+        key = entry.get("key")
+        if key:
+            return _entity_key_from_artifact_key(key)
+        return None
+    ek = getattr(entry, "entity_key", None)
+    if ek is not None and ek != "":
+        return ek
+    key = getattr(entry, "key", None)
+    if key:
+        return _entity_key_from_artifact_key(key)
+    return None
+
+
 def _created_at_for_sort(e: object) -> str:
     """Extract created_at for ascending sort. Empty string for missing."""
     if isinstance(e, dict):
@@ -254,6 +288,34 @@ def main() -> None:
         st.sidebar.success("API OK")
 
     entity_key_opts = _entity_key_options(base)
+    custom_keys = st.session_state.get("custom_entity_keys", set())
+    opts_set = set(entity_key_opts)
+    entity_key_options = entity_key_opts + sorted(
+        k for k in custom_keys if k not in opts_set
+    )
+    entity_key = st.sidebar.selectbox(
+        "entity_key",
+        options=entity_key_options,
+        index=None,
+        placeholder="Choose an option",
+        accept_new_options=True,
+        key="sidebar_entity_key",
+    )
+    if entity_key and entity_key not in opts_set:
+        custom_keys = custom_keys | {entity_key}
+        st.session_state["custom_entity_keys"] = custom_keys
+    exact_match = st.sidebar.toggle(
+        "exact match",
+        value=True,
+        key="sidebar_entity_exact_match",
+        help="ON: exact match, API filter. OFF: partial match (contains), client-side filter.",
+    )
+    entity_key_filter_value = entity_key
+    entity_key_for_actions = (
+        entity_key
+        if entity_key is not None
+        else (entity_key_opts[0] if entity_key_opts else "demo/excel")
+    )
 
     tab_names = [
         "Inspect", "Import", "Export", "Artifacts", "Results",
@@ -318,9 +380,6 @@ def main() -> None:
     with tab_inspect:
         st.subheader("Inspect Excel (optional)")
         st.caption("Detect kind and effective date from the uploaded xlsx before import.")
-        entity_key_inspect = st.selectbox(
-            "entity_key", options=entity_key_opts, key="inspect_entity_key"
-        )
         file_inspect = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="inspect_file")
         if file_inspect and st.button("Run inspect", key="inspect_btn"):
             with st.spinner("Inspecting..."):
@@ -335,7 +394,7 @@ def main() -> None:
                             )
                         },
                         data={
-                            "entity_key": entity_key_inspect,
+                            "entity_key": entity_key_for_actions,
                             "input_profile_name": "source",
                         },
                         timeout=30,
@@ -350,9 +409,6 @@ def main() -> None:
     with tab_import:
         st.subheader("Import Excel (table extract)")
         st.caption("Upload xlsx, set entity_key (e.g. demo/excel). Creates read/df artifact.")
-        entity_key_import = st.selectbox(
-            "entity_key", options=entity_key_opts, key="import_entity_key"
-        )
         file = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="import_file")
         if file and st.button("Run import"):
             with st.spinner("Importing..."):
@@ -368,7 +424,7 @@ def main() -> None:
                         },
                         data={
                             "template_name": "import_excel_region",
-                            "entity_key": entity_key_import,
+                            "entity_key": entity_key_for_actions,
                             "input_profile_name": "source",
                             "sheet_name": "data",
                             "header_row": 0,
@@ -406,22 +462,22 @@ def main() -> None:
         st.subheader("Results")
         st.caption("Per-run and per-entity results. Postgres only; in-memory returns empty.")
         run_id_filter = st.text_input("Filter by run_id", key="er_run_id", placeholder="optional")
-        entity_key_filter = st.text_input(
-            "Filter by entity_key", key="er_entity_key", placeholder="optional"
-        )
         if st.button("Refresh", key="results_refresh"):
             try:
                 params = {}
                 if run_id_filter.strip():
                     params["run_id"] = run_id_filter.strip()
-                if entity_key_filter.strip():
-                    params["entity_key"] = entity_key_filter.strip()
+                use_api_filter = (
+                    exact_match and entity_key_filter_value is not None
+                )
+                if use_api_filter:
+                    params["entity_key"] = entity_key_filter_value
                 r = requests.get(api(base, "/results"), params=params or None, timeout=10)
                 r.raise_for_status()
-                st.session_state["results"] = r.json().get("entries", [])
+                raw_results = r.json().get("entries", [])
                 latest_params = (
-                    {"entity_key": entity_key_filter.strip()}
-                    if entity_key_filter.strip()
+                    {"entity_key": entity_key_filter_value}
+                    if use_api_filter
                     else None
                 )
                 r2 = requests.get(
@@ -430,7 +486,29 @@ def main() -> None:
                     timeout=10,
                 )
                 r2.raise_for_status()
-                st.session_state["latest_results"] = r2.json().get("entries", [])
+                raw_latest = r2.json().get("entries", [])
+                if not use_api_filter and entity_key_filter_value is not None:
+                    mode = "partial" if not exact_match else "exact"
+                    raw_results = [
+                        e
+                        for e in raw_results
+                        if _entity_matches(
+                            e.get("entity_key"),
+                            entity_key_filter_value,
+                            mode,
+                        )
+                    ]
+                    raw_latest = [
+                        e
+                        for e in raw_latest
+                        if _entity_matches(
+                            e.get("entity_key"),
+                            entity_key_filter_value,
+                            mode,
+                        )
+                    ]
+                st.session_state["results"] = raw_results
+                st.session_state["latest_results"] = raw_latest
             except requests.RequestException as e:
                 st.error(str(e))
         er_entries = st.session_state.get("results", [])
@@ -488,6 +566,17 @@ def main() -> None:
                 st.error(str(e))
         entries = st.session_state.get("artifact_entries", [])
         if entries:
+            if entity_key_filter_value is not None:
+                mode = "partial" if not exact_match else "exact"
+                entries = [
+                    e
+                    for e in entries
+                    if _entity_matches(
+                        _entity_key_from_entry(e),
+                        entity_key_filter_value,
+                        mode,
+                    )
+                ]
             sorted_entries = sorted(
                 entries,
                 key=lambda e: (_created_at_for_sort(e) == "", _created_at_for_sort(e)),
@@ -588,18 +677,7 @@ def main() -> None:
         else:
             source = st.selectbox("Source artifact (read/df)", options=df_keys, key="export_source")
             inferred = _entity_key_from_artifact_key(source)
-            export_opts = (
-                [inferred] + [k for k in entity_key_opts if k != inferred]
-                if inferred not in entity_key_opts
-                else entity_key_opts
-            )
-            default_idx = 0 if inferred not in entity_key_opts else entity_key_opts.index(inferred)
-            entity_key_export = st.selectbox(
-                "entity_key",
-                options=export_opts,
-                index=default_idx,
-                key="export_entity_key",
-            )
+            st.caption(f"Inferred from source: `{inferred}` (entity from sidebar)")
             if st.button("Run export"):
                 with st.spinner("Exporting..."):
                     try:
@@ -607,7 +685,7 @@ def main() -> None:
                             api(base, "/export/from_artifact"),
                             data={
                                 "source_artifact_key": source,
-                                "entity_key": entity_key_export,
+                                "entity_key": entity_key_for_actions,
                                 "mapping_name": "detect_region_test",
                             },
                             timeout=60,
