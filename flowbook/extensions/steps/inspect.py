@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from flowbook.core.configs.spec_types import InputProfile
+from flowbook.core.configs.spec_types import InputProfile, Routing
 from flowbook.core.registry.base_op import BaseOp
 from flowbook.core.registry.spec import InputsBase, OutputsBase
 from flowbook.core.registry.step_decorator import register_from_steps, step
@@ -80,6 +80,67 @@ class InspectFilenameKindOp(BaseOp):
             "resolved_path": path_str,
             "filename": filename,
             "detected_kind": detected_kind,
+            "evidence": {
+                "matched_pattern": matched_pattern,
+                "matcher": "filename_regex",
+            },
+        }
+        return {self.Outputs.RESULT: result}
+
+
+def _resolve_template_name(store: RunStore, detected_kind: str | None) -> str | None:
+    """Resolve template_name from Routing config (default profile)."""
+    try:
+        routing = store.configs.get_spec(Routing, "default")
+    except KeyError:
+        return None
+    kind_map = routing.get("map") or {}
+    if detected_kind and detected_kind in kind_map:
+        return kind_map[detected_kind]
+    return routing.get("default")
+
+
+@step("inspect_filename")
+class InspectFilenameOp(BaseOp):
+    """Identifies input kind from filename only. Returns template_name from routing."""
+
+    class Inputs(InputsBase):
+        INPUT_PROFILE_NAME = "input_profile_name"
+        FILENAME = "filename"
+        REQUIRED = (INPUT_PROFILE_NAME, FILENAME)
+        OPTIONAL = ()
+
+    class Outputs(OutputsBase):
+        RESULT = "result"
+
+    def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
+        input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
+        filename = inputs[self.Inputs.FILENAME]
+
+        config = store.configs.get_spec(InputProfile, input_profile_name)
+        kind_rules = config.get("kind_rules")
+        if kind_rules is None:
+            raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
+
+        detected_kind = None
+        matched_pattern = None
+        for rule in kind_rules:
+            pattern = rule.get("pattern")
+            kind = rule.get("kind")
+            if pattern and kind and re.match(pattern, filename):
+                detected_kind = kind
+                matched_pattern = pattern
+                break
+
+        template_name = _resolve_template_name(store, detected_kind)
+
+        result = {
+            "schema_version": "inspect_filename_v1",
+            "input_profile_name": input_profile_name,
+            "filename": filename,
+            "detected_kind": detected_kind,
+            "template_name": template_name,
+            "effective_date": None,
             "evidence": {
                 "matched_pattern": matched_pattern,
                 "matcher": "filename_regex",
