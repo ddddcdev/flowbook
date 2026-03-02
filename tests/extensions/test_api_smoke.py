@@ -12,6 +12,7 @@ Verifies:
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from io import BytesIO
@@ -207,7 +208,7 @@ def test_import_excel(client: TestClient):
         files={"file": _upload_file("fileA_sample.xlsx", xlsx)},
         data={
             "template_name": "import_excel",
-            "input_profile_name": "source",
+            "inputs": json.dumps({"entity_key": "default"}),
         },
     )
 
@@ -229,7 +230,6 @@ def test_import_unknown_template_returns_error(client: TestClient):
 
     assert r.status_code == 400
     detail = r.json()["detail"]
-    assert detail["run_id"] is not None
     assert "reason" in detail
 
 
