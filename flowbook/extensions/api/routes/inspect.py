@@ -25,7 +25,7 @@ async def inspect(
     file: Annotated[UploadFile | None, File()] = None,
     filename: Annotated[str | None, Form()] = None,
     entity_key: Annotated[str, Form()] = "default",
-    input_profile_name: Annotated[str, Form()] = "source",
+    input_profile_name: Annotated[str, Form()] = "demo_excel_inspect",
 ) -> InspectResponse:
     """
     Inspect an uploaded file or filename.

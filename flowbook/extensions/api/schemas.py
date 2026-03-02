@@ -32,7 +32,7 @@ class InspectResponse(BaseModel):
 class ImportRequest(BaseModel):
     """Form parameters for POST /import (file is separate)."""
 
-    template_name: str
+    plan_name: str
     inputs: str = "{}"
 
 
@@ -48,7 +48,7 @@ class RunResponse(BaseModel):
 
 
 class ExportRequest(BaseModel):
-    template_name: str
+    plan_name: str
     bindings: dict[str, str] = {}
     inputs: dict[str, Any] = {}
 

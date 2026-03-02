@@ -17,29 +17,29 @@ from flowbook import (
 from flowbook.core.configs.spec_types import (
     InputProfile,
     Mapping,
-    PlanTemplate,
+    Plan,
     Routing,
 )
 from flowbook.extensions.steps.apply_mapping import ApplyMappingOp
 from flowbook.extensions.steps.inspect_excel_bytes_v2 import InspectExcelBytesV2Op
-from flowbook.extensions.steps.plan_from_template import PlanFromTemplateOp
+from flowbook.extensions.steps.load_plan import LoadPlanOp
 from flowbook.extensions.steps.read_excel_bytes import ReadExcelBytesOp
 from flowbook.extensions.steps.write_excel import WriteExcelOp
 
 pytestmark = pytest.mark.e2e
 
 
-def _resolve_template_name(config_store: InMemoryConfigStore, detected_kind: str | None) -> str:
+def _resolve_plan_name(config_store: InMemoryConfigStore, detected_kind: str | None) -> str:
     routing = config_store.get_spec(Routing, "default")
     map_obj = routing.get("map") or {}
-    template_name = (
+    plan_name = (
         map_obj.get(detected_kind, routing.get("default"))
         if detected_kind is not None
         else routing.get("default")
     )
-    if template_name is None:
-        raise RuntimeError(f"template_name is None for detected_kind={detected_kind}")
-    return template_name
+    if plan_name is None:
+        raise RuntimeError(f"plan_name is None for detected_kind={detected_kind}")
+    return plan_name
 
 
 def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
@@ -59,12 +59,12 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
     }
     config_store.put_spec(
         InputProfile,
-        "source",
+        "demo_excel_inspect",
         input_profile_spec,
         config_id=str(uuid4()),
     )
 
-    routing_spec = {"map": {"fileA": "tmpl_fileA"}, "default": None}
+    routing_spec = {"map": {"fileA": "plan_fileA"}, "default": None}
     config_store.put_spec(
         Routing,
         "default",
@@ -86,7 +86,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         config_id=str(uuid4()),
     )
 
-    template_spec = {
+    plan_spec = {
         "plan": {
             "name": "excel_e2e",
             "steps": [
@@ -116,9 +116,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         }
     }
     config_store.put_spec(
-        PlanTemplate,
-        "tmpl_fileA",
-        template_spec,
+        Plan,
+        "plan_fileA",
+        plan_spec,
         config_id=str(uuid4()),
     )
 
@@ -137,7 +137,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         inspect_run.store.put_bytes(bytes_artifact_key, src_bytes)
         inspect_run.bind("src_excel_bytes", bytes_artifact_key)
         inspect_run.put_input("src_excel_filename", "fileA_real_input.xlsx")
-        inspect_run.put_input("input_profile_name", "source")
+        inspect_run.put_input("input_profile_name", "demo_excel_inspect")
 
         inspect_config = {
             "steps": [
@@ -161,7 +161,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         assert result["detected_kind"] == "fileA"
         assert result["effective_date"] == "2026-02-10"
 
-    template_name = _resolve_template_name(config_store, result["detected_kind"])
+    plan_name = _resolve_plan_name(config_store, result["detected_kind"])
 
     # ---- Plan + Execute ----
     with engine.create_run() as run:
@@ -170,14 +170,14 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         run.put_input("sheet_name", "data")
         run.put_input("header_row", 0)
         run.put_input("mapping_name_val", "mvp_map")
-        run.put_input("template_name", template_name)
+        run.put_input("plan_name", plan_name)
 
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
                 }
             ]
         }

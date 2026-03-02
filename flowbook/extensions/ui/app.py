@@ -391,8 +391,8 @@ _DEMO_HINT = """Use this app to try the full flow: Inspect → Import → Export
 → `flowbook fixture generate -o tests/fixtures/excel/`
 
 **Sequence:**
-1. **Inspect** — Upload the file above, entity_key `demo/excel`, inspect profile `source`
-2. **Import** — Same file, template `import_excel_region`, creates read/df artifact
+1. **Inspect** — Upload the file above, entity_key `demo/excel`, profile `demo_excel_inspect`
+2. **Import** — Same file, plan `import_excel_region`, creates read/df artifact
 3. **Export** — From Import’s read/df, mapping `detect_region_test`, creates write/bytes
 4. **Results** — Select the row with read/df or write/bytes
 5. **Download** — Use the selected result’s artifact (as Excel or raw)
@@ -522,7 +522,7 @@ def main() -> None:
         )
         input_profile_name = st.text_input(
             "input_profile_name",
-            value=st.session_state.get("inspect_input_profile", "source"),
+            value=st.session_state.get("inspect_input_profile", "demo_excel_inspect"),
             key="inspect_input_profile",
         )
         file_inspect = st.file_uploader(
@@ -571,8 +571,8 @@ def main() -> None:
                     st.session_state["inspect_profile"] = profile
                     st.success(f"Run ID: `{data['run_id']}`")
                     st.json(profile)
-                    if profile.get("template_name"):
-                        st.caption(f"template_name: `{profile['template_name']}`")
+                    if profile.get("plan_name"):
+                        st.caption(f"plan_name: `{profile['plan_name']}`")
                     if profile.get("detected_kind"):
                         st.caption(f"detected_kind: `{profile['detected_kind']}`")
                 except requests.RequestException as e:
@@ -618,7 +618,7 @@ def main() -> None:
                 if 0 <= selected_row_idx < len(sorted_results):
                     selected_profile = sorted_results[selected_row_idx].get("profile") or {}
         if selected_profile:
-            template_name = selected_profile.get("template_name") or "import_excel_region"
+            plan_name = selected_profile.get("plan_name") or "import_excel_region"
             ek = entity_key_for_actions
             if selected_profile.get("effective_date") and selected_profile.get("detected_kind"):
                 ek = f"{selected_profile['effective_date']}/{selected_profile['detected_kind']}"
@@ -630,10 +630,10 @@ def main() -> None:
             }
             st.caption("Import parameters (from selection)")
             st.text_input(
-                "template_name",
-                value=template_name,
+                "plan_name",
+                value=plan_name,
                 disabled=True,
-                key="import_tmpl_display",
+                key="import_plan_display",
             )
             st.json(inputs_dict)
             inputs_json = json.dumps(inputs_dict)
@@ -642,7 +642,7 @@ def main() -> None:
                 st.info("No Inspect results. Run Inspect first, then click Refresh.")
             else:
                 st.info("Select a row to set import parameters.")
-            template_name = ""
+            plan_name = ""
             inputs_json = "{}"
         file = st.file_uploader(
             "Upload file",
@@ -663,7 +663,7 @@ def main() -> None:
                             )
                         },
                         data={
-                            "template_name": template_name,
+                            "plan_name": plan_name,
                             "inputs": json.dumps(inputs_dict),
                         },
                         timeout=60,
@@ -1070,7 +1070,7 @@ def main() -> None:
             st.info("No entities. Click Refresh or run Import to auto-register entities.")
 
     with tab_configs:
-        st.subheader("Configs (input_profiles, mappings, templates, routing)")
+        st.subheader("Configs (input_profiles, mappings, plans, routing)")
         if st.button("Refresh list", key="configs_refresh"):
             try:
                 r = requests.get(api(base, "/configs"), timeout=10)

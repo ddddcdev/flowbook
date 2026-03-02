@@ -88,8 +88,8 @@ class InspectFilenameKindOp(BaseOp):
         return {self.Outputs.RESULT: result}
 
 
-def _resolve_template_name(store: RunStore, detected_kind: str | None) -> str | None:
-    """Resolve template_name from Routing config (default profile)."""
+def _resolve_plan_name(store: RunStore, detected_kind: str | None) -> str | None:
+    """Resolve plan_name from Routing config (default profile)."""
     try:
         routing = store.configs.get_spec(Routing, "default")
     except KeyError:
@@ -102,7 +102,7 @@ def _resolve_template_name(store: RunStore, detected_kind: str | None) -> str | 
 
 @step("inspect_filename")
 class InspectFilenameOp(BaseOp):
-    """Identifies input kind from filename only. Returns template_name from routing."""
+    """Identifies input kind from filename only. Returns plan_name from routing."""
 
     class Inputs(InputsBase):
         INPUT_PROFILE_NAME = "input_profile_name"
@@ -132,14 +132,14 @@ class InspectFilenameOp(BaseOp):
                 matched_pattern = pattern
                 break
 
-        template_name = _resolve_template_name(store, detected_kind)
+        plan_name = _resolve_plan_name(store, detected_kind)
 
         result = {
             "schema_version": "inspect_filename_v1",
             "input_profile_name": input_profile_name,
             "filename": filename,
             "detected_kind": detected_kind,
-            "template_name": template_name,
+            "plan_name": plan_name,
             "effective_date": None,
             "evidence": {
                 "matched_pattern": matched_pattern,

@@ -1,7 +1,7 @@
 """
 Route: POST /import
 
-Upload file (Excel or CSV) + template_name + inputs -> run import plan -> artifacts.
+Upload file (Excel or CSV) + plan_name + inputs -> run import plan -> artifacts.
 """
 
 from __future__ import annotations
@@ -48,10 +48,10 @@ def _parse_inputs(inputs_str: str) -> dict[str, Any]:
 
 
 def _import_form(
-    template_name: Annotated[str, Form(...)],
+    plan_name: Annotated[str, Form(...)],
     inputs: Annotated[str, Form()] = "{}",
 ) -> ImportRequest:
-    return ImportRequest(template_name=template_name, inputs=inputs)
+    return ImportRequest(plan_name=plan_name, inputs=inputs)
 
 
 @router.post("/import", response_model=RunResponse)
@@ -60,10 +60,10 @@ async def import_file(
     req: Annotated[ImportRequest, Depends(_import_form)],
 ) -> RunResponse:
     """
-    Import an uploaded file using a named plan template.
+    Import an uploaded file using a named plan.
 
     - **file**: Excel (.xlsx, .xls) or CSV
-    - **template_name**: plan template (e.g. import_excel_region, import_csv)
+    - **plan_name**: plan (e.g. import_excel_region, import_csv)
     - **inputs**: JSON with entity_key, encoding, sheet_name, target_month, etc.
     """
     engine = get_engine()
@@ -89,9 +89,9 @@ async def import_file(
                     f"Unsupported file extension '.{ext}'. Use .csv, .xlsx, or .xls"
                 ) from None
 
-            session.put_input("template_name", req.template_name)
+            session.put_input("plan_name", req.plan_name)
 
-            # Merge defaults for common template params
+            # Merge defaults for common plan params
             defaults: dict[str, Any] = {
                 "sheet_name": "data",
                 "header_row": 0,
@@ -114,9 +114,9 @@ async def import_file(
                 "steps": [
                     {
                         "name": "planner",
-                        "op": "plan_from_template",
+                        "op": "load_plan",
                         "inputs": {
-                            "template_name": "@template_name",
+                            "plan_name": "@plan_name",
                         },
                     }
                 ],

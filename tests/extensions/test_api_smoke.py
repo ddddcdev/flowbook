@@ -4,7 +4,7 @@ Smoke test for the FastAPI sample app.
 Verifies:
 - /health returns 200
 - POST /inspect with an Excel file returns a profile
-- POST /import with a file + template executes a plan
+- POST /import with a file + plan executes a plan
 - POST /export with bindings executes an export plan
 - GET /artifacts lists keys; GET /artifacts/{key} retrieves value
 - Failure responses include run_id + reason
@@ -22,7 +22,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from flowbook.core.configs.spec_types import InputProfile, PlanTemplate
+from flowbook.core.configs.spec_types import InputProfile, Plan
 from flowbook.extensions.api.app import app
 from flowbook.extensions.api.deps import get_engine
 
@@ -51,7 +51,7 @@ def client() -> TestClient:
     # InputProfile for inspect
     engine.config_store.put_spec(
         InputProfile,
-        "source",
+        "demo_excel_inspect",
         {
             "kind_rules": [
                 {"pattern": r"^fileA_.*\.xlsx$", "kind": "fileA"},
@@ -60,9 +60,9 @@ def client() -> TestClient:
         config_id=str(uuid.uuid4()),
     )
 
-    # PlanTemplate for import: read excel bytes → df artifact
+    # Plan for import: read excel bytes → df artifact
     engine.config_store.put_spec(
-        PlanTemplate,
+        Plan,
         "import_excel",
         {
             "plan": {
@@ -83,9 +83,9 @@ def client() -> TestClient:
         config_id=str(uuid.uuid4()),
     )
 
-    # PlanTemplate for export: write DataFrame to Excel bytes
+    # Plan for export: write DataFrame to Excel bytes
     engine.config_store.put_spec(
-        PlanTemplate,
+        Plan,
         "export_excel",
         {
             "plan": {
@@ -173,7 +173,7 @@ def test_inspect_upload(client: TestClient):
     r = client.post(
         "/inspect",
         files={"file": _upload_file("fileA_sample.xlsx", xlsx)},
-        data={"input_profile_name": "source"},
+        data={"input_profile_name": "demo_excel_inspect"},
     )
 
     assert r.status_code == 200, r.text
@@ -207,7 +207,7 @@ def test_import_excel(client: TestClient):
         "/import",
         files={"file": _upload_file("fileA_sample.xlsx", xlsx)},
         data={
-            "template_name": "import_excel",
+            "plan_name": "import_excel",
             "inputs": json.dumps({"entity_key": "default"}),
         },
     )
@@ -219,13 +219,13 @@ def test_import_excel(client: TestClient):
     assert len(body["artifacts_written"]) > 0
 
 
-def test_import_unknown_template_returns_error(client: TestClient):
+def test_import_unknown_plan_returns_error(client: TestClient):
     xlsx = _make_xlsx_bytes()
 
     r = client.post(
         "/import",
         files={"file": _upload_file("fileA_sample.xlsx", xlsx)},
-        data={"template_name": "nonexistent"},
+        data={"plan_name": "nonexistent"},
     )
 
     assert r.status_code == 400
@@ -246,7 +246,7 @@ def test_export_excel_with_bindings(client: TestClient):
     r = client.post(
         "/export",
         json={
-            "template_name": "export_excel",
+            "plan_name": "export_excel",
             "bindings": {
                 "in_key": "artifact/test/df",
             },

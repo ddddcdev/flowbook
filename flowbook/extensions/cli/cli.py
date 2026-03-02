@@ -67,7 +67,7 @@ def register_cli(app: Typer) -> None:
 
     @db_app.command("seed-default")
     def db_seed_default() -> None:
-        """Seed hardcoded InputProfile and PlanTemplates for API smoke test."""
+        """Seed hardcoded InputProfile and Plans for API smoke test."""
         from flowbook.extensions.cli.db import seed_config_for_api
 
         code = seed_config_for_api()

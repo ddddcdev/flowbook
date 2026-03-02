@@ -2,8 +2,8 @@
 Route: POST /export (JSON), POST /export (Form)
 
 Execute an export plan on existing artifacts (no file upload).
-- JSON: template_name + bindings + inputs
-- Form: source_artifact_key + template_name + inputs (export_excel_region default)
+- JSON: plan_name + bindings + inputs
+- Form: source_artifact_key + plan_name + inputs (export_excel_region default)
 """
 
 from __future__ import annotations
@@ -43,9 +43,9 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
     """
     Run an export plan over existing artifacts.
 
-    - **template_name**: plan template to resolve from config store
+    - **plan_name**: plan to resolve from config store
     - **bindings**: map of logical name -> full artifact key
-    - **inputs**: optional key-value params for the template
+    - **inputs**: optional key-value params for the plan
     """
     engine = get_engine()
     with engine.create_run() as session:
@@ -53,7 +53,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
             for name, artifact_key in req.bindings.items():
                 session.bind(name, artifact_key)
 
-            session.put_input("template_name", req.template_name)
+            session.put_input("plan_name", req.plan_name)
             for k, v in req.inputs.items():
                 session.put_input(k, v)
 
@@ -62,9 +62,9 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
                 "steps": [
                     {
                         "name": "planner",
-                        "op": "plan_from_template",
+                        "op": "load_plan",
                         "inputs": {
-                            "template_name": "@template_name",
+                            "plan_name": "@plan_name",
                         },
                     }
                 ],
@@ -111,12 +111,12 @@ async def export_from_artifact(
     source_artifact_key: Annotated[str, Form(...)],
     entity_key: Annotated[str, Form()] = "default",
     mapping_name: Annotated[str, Form()] = "detect_region_test",
-    template_name: Annotated[str, Form()] = "export_excel_region",
+    plan_name: Annotated[str, Form()] = "export_excel_region",
     inputs: Annotated[str, Form()] = "{}",
 ) -> RunResponse:
     """
     Run export plan on an existing import: load DataFrame at source_artifact_key,
-    apply mapping, write xlsx. template_name and inputs allow extensibility.
+    apply mapping, write xlsx. plan_name and inputs allow extensibility.
     """
     engine = get_engine()
     try:
@@ -146,7 +146,7 @@ async def export_from_artifact(
             }
             merged = {**base_inputs, **inputs_dict}
 
-            session.put_input("template_name", template_name)
+            session.put_input("plan_name", plan_name)
             for k, v in merged.items():
                 if k == "entity_key":
                     continue
@@ -157,8 +157,8 @@ async def export_from_artifact(
                 "steps": [
                     {
                         "name": "planner",
-                        "op": "plan_from_template",
-                        "inputs": {"template_name": "@template_name"},
+                        "op": "load_plan",
+                        "inputs": {"plan_name": "@plan_name"},
                     }
                 ],
             }

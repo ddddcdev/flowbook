@@ -37,8 +37,8 @@ def _normalize_date(value: object) -> str | None:
     return None
 
 
-def _resolve_template_name(store: RunStore, detected_kind: str | None) -> str | None:
-    """Resolve template_name from Routing config (default profile)."""
+def _resolve_plan_name(store: RunStore, detected_kind: str | None) -> str | None:
+    """Resolve plan_name from Routing config (default profile)."""
     try:
         routing = store.configs.get_spec(Routing, "default")
     except KeyError:
@@ -114,14 +114,14 @@ class InspectExcelBytesV2Op(BaseOp):
                 raw_value = _get_cell_value(ws, cell)
                 effective_date = _normalize_date(raw_value)
 
-        template_name = _resolve_template_name(store, detected_kind)
+        plan_name = _resolve_plan_name(store, detected_kind)
 
         result = {
             "schema_version": "inspect_result_v2",
             "input_profile_name": input_profile_name,
             "filename": filename,
             "detected_kind": detected_kind,
-            "template_name": template_name,
+            "plan_name": plan_name,
             "effective_date": effective_date,
             "evidence": {
                 "matcher": "filename_regex",

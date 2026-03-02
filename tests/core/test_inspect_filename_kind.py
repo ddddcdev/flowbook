@@ -42,9 +42,9 @@ def create_engine():
     # Preload single input profile with kind_rules
     config_store.put_spec(
         InputProfile,
-        "source",
+        "demo_excel_inspect",
         PROFILE_CONFIG,
-        config_id="test-source",
+        config_id="test-demo-excel-inspect",
     )
 
     registry = Registry()
@@ -76,7 +76,7 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
     with engine.create_run() as run_session:
         # Provide path for inspection
         path = f"/data/{filename}"
-        run_session.put_input("input_profile_name", "source")
+        run_session.put_input("input_profile_name", "demo_excel_inspect")
         run_session.put_input("path", path)
 
         # Plan config
@@ -106,7 +106,7 @@ def test_inspect_matches_filename_to_kind(filename, expected_kind, expected_patt
 
         # Validate result schema
         assert result["schema_version"] == "inspect_result_v1"
-        assert result["input_profile_name"] == "source"
+        assert result["input_profile_name"] == "demo_excel_inspect"
         assert result["resolved_path"] == path
         assert result["filename"] == filename
         assert result["detected_kind"] == expected_kind
@@ -121,7 +121,7 @@ def test_inspect_unknown_filename_no_error():
     with engine.create_run() as run_session:
         # Provide unknown filename
         path = "/data/unknown_file.txt"
-        run_session.put_input("input_profile_name", "source")
+        run_session.put_input("input_profile_name", "demo_excel_inspect")
         run_session.put_input("path", path)
 
         # Plan config
@@ -258,7 +258,7 @@ def test_inspect_missing_path_input_raises_error():
     engine = create_engine()
     with engine.create_run() as run_session:
         # Only provide input_profile_name, NOT path
-        run_session.put_input("input_profile_name", "source")
+        run_session.put_input("input_profile_name", "demo_excel_inspect")
 
         # Plan config
         config = {
