@@ -69,6 +69,9 @@ flowbook = "flowbook.core.registry.extensions:register_steps"
 [project.entry-points."flowbook.cli"]
 flowbook = "flowbook.extensions.cli.cli:register_cli"
 
+[project.entry-points."flowbook.api"]
+# Extensions register here (e.g. flowbook_demo = "flowbook_demo.api:register_api")
+
 [dependency-groups]
 dev = [
     "typer>=0.12.0",
