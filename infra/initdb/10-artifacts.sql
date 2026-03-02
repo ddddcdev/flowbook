@@ -1,7 +1,10 @@
--- entities: entity_key is the scoping key (opaque string, exact-match only)
+-- entities: entity_key is the scoping key (slash-separated hierarchy allowed)
+-- meta: jsonb for display_name, description, etc.
 CREATE TABLE IF NOT EXISTS entities (
-  entity_key text PRIMARY KEY,
-  meta_json  text
+  entity_key   text PRIMARY KEY,
+  meta         jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
 -- runs: already exists conceptually
@@ -76,3 +79,16 @@ CREATE TRIGGER results_set_updated_at
 BEFORE UPDATE ON results
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS entities_set_updated_at ON entities;
+CREATE TRIGGER entities_set_updated_at
+BEFORE UPDATE ON entities
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+-- Seed initial entities
+INSERT INTO entities (entity_key, meta, created_at, updated_at)
+VALUES
+  ('demo', '{"display_name": "Demo", "desc": "Top-level demo scope"}'::jsonb, now(), now()),
+  ('demo/excel', '{"display_name": "Demo Excel", "desc": "Excel import/export demo"}'::jsonb, now(), now())
+ON CONFLICT (entity_key) DO NOTHING;

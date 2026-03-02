@@ -120,6 +120,28 @@ def _created_at_for_sort(e: object) -> str:
     return getattr(e, "created_at", None) or ""
 
 
+def _read_df_artifact_key_from_result(entry: dict) -> str | None:
+    """Extract read/df artifact key from result entry. Returns None if not found."""
+    ra = entry.get("result_artifacts")
+    if not ra:
+        return None
+    if isinstance(ra, str):
+        try:
+            ra = json.loads(ra)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(ra, list):
+        return None
+    run_id = entry.get("run_id", "")
+    entity_key = entry.get("entity_key", "")
+    for x in ra:
+        item = x if isinstance(x, dict) else {"path": str(x)}
+        path = item.get("path") if isinstance(item, dict) else None
+        if path and "read/df" in path:
+            return build_artifact_key(run_id, entity_key, path)
+    return None
+
+
 def _result_entry_for_display(entry: dict) -> dict:
     """Convert result_artifacts to JSON string for readable DataFrame preview."""
     out = dict(entry)
@@ -271,8 +293,14 @@ def health(base: str) -> bool:
 
 
 def _entity_key_options(base: str) -> list[str]:
-    """Fetch registered entity_keys from latest_results; fallback to demo/excel."""
+    """Fetch entity_keys from /entities; fallback to latest_results, then demo/excel."""
     try:
+        r = requests.get(api(base, "/entities"), timeout=10)
+        if r.status_code == 200:
+            entries = r.json().get("entries", [])
+            keys = sorted(e["entity_key"] for e in entries if e.get("entity_key"))
+            if keys:
+                return keys
         r = requests.get(api(base, "/latest_results"), timeout=10)
         r.raise_for_status()
         entries = r.json().get("entries", [])
@@ -284,19 +312,29 @@ def _entity_key_options(base: str) -> list[str]:
         return ["demo/excel"]
 
 
+_DEMO_HINT = """Use this app to try the full flow: Inspect → Import → Export → Results → Download.
+
+**Dummy file** (generate if missing):
+`tests/fixtures/excel/test_detect_region_input.xlsx`
+→ `flowbook fixture generate -o tests/fixtures/excel/`
+
+**Sequence:**
+1. **Inspect** — Upload the file above, entity_key `demo/excel`, inspect profile `source`
+2. **Import** — Same file, template `import_excel_region`, creates read/df artifact
+3. **Export** — From Import’s read/df, mapping `detect_region_test`, creates write/bytes
+4. **Results** — Select the row with read/df or write/bytes
+5. **Download** — Use the selected result’s artifact (as Excel or raw)
+
+Connects to the flowbook API (FastAPI). Use Health tab to verify API is running."""
+
+
 def main() -> None:
     st.set_page_config(page_title="flowbook", page_icon="📊", layout="wide")
     st.title("flowbook API demo")
-    base = st.sidebar.text_input(
-        "API base URL",
-        value=DEFAULT_BASE,
-    )
-    if not health(base):
-        st.sidebar.error(
-            "API not reachable. Start: uv run uvicorn flowbook.extensions.api.app:app --reload"
-        )
-    else:
-        st.sidebar.success("API OK")
+    base = st.session_state.get("api_base", DEFAULT_BASE)
+
+    with st.sidebar.popover("About this demo", icon=":material/info:"):
+        st.caption(_DEMO_HINT)
 
     entity_key_opts = _entity_key_options(base)
     custom_keys = st.session_state.get("custom_entity_keys", set())
@@ -311,35 +349,52 @@ def main() -> None:
         placeholder="Choose an option",
         accept_new_options=True,
         key="sidebar_entity_key",
+        help="Scope for Inspect/Import/Export. Filter for Results/Artifacts. Empty = no filter.",
     )
     if entity_key and entity_key not in opts_set:
         custom_keys = custom_keys | {entity_key}
         st.session_state["custom_entity_keys"] = custom_keys
+    entity_key_filter_value = entity_key if entity_key else None
     exact_match = st.sidebar.toggle(
         "exact match",
-        value=True,
+        value=False,
         key="sidebar_entity_exact_match",
         help="ON: exact match, API filter. OFF: partial match (contains), client-side filter.",
     )
-    entity_key_filter_value = entity_key
     entity_key_for_actions = (
         entity_key
-        if entity_key is not None
+        if entity_key
         else (entity_key_opts[0] if entity_key_opts else "demo/excel")
     )
 
     tab_names = [
-        "Inspect", "Import", "Export", "Artifacts", "Results",
-        "Configs", "Steps",
+        "Health", "Inspect", "Import", "Export", "Results", "Artifacts",
+        "Entities", "Configs", "Steps",
     ]
     tabs = st.tabs(tab_names)
-    tab_inspect = tabs[0]
-    tab_import = tabs[1]
-    tab_export = tabs[2]
-    tab_artifacts = tabs[3]
+    tab_health = tabs[0]
+    tab_inspect = tabs[1]
+    tab_import = tabs[2]
+    tab_export = tabs[3]
     tab_results = tabs[4]
-    tab_configs = tabs[5]
-    tab_steps = tabs[6]
+    tab_artifacts = tabs[5]
+    tab_entities = tabs[6]
+    tab_configs = tabs[7]
+    tab_steps = tabs[8]
+
+    with tab_health:
+        st.subheader("API connection")
+        base = st.text_input(
+            "API base URL",
+            value=DEFAULT_BASE,
+            key="api_base",
+        )
+        if health(base):
+            st.success("API OK")
+        else:
+            st.error(
+                "API not reachable. Start: uv run uvicorn flowbook.extensions.api.app:app --reload"
+            )
 
     with tab_steps:
         st.subheader("Steps (ops)")
@@ -471,13 +526,13 @@ def main() -> None:
 
     with tab_results:
         st.subheader("Results")
-        st.caption("Per-run and per-entity results. Postgres only; in-memory returns empty.")
-        run_id_filter = st.text_input("Filter by run_id", key="er_run_id", placeholder="optional")
+        st.caption(
+            "Per-run and per-entity results. Export done? Select a row → download below "
+            "(Artifact → raw). Postgres only; in-memory returns empty."
+        )
         if st.button("Refresh", key="results_refresh"):
             try:
                 params = {}
-                if run_id_filter.strip():
-                    params["run_id"] = run_id_filter.strip()
                 use_api_filter = (
                     exact_match and entity_key_filter_value is not None
                 )
@@ -669,59 +724,199 @@ def main() -> None:
 
     with tab_export:
         st.subheader("Export (filter/map -> xlsx)")
-        st.caption("Pick read/df artifact, set entity_key. Creates write/bytes (xlsx).")
-        keys = st.session_state.get("artifact_keys", [])
-        df_keys = [k for k in keys if k.endswith("/read/df")]
-        if not df_keys:
-            if st.button("Load keys for export"):
-                try:
-                    r = requests.get(api(base, "/artifacts"), timeout=10)
-                    r.raise_for_status()
-                    keys = r.json().get("keys", [])
-                    df_keys = [k for k in keys if k.endswith("/read/df")]
-                    st.session_state["artifact_keys"] = keys
-                    st.rerun()
-                except requests.RequestException as e:
-                    st.error(str(e))
-            else:
-                st.info("No import keys. List artifacts first or run Import.")
-        else:
-            source = st.selectbox("Source artifact (read/df)", options=df_keys, key="export_source")
-            inferred = _entity_key_from_artifact_key(source)
-            st.caption(f"Inferred from source: `{inferred}` (entity from sidebar)")
-            if st.button("Run export"):
-                with st.spinner("Exporting..."):
-                    try:
-                        r = requests.post(
-                            api(base, "/export/from_artifact"),
-                            data={
-                                "source_artifact_key": source,
-                                "entity_key": entity_key_for_actions,
-                                "mapping_name": "detect_region_test",
-                            },
-                            timeout=60,
+        st.caption("Select a result row (import with read/df). Entity filter from sidebar.")
+        if st.button("Load results", key="export_load"):
+            try:
+                params = {}
+                use_api_filter = (
+                    exact_match and entity_key_filter_value is not None
+                )
+                if use_api_filter:
+                    params["entity_key"] = entity_key_filter_value
+                r = requests.get(api(base, "/results"), params=params or None, timeout=10)
+                r.raise_for_status()
+                raw_results = r.json().get("entries", [])
+                latest_params = (
+                    {"entity_key": entity_key_filter_value}
+                    if use_api_filter
+                    else None
+                )
+                r2 = requests.get(
+                    api(base, "/latest_results"),
+                    params=latest_params,
+                    timeout=10,
+                )
+                r2.raise_for_status()
+                raw_latest = r2.json().get("entries", [])
+                if not use_api_filter and entity_key_filter_value is not None:
+                    mode = "partial" if not exact_match else "exact"
+                    raw_results = [
+                        e
+                        for e in raw_results
+                        if _entity_matches(
+                            e.get("entity_key"),
+                            entity_key_filter_value,
+                            mode,
                         )
-                        r.raise_for_status()
-                        data = r.json()
-                        written = data.get("artifacts_written", [])
-                        bytes_keys = [k for k in written if "/write/bytes" in k]
-                        if bytes_keys:
-                            st.success("Export done. Download below (Artifact -> raw).")
-                            if "artifact_keys" not in st.session_state:
-                                st.session_state["artifact_keys"] = []
-                            st.session_state["artifact_keys"] = list(
-                                set(st.session_state["artifact_keys"] + written)
-                            )
-                            raw_resp = requests.get(
-                                api(base, f"/artifacts/{bytes_keys[0]}/raw"),
-                                timeout=30,
-                            )
-                            raw_resp.raise_for_status()
-                            df = pd.read_excel(io.BytesIO(raw_resp.content), engine="openpyxl")
-                            st.dataframe(df, width="stretch", hide_index=True)
-                        st.json({"status": data["status"], "artifacts_written": written})
-                    except requests.RequestException as e:
-                        st.error(str(e))
+                    ]
+                    raw_latest = [
+                        e
+                        for e in raw_latest
+                        if _entity_matches(
+                            e.get("entity_key"),
+                            entity_key_filter_value,
+                            mode,
+                        )
+                    ]
+                st.session_state["results"] = raw_results
+                st.session_state["latest_results"] = raw_latest
+                st.rerun()
+            except requests.RequestException as e:
+                st.error(str(e))
+        er_entries = st.session_state.get("results", [])
+        lat_entries = st.session_state.get("latest_results", [])
+        if not er_entries and not lat_entries:
+            st.info("Click Load results or run Import first.")
+        else:
+            # Export needs import results (read/df). Filter from full results.
+            entries_with_df = [
+                e for e in er_entries if _read_df_artifact_key_from_result(e) is not None
+            ]
+            if not entries_with_df:
+                st.info(
+                    "No import results (read/df) in the list. "
+                    "Run Import first, then Load results."
+                )
+            else:
+                show_latest = st.toggle(
+                    "latest per entity (imports with read/df only)",
+                    value=True,
+                    key="export_show_latest",
+                )
+                if show_latest:
+                    # Keep latest (max updated_at) per entity_key
+                    by_entity: dict[str, dict] = {}
+                    for e in entries_with_df:
+                        ek = e.get("entity_key", "")
+                        if not ek:
+                            continue
+                        cur = by_entity.get(ek)
+                        if cur is None or _created_at_for_sort(e) > _created_at_for_sort(cur):
+                            by_entity[ek] = e
+                    entries = list(by_entity.values())
+                else:
+                    entries = entries_with_df
+                if entries:
+                    sorted_entries = sorted(
+                        entries,
+                        key=lambda e: (_created_at_for_sort(e) == "", _created_at_for_sort(e)),
+                    )
+                    df = pd.DataFrame(
+                        [_result_entry_for_display(e) for e in sorted_entries]
+                    )
+                    event = st.dataframe(
+                        df,
+                        key="export_results_df",
+                        width="stretch",
+                        hide_index=True,
+                        on_select="rerun",
+                        selection_mode="single-row",
+                    )
+                    row_idx = None
+                    sel = getattr(event, "selection", None)
+                    if sel and getattr(sel, "rows", None):
+                        row_idx = sel.rows[0]
+                    if row_idx is not None and row_idx < len(sorted_entries):
+                        selected = sorted_entries[row_idx]
+                        source_key = _read_df_artifact_key_from_result(selected)
+                        export_entity = selected.get("entity_key", "")
+                        st.caption(f"Selected: `{source_key}`")
+                        if st.button("Run export", key="export_run"):
+                            with st.spinner("Exporting..."):
+                                try:
+                                    r = requests.post(
+                                        api(base, "/export/from_artifact"),
+                                        data={
+                                            "source_artifact_key": source_key,
+                                            "entity_key": export_entity,
+                                            "mapping_name": "detect_region_test",
+                                        },
+                                        timeout=60,
+                                    )
+                                    r.raise_for_status()
+                                    data = r.json()
+                                    written = data.get("artifacts_written", [])
+                                    bytes_keys = [
+                                        k for k in written if "/write/bytes" in k
+                                    ]
+                                    if bytes_keys:
+                                        st.success(
+                                            "Export done. Download via Results tab (select row → download)."
+                                        )
+                                        if "artifact_keys" not in st.session_state:
+                                            st.session_state["artifact_keys"] = []
+                                        st.session_state["artifact_keys"] = list(
+                                            set(st.session_state["artifact_keys"] + written)
+                                        )
+                                        raw_resp = requests.get(
+                                            api(base, f"/artifacts/{bytes_keys[0]}/raw"),
+                                            timeout=30,
+                                        )
+                                        raw_resp.raise_for_status()
+                                        try:
+                                            df_out = pd.read_excel(
+                                                io.BytesIO(raw_resp.content),
+                                                engine="openpyxl",
+                                            )
+                                            st.dataframe(
+                                                df_out,
+                                                width="stretch",
+                                                hide_index=True,
+                                            )
+                                        except ImportError:
+                                            st.warning(
+                                                "Preview requires openpyxl. "
+                                                "Download via Artifacts tab."
+                                            )
+                                    st.json(
+                                        {
+                                            "status": data["status"],
+                                            "artifacts_written": written,
+                                        }
+                                    )
+                                except requests.RequestException as e:
+                                    st.error(str(e))
+                    else:
+                        st.caption("Select a row to export.")
+
+    with tab_entities:
+        st.subheader("Entities")
+        st.caption("Registered entities (entity_key, meta). Postgres only; in-memory returns empty.")
+        if st.button("Refresh", key="entities_refresh"):
+            try:
+                r = requests.get(api(base, "/entities"), timeout=10)
+                r.raise_for_status()
+                data = r.json()
+                st.session_state["entities_list"] = data.get("entries", [])
+            except requests.RequestException as e:
+                st.error(str(e))
+        entries = st.session_state.get("entities_list", [])
+        if entries:
+            df = pd.DataFrame(
+                [
+                    {
+                        "entity_key": e.get("entity_key", ""),
+                        "display_name": (e.get("meta") or {}).get("display_name", ""),
+                        "desc": (e.get("meta") or {}).get("desc", ""),
+                        "created_at": e.get("created_at", ""),
+                        "updated_at": e.get("updated_at", ""),
+                    }
+                    for e in entries
+                ]
+            )
+            st.dataframe(df, width="stretch", hide_index=True)
+        else:
+            st.info("No entities. Click Refresh or run Import to auto-register entities.")
 
     with tab_configs:
         st.subheader("Configs (input_profiles, mappings, templates, routing)")

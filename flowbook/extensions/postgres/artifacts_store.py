@@ -32,7 +32,19 @@ entities = Table(
     "entities",
     metadata,
     Column("entity_key", Text, primary_key=True),
-    Column("meta_json", Text, nullable=True),
+    Column("meta", JSON, nullable=False, server_default="{}"),
+    Column(
+        "created_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+    Column(
+        "updated_at",
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
 )
 
 runs = Table(
@@ -165,6 +177,7 @@ class PostgresArtifactsStore(ArtifactsStore):
             raise TypeError(f"put expects JSON-serializable value: key={key}") from e
 
         run_id, entity_key, path = parse_artifact_key(key)
+        self.upsert_entity(entity_key)
         meta_vals = self._meta_values(**kwargs)
         vals = {
             "run_id": run_id,
@@ -280,6 +293,7 @@ class PostgresArtifactsStore(ArtifactsStore):
     # ---- Protocol: bytes ----
     def put_bytes(self, key: str, data: bytes, **kwargs: Any) -> str:
         run_id, entity_key, path = parse_artifact_key(key)
+        self.upsert_entity(entity_key)
         meta_vals = self._meta_values(**kwargs)
         meta = dict(kwargs.get("meta") or {})
         vals = {
@@ -335,6 +349,7 @@ class PostgresArtifactsStore(ArtifactsStore):
         meta.update(kwargs.get("meta") or {})
 
         run_id, entity_key, path = parse_artifact_key(key)
+        self.upsert_entity(entity_key)
         meta_vals = self._meta_values(**kwargs)
         vals = {
             "run_id": run_id,
@@ -447,7 +462,11 @@ class PostgresArtifactsStore(ArtifactsStore):
         return _run_row_to_dict(row)
 
     def upsert_entity(self, entity_key: str) -> None:
-        """Upsert entities row. Ensures entity exists when first used."""
+        """Upsert entities row. Ensures entity exists when first used. ON CONFLICT DO NOTHING.
+        Skips entity_keys with ':' (e.g. artifact:input) - those are logical addresses, not scopes.
+        """
+        if not entity_key or ":" in entity_key:
+            return
         stmt = (
             pg_insert(entities)
             .values(entity_key=entity_key)
@@ -455,6 +474,21 @@ class PostgresArtifactsStore(ArtifactsStore):
         )
         with self.engine.begin() as conn:
             conn.execute(stmt)
+
+    def list_entities(self) -> list[dict[str, Any]]:
+        """List all entities. Returns list of {entity_key, meta, created_at, updated_at}."""
+        stmt = select(entities).order_by(entities.c.entity_key)
+        with self.engine.begin() as conn:
+            rows = conn.execute(stmt).all()
+        return [
+            {
+                "entity_key": r.entity_key,
+                "meta": r.meta or {},
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            }
+            for r in rows
+        ]
 
     def upsert_result(
         self,

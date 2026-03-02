@@ -116,6 +116,20 @@ class RunGetResponse(BaseModel):
     updated_at: str | None = None
 
 
+# ---- /entities ----
+
+
+class EntityEntry(BaseModel):
+    entity_key: str
+    meta: dict[str, Any] = {}
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class EntitiesListResponse(BaseModel):
+    entries: list[EntityEntry] = []
+
+
 # ---- /results, /latest_results ----
 
 

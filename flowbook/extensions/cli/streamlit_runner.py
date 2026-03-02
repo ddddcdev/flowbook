@@ -54,7 +54,7 @@ def run(venv_dir: str | Path = ".venv-ui", extra_args: list[str] | None = None) 
         uv = _find_uv()
         venv_arg = str(venv)
         # st.dataframe(key=, on_select=, selection_mode=) requires streamlit>=1.35.0
-        pkgs = ["streamlit>=1.35.0", "requests", "altair>=4,<5"]
+        pkgs = ["streamlit>=1.35.0", "requests", "altair>=4,<5", "openpyxl>=3.1.5"]
         if sys.version_info >= (3, 13):
             pkgs.append("standard-imghdr")  # imghdr removed in 3.13
         if (repo / "pyproject.toml").exists():

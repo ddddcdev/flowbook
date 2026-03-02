@@ -12,12 +12,19 @@ flowbook api up
 flowbook streamlit up
 ```
 
-Or directly:
+Or directly (pass env file to avoid variable warnings):
 
 ```sh
-docker compose -f infra/compose.postgres.yml up -d
-docker compose -f infra/compose.api.yml up -d
-docker compose -f infra/compose.streamlit.yml up -d
+docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d
+docker compose -f infra/compose.api.yml --env-file infra/.env.api up -d
+docker compose -f infra/compose.streamlit.yml --env-file infra/.env.streamlit up -d
+```
+
+For fresh DB (remove volume and recreate):
+
+```sh
+docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v
+docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d
 ```
 
 Build context is `..` (repo root). The Dockerfiles expect `pyproject.toml`, `uv.lock`, and `flowbook/` at context root. Dependencies via `uv pip install -e ".[full]" --no-sources` (lock file pins versions).
