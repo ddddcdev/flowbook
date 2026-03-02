@@ -30,10 +30,10 @@ class InspectResponse(BaseModel):
 
 
 class ImportRequest(BaseModel):
-    """Additional parameters alongside the uploaded file."""
+    """Form parameters for POST /import (file is separate)."""
 
     template_name: str
-    input_profile_name: str = "source"
+    inputs: str = "{}"
 
 
 class RunResponse(BaseModel):

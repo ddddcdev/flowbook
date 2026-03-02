@@ -9,11 +9,11 @@ from __future__ import annotations
 import json
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
-from flowbook.extensions.api.schemas import RunResponse
+from flowbook.extensions.api.schemas import ImportRequest, RunResponse
 
 router = APIRouter(tags=["import"])
 
@@ -47,11 +47,17 @@ def _parse_inputs(inputs_str: str) -> dict[str, Any]:
         return {}
 
 
+def _import_form(
+    template_name: Annotated[str, Form(...)],
+    inputs: Annotated[str, Form()] = "{}",
+) -> ImportRequest:
+    return ImportRequest(template_name=template_name, inputs=inputs)
+
+
 @router.post("/import", response_model=RunResponse)
 async def import_file(
     file: Annotated[UploadFile, File(...)],
-    template_name: Annotated[str, Form(...)],
-    inputs: Annotated[str, Form()] = "{}",
+    req: Annotated[ImportRequest, Depends(_import_form)],
 ) -> RunResponse:
     """
     Import an uploaded file using a named plan template.
@@ -61,7 +67,7 @@ async def import_file(
     - **inputs**: JSON with entity_key, encoding, sheet_name, target_month, etc.
     """
     engine = get_engine()
-    inputs_dict = _parse_inputs(inputs)
+    inputs_dict = _parse_inputs(req.inputs)
     entity_key = inputs_dict.get("entity_key", "default")
     if not isinstance(entity_key, str):
         entity_key = "default"
@@ -83,7 +89,7 @@ async def import_file(
                     f"Unsupported file extension '.{ext}'. Use .csv, .xlsx, or .xls"
                 ) from None
 
-            session.put_input("template_name", template_name)
+            session.put_input("template_name", req.template_name)
 
             # Merge defaults for common template params
             defaults: dict[str, Any] = {

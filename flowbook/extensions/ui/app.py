@@ -120,6 +120,77 @@ def _created_at_for_sort(e: object) -> str:
     return getattr(e, "created_at", None) or ""
 
 
+def _format_datetime_display(val: str | None) -> str:
+    """Format datetime for display: YYYY-MM-DD HH:mm:ss (truncate microseconds)."""
+    if not val:
+        return ""
+    s = str(val).strip()
+    if not s:
+        return ""
+    # Match ISO format: 2026-03-02T21:41:04.123456+09:00 or 2026-03-02T12:36:23.903Z
+    m = re.match(r"(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})", s)
+    if m:
+        return f"{m.group(1)} {m.group(2)}"
+    return s[:19] if len(s) >= 19 else s  # fallback: first 19 chars
+
+
+def _fetch_inspect_results_from_api(
+    base: str,
+    entity_key_filter: str | None,
+    exact_match: bool = False,
+) -> list[dict]:
+    """Fetch inspect results from /results and /artifacts APIs. No session_state."""
+    try:
+        params = {}
+        if exact_match and entity_key_filter:
+            params["entity_key"] = entity_key_filter
+        r = requests.get(api(base, "/results"), params=params or None, timeout=10)
+        r.raise_for_status()
+        entries = r.json().get("entries", [])
+    except requests.RequestException:
+        return []
+    out = []
+    for e in entries:
+        cfg = e.get("config_json")
+        if not cfg:
+            continue
+        try:
+            cfg_obj = json.loads(cfg) if isinstance(cfg, str) else cfg
+        except json.JSONDecodeError:
+            continue
+        if cfg_obj.get("name") != "inspect" or e.get("status") != "succeeded":
+            continue
+        ra = e.get("result_artifacts")
+        if not ra or not isinstance(ra, list):
+            continue
+        path_item = ra[0]
+        path = path_item.get("path") if isinstance(path_item, dict) else None
+        if not path:
+            continue
+        run_id = e.get("run_id", "")
+        entity_key = e.get("entity_key", "")
+        key = f"{run_id}/{entity_key}/{path}"
+        try:
+            r2 = requests.get(api(base, f"/artifacts/{key}/raw"), timeout=10)
+            r2.raise_for_status()
+            profile = r2.json()
+        except (requests.RequestException, json.JSONDecodeError):
+            continue
+        if not isinstance(profile, dict):
+            continue
+        if entity_key_filter and not exact_match:
+            if not _entity_matches(entity_key, entity_key_filter, "partial"):
+                continue
+        out.append({
+            "run_id": run_id,
+            "entity_key": entity_key,
+            "profile": profile,
+            "created_at": e.get("created_at") or "",
+            "updated_at": e.get("updated_at") or "",
+        })
+    return out[:50]
+
+
 def _read_df_artifact_key_from_result(entry: dict) -> str | None:
     """Extract read/df artifact key from result entry. Returns None if not found."""
     ra = entry.get("result_artifacts")
@@ -147,6 +218,9 @@ def _result_entry_for_display(entry: dict) -> dict:
     out = dict(entry)
     if "result_artifacts" in out and out["result_artifacts"] is not None:
         out["result_artifacts"] = json.dumps(out["result_artifacts"], ensure_ascii=False)
+    for k in ("created_at", "updated_at"):
+        if k in out and out[k]:
+            out[k] = _format_datetime_display(out[k])
     return out
 
 
@@ -493,9 +567,9 @@ def main() -> None:
                         )
                     r.raise_for_status()
                     data = r.json()
-                    st.session_state["inspect_profile"] = data["profile"]
-                    st.success(f"Run ID: `{data['run_id']}`")
                     profile = data["profile"]
+                    st.session_state["inspect_profile"] = profile
+                    st.success(f"Run ID: `{data['run_id']}`")
                     st.json(profile)
                     if profile.get("template_name"):
                         st.caption(f"template_name: `{profile['template_name']}`")
@@ -507,69 +581,78 @@ def main() -> None:
     with tab_import:
         st.subheader("Import (table extract)")
         st.caption(
-            "Upload xlsx/xls/csv. template_name and inputs (entity_key, sheet_name, etc.) "
-            "can be applied from Inspect result."
+            "Select an Inspect result to use its parameters. Upload file and run Import."
         )
-        inspect_profile = st.session_state.get("inspect_profile") or {}
-        default_template = inspect_profile.get("template_name") or "import_excel_region"
-        template_name = st.text_input(
-            "template_name",
-            value=st.session_state.get("import_template_name", default_template),
-            key="import_template_name",
+        if st.button("Refresh", key="import_inspect_refresh"):
+            st.rerun()
+        inspect_results = _fetch_inspect_results_from_api(
+            base, entity_key_filter_value, exact_match
         )
-        default_inputs = inspect_profile.get("entity_key") or entity_key_for_actions
-        if inspect_profile.get("effective_date") and inspect_profile.get("detected_kind"):
-            eff = inspect_profile["effective_date"]
-            kind = inspect_profile["detected_kind"]
-            default_inputs = f"{eff}/{kind}"
-        default_inputs_json = json.dumps(
-            {
-                "entity_key": default_inputs,
+        selected_profile = None
+        selected_row_idx = None
+        if inspect_results:
+            sorted_results = sorted(
+                inspect_results,
+                key=lambda r: r.get("updated_at") or "",
+                reverse=True,
+            )
+            df_rows = [
+                {
+                    "updated_at": _format_datetime_display(r.get("updated_at")),
+                    "run_id": r.get("run_id") or "",
+                    "entity_key": r.get("entity_key") or "",
+                }
+                for r in sorted_results
+            ]
+            df = pd.DataFrame(df_rows)
+            event = st.dataframe(
+                df,
+                key="import_inspect_df",
+                width="stretch",
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+            )
+            if event.selection and event.selection.rows:
+                selected_row_idx = event.selection.rows[0]
+                if 0 <= selected_row_idx < len(sorted_results):
+                    selected_profile = sorted_results[selected_row_idx].get("profile") or {}
+        if selected_profile:
+            template_name = selected_profile.get("template_name") or "import_excel_region"
+            ek = entity_key_for_actions
+            if selected_profile.get("effective_date") and selected_profile.get("detected_kind"):
+                ek = f"{selected_profile['effective_date']}/{selected_profile['detected_kind']}"
+            inputs_dict = {
+                "entity_key": ek,
                 "sheet_name": "data",
                 "region_profile_name": "detail_region",
                 "mapping_name": "detect_region_test",
-            },
-            indent=2,
-        )
-        inputs_json = st.text_area(
-            "inputs (JSON)",
-            value=st.session_state.get("import_inputs_json", default_inputs_json),
-            height=120,
-            key="import_inputs",
-        )
-        if st.button("Apply from Inspect", key="import_apply_inspect"):
-            if inspect_profile:
-                tmpl = inspect_profile.get("template_name") or "import_excel_region"
-                ek = entity_key_for_actions
-                if inspect_profile.get("effective_date") and inspect_profile.get("detected_kind"):
-                    ek = f"{inspect_profile['effective_date']}/{inspect_profile['detected_kind']}"
-                st.session_state["import_template_name"] = tmpl
-                st.session_state["import_inputs_json"] = json.dumps(
-                    {
-                        "entity_key": ek,
-                        "sheet_name": "data",
-                        "region_profile_name": "detail_region",
-                        "mapping_name": "detect_region_test",
-                    },
-                    indent=2,
-                )
-                st.rerun()
+            }
+            st.caption("Import parameters (from selection)")
+            st.text_input(
+                "template_name",
+                value=template_name,
+                disabled=True,
+                key="import_tmpl_display",
+            )
+            st.json(inputs_dict)
+            inputs_json = json.dumps(inputs_dict)
+        else:
+            if not inspect_results:
+                st.info("No Inspect results. Run Inspect first, then click Refresh.")
             else:
-                st.warning("Run Inspect first to apply its result.")
+                st.info("Select a row to set import parameters.")
+            template_name = ""
+            inputs_json = "{}"
         file = st.file_uploader(
             "Upload file",
             type=["xlsx", "xls", "csv"],
             key="import_file",
         )
-        if file and st.button("Run import"):
+        if file and selected_profile and st.button("Run import"):
             with st.spinner("Importing..."):
                 try:
-                    inputs_dict = {}
-                    try:
-                        inputs_dict = json.loads(inputs_json) if inputs_json.strip() else {}
-                    except json.JSONDecodeError:
-                        st.error("Invalid inputs JSON")
-                        raise
+                    inputs_dict = json.loads(inputs_json) if inputs_json.strip() else {}
                     r = requests.post(
                         api(base, "/import"),
                         files={
@@ -734,6 +817,9 @@ def main() -> None:
                     else (e.model_dump() if hasattr(e, "model_dump") else dict(e))
                 )
                 d.pop("meta", None)
+                for k in ("created_at", "updated_at"):
+                    if k in d and d[k]:
+                        d[k] = _format_datetime_display(d[k])
                 display_entries.append(d)
             df = pd.DataFrame(display_entries)
             event = st.dataframe(
@@ -973,8 +1059,8 @@ def main() -> None:
                         "entity_key": e.get("entity_key", ""),
                         "display_name": (e.get("meta") or {}).get("display_name", ""),
                         "desc": (e.get("meta") or {}).get("desc", ""),
-                        "created_at": e.get("created_at", ""),
-                        "updated_at": e.get("updated_at", ""),
+                        "created_at": _format_datetime_display(e.get("created_at")),
+                        "updated_at": _format_datetime_display(e.get("updated_at")),
                     }
                     for e in entries
                 ]
