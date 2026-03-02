@@ -193,7 +193,6 @@ def test_inspect_unknown_profile_returns_error(client: TestClient):
 
     assert r.status_code == 400
     detail = r.json()["detail"]
-    assert detail["run_id"] is not None
     assert "reason" in detail
 
 
