@@ -112,7 +112,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                     "op": "write_excel",
                     "inputs": {WriteExcelOp.Inputs.DF: "@map/df"},
                 },
-            ]
+            ],
         }
     }
     config_store.put_spec(

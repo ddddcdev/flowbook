@@ -76,7 +76,7 @@ def client() -> TestClient:
                             "header": "@header_row",
                         },
                     }
-                ]
+                ],
             }
         },
         config_id=str(uuid.uuid4()),
@@ -95,7 +95,7 @@ def client() -> TestClient:
                         "op": "write_excel",
                         "inputs": {"df": "@in_key"},
                     }
-                ]
+                ],
             }
         },
         config_id=str(uuid.uuid4()),

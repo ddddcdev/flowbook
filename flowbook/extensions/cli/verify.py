@@ -22,9 +22,7 @@ def verify_pypi(version: str, full: bool) -> int:
 
     python = sys.executable
     pip = (
-        str(venv_dir / "bin" / "pip")
-        if os.name != "nt"
-        else str(venv_dir / "Scripts" / "pip.exe")
+        str(venv_dir / "bin" / "pip") if os.name != "nt" else str(venv_dir / "Scripts" / "pip.exe")
     )
     flowbook_exe = (
         str(venv_dir / "bin" / "flowbook")
@@ -96,11 +94,7 @@ def verify_wheel(wheel_dir: str | Path, venv_dir: str | Path) -> int:
         shutil.rmtree(vdir)
 
     python = sys.executable
-    pip = (
-        str(vdir / "bin" / "pip")
-        if os.name != "nt"
-        else str(vdir / "Scripts" / "pip.exe")
-    )
+    pip = str(vdir / "bin" / "pip") if os.name != "nt" else str(vdir / "Scripts" / "pip.exe")
     flowbook_exe = (
         str(vdir / "bin" / "flowbook")
         if os.name != "nt"

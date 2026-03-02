@@ -7,6 +7,7 @@
     "test": "tests"
   },
   "scripts": {
+    "db:fresh": "docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v && docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d",
     "typecheck": "pyright",
     "lint": "uv run ruff check .",
     "fmt": "uv run ruff format .",

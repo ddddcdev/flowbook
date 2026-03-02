@@ -12,7 +12,7 @@ from fastapi import APIRouter
 
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
-from flowbook.extensions.api.schemas import EntityEntry, EntitiesListResponse
+from flowbook.extensions.api.schemas import EntitiesListResponse, EntityEntry
 
 router = APIRouter(tags=["entities"])
 

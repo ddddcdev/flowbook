@@ -205,9 +205,7 @@ def _results_preview(base: str, entries: list[dict], event: object) -> None:
             raw_content = None
             content_type = None
             try:
-                raw_resp = requests.get(
-                    api(base, f"/artifacts/{artifact_key}/raw"), timeout=30
-                )
+                raw_resp = requests.get(api(base, f"/artifacts/{artifact_key}/raw"), timeout=30)
                 raw_resp.raise_for_status()
                 raw_content = raw_resp.content
                 content_type = raw_resp.headers.get("content-type", "").split(";")[0]
@@ -339,9 +337,7 @@ def main() -> None:
     entity_key_opts = _entity_key_options(base)
     custom_keys = st.session_state.get("custom_entity_keys", set())
     opts_set = set(entity_key_opts)
-    entity_key_options = entity_key_opts + sorted(
-        k for k in custom_keys if k not in opts_set
-    )
+    entity_key_options = entity_key_opts + sorted(k for k in custom_keys if k not in opts_set)
     entity_key = st.sidebar.selectbox(
         "entity_key",
         options=entity_key_options,
@@ -362,14 +358,19 @@ def main() -> None:
         help="ON: exact match, API filter. OFF: partial match (contains), client-side filter.",
     )
     entity_key_for_actions = (
-        entity_key
-        if entity_key
-        else (entity_key_opts[0] if entity_key_opts else "demo/excel")
+        entity_key if entity_key else (entity_key_opts[0] if entity_key_opts else "demo/excel")
     )
 
     tab_names = [
-        "Health", "Inspect", "Import", "Export", "Results", "Artifacts",
-        "Entities", "Configs", "Steps",
+        "Health",
+        "Inspect",
+        "Import",
+        "Export",
+        "Results",
+        "Artifacts",
+        "Entities",
+        "Configs",
+        "Steps",
     ]
     tabs = st.tabs(tab_names)
     tab_health = tabs[0]
@@ -426,18 +427,14 @@ def main() -> None:
                     st.subheader(f"Spec: {op_name}")
                     st.markdown(spec.get("docstring") or "(no docstring)")
                     st.caption(
-                        "Inputs (required): "
-                        + ", ".join(spec.get("required_inputs", []))
+                        "Inputs (required): " + ", ".join(spec.get("required_inputs", []))
                         or "(none)"
                     )
                     st.caption(
-                        "Inputs (optional): "
-                        + ", ".join(spec.get("optional_inputs", []))
+                        "Inputs (optional): " + ", ".join(spec.get("optional_inputs", []))
                         or "(none)"
                     )
-                    st.caption(
-                        "Outputs: " + ", ".join(spec.get("output_keys", [])) or "(none)"
-                    )
+                    st.caption("Outputs: " + ", ".join(spec.get("output_keys", [])) or "(none)")
             else:
                 st.info("No steps. API may not have discover_steps loaded.")
         except requests.RequestException as e:
@@ -533,19 +530,13 @@ def main() -> None:
         if st.button("Refresh", key="results_refresh"):
             try:
                 params = {}
-                use_api_filter = (
-                    exact_match and entity_key_filter_value is not None
-                )
+                use_api_filter = exact_match and entity_key_filter_value is not None
                 if use_api_filter:
                     params["entity_key"] = entity_key_filter_value
                 r = requests.get(api(base, "/results"), params=params or None, timeout=10)
                 r.raise_for_status()
                 raw_results = r.json().get("entries", [])
-                latest_params = (
-                    {"entity_key": entity_key_filter_value}
-                    if use_api_filter
-                    else None
-                )
+                latest_params = {"entity_key": entity_key_filter_value} if use_api_filter else None
                 r2 = requests.get(
                     api(base, "/latest_results"),
                     params=latest_params,
@@ -687,11 +678,7 @@ def main() -> None:
                             )
                             if meta_resp.status_code == 200:
                                 meta_val = meta_resp.json().get("value")
-                                meta = (
-                                    meta_val.get("meta")
-                                    if isinstance(meta_val, dict)
-                                    else None
-                                )
+                                meta = meta_val.get("meta") if isinstance(meta_val, dict) else None
                         except Exception:
                             pass
                     raw_content = None
@@ -703,9 +690,7 @@ def main() -> None:
                         )
                         raw_resp.raise_for_status()
                         raw_content = raw_resp.content
-                        content_type = raw_resp.headers.get(
-                            "content-type", ""
-                        ).split(";")[0]
+                        content_type = raw_resp.headers.get("content-type", "").split(";")[0]
                     except requests.RequestException:
                         pass
                     if meta and isinstance(meta, dict):
@@ -728,19 +713,13 @@ def main() -> None:
         if st.button("Load results", key="export_load"):
             try:
                 params = {}
-                use_api_filter = (
-                    exact_match and entity_key_filter_value is not None
-                )
+                use_api_filter = exact_match and entity_key_filter_value is not None
                 if use_api_filter:
                     params["entity_key"] = entity_key_filter_value
                 r = requests.get(api(base, "/results"), params=params or None, timeout=10)
                 r.raise_for_status()
                 raw_results = r.json().get("entries", [])
-                latest_params = (
-                    {"entity_key": entity_key_filter_value}
-                    if use_api_filter
-                    else None
-                )
+                latest_params = {"entity_key": entity_key_filter_value} if use_api_filter else None
                 r2 = requests.get(
                     api(base, "/latest_results"),
                     params=latest_params,
@@ -784,8 +763,7 @@ def main() -> None:
             ]
             if not entries_with_df:
                 st.info(
-                    "No import results (read/df) in the list. "
-                    "Run Import first, then Load results."
+                    "No import results (read/df) in the list. Run Import first, then Load results."
                 )
             else:
                 show_latest = st.toggle(
@@ -811,9 +789,7 @@ def main() -> None:
                         entries,
                         key=lambda e: (_created_at_for_sort(e) == "", _created_at_for_sort(e)),
                     )
-                    df = pd.DataFrame(
-                        [_result_entry_for_display(e) for e in sorted_entries]
-                    )
+                    df = pd.DataFrame([_result_entry_for_display(e) for e in sorted_entries])
                     event = st.dataframe(
                         df,
                         key="export_results_df",
@@ -846,12 +822,11 @@ def main() -> None:
                                     r.raise_for_status()
                                     data = r.json()
                                     written = data.get("artifacts_written", [])
-                                    bytes_keys = [
-                                        k for k in written if "/write/bytes" in k
-                                    ]
+                                    bytes_keys = [k for k in written if "/write/bytes" in k]
                                     if bytes_keys:
                                         st.success(
-                                            "Export done. Download via Results tab (select row → download)."
+                                            "Export done. Download via Results tab "
+                                            "(select row → download)."
                                         )
                                         if "artifact_keys" not in st.session_state:
                                             st.session_state["artifact_keys"] = []
@@ -891,7 +866,9 @@ def main() -> None:
 
     with tab_entities:
         st.subheader("Entities")
-        st.caption("Registered entities (entity_key, meta). Postgres only; in-memory returns empty.")
+        st.caption(
+            "Registered entities (entity_key, meta). Postgres only; in-memory returns empty."
+        )
         if st.button("Refresh", key="entities_refresh"):
             try:
                 r = requests.get(api(base, "/entities"), timeout=10)

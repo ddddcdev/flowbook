@@ -163,19 +163,13 @@ class RunSession:
     def exec_plan(self, *, plan_config: dict[str, Any]) -> RunInfo:
         """Execute plan. Records config to runs (entry) and results (executed)."""
         self._record_run_config(plan_config)
-        return self._exec(
-            plan_config=plan_config, entity_key=self.entity_key
-        )
+        return self._exec(plan_config=plan_config, entity_key=self.entity_key)
 
-    def exec_with_planner_once(
-        self, *, planner_config: dict[str, Any]
-    ) -> tuple[RunInfo, RunInfo]:
+    def exec_with_planner_once(self, *, planner_config: dict[str, Any]) -> tuple[RunInfo, RunInfo]:
         """Run planner once, then execute resulting plan.
         Records planner_config to runs; each exec to results."""
         self._record_run_config(planner_config)
-        planner_info = self._exec(
-            plan_config=planner_config, entity_key=self.entity_key
-        )
+        planner_info = self._exec(plan_config=planner_config, entity_key=self.entity_key)
         if planner_info.status != "succeeded":
             raise RuntimeError(f"planner run failed (run_id={self.run_id}): {planner_info.errors}")
 
@@ -203,9 +197,7 @@ class RunSession:
             ra_key = planner_step.outputs["result_artifacts"]
             plan_config = {**plan_config, "result_artifacts": self.store.get(ra_key)}
         self._executed = False
-        exec_info = self._exec(
-            plan_config=plan_config, entity_key=self.entity_key
-        )
+        exec_info = self._exec(plan_config=plan_config, entity_key=self.entity_key)
         if exec_info.status != "succeeded":
             raise RuntimeError(f"plan execution failed (run_id={self.run_id}): {exec_info.errors}")
 

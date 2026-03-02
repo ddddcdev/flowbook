@@ -20,6 +20,7 @@ def _get_console():
         return _console
     try:
         from rich.console import Console
+
         _console = Console(force_terminal=True)
         return _console
     except ImportError:
@@ -66,7 +67,8 @@ def run(
         if interactive:
             input(msg)
 
-    # Optional: full init (reset artifacts, results, runs, entities, configs; seed demo entities + configs)
+    # Optional: full init (reset artifacts, results, runs, entities, configs;
+    # seed demo entities + configs)
     run_reset = False
     if interactive:
         init_ans = input("Full init DB (clear artifacts + configs, then seed)? [Y/n] ").strip()

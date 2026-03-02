@@ -39,8 +39,6 @@ def build(plan_config: dict[str, Any]) -> Plan:
                 label = item.get("label") if isinstance(item.get("label"), str) else None
                 result_artifacts.append(ResultArtifact(path=path, label=label))
             else:
-                raise ValueError(
-                    f"result_artifacts entry must have step and key: {item!r}"
-                )
+                raise ValueError(f"result_artifacts entry must have step and key: {item!r}")
 
     return Plan(steps=steps, result_artifacts=result_artifacts)

@@ -15,6 +15,7 @@ def get_bundled_configs_dir() -> Path | None:
     """Return path to bundled configs (flowbook/flowbook/configs/) or None if not found."""
     try:
         from flowbook.extensions import cli
+
         root = Path(cli.__file__).resolve().parent.parent.parent / "configs"
         return root if root.exists() else None
     except Exception:
@@ -35,9 +36,7 @@ def _normalize_url(url: str) -> str:
     return url
 
 
-def _seed_configs_from_dir_into_store(
-    store: Any, root: Path, type_map: dict[str, Any]
-) -> int:
+def _seed_configs_from_dir_into_store(store: Any, root: Path, type_map: dict[str, Any]) -> int:
     """Seed configs from a directory into an existing store. Returns count."""
     total = 0
     for subdir, spec_type in type_map.items():
@@ -200,7 +199,7 @@ def seed_config_for_api() -> int:
                             "header": "@header_row",
                         },
                     }
-                ]
+                ],
             }
         },
         config_id=str(uuid.uuid4()),
@@ -219,7 +218,7 @@ def seed_config_for_api() -> int:
                         "op": "write_excel",
                         "inputs": {"df": "@in_key"},
                     }
-                ]
+                ],
             }
         },
         config_id=str(uuid.uuid4()),
@@ -336,8 +335,10 @@ def reset_db(config_dir: str | Path) -> int:
             text(
                 "INSERT INTO entities (entity_key, meta, created_at, updated_at) "
                 "VALUES "
-                "('demo', '{\"display_name\": \"Demo\", \"desc\": \"Top-level demo scope\"}'::jsonb, now(), now()), "
-                "('demo/excel', '{\"display_name\": \"Demo Excel\", \"desc\": \"Excel import/export demo\"}'::jsonb, now(), now()) "
+                "('demo', '{\"display_name\": \"Demo\", \"desc\": \"Top-level demo scope\"}'"
+                "::jsonb, now(), now()), "
+                "('demo/excel', '{\"display_name\": \"Demo Excel\", "
+                "\"desc\": \"Excel import/export demo\"}'::jsonb, now(), now()) "
                 "ON CONFLICT (entity_key) DO NOTHING"
             )
         )

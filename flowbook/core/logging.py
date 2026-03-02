@@ -55,10 +55,29 @@ class JsonFormatter(logging.Formatter):
         # Include extra fields (run_id, entity_key, artifact_path, step, status, etc.)
         # Exclude internal logging fields for cleaner JSON
         skip = {
-            "message", "asctime", "name", "msg", "args", "created", "filename",
-            "pathname", "module", "lineno", "funcName", "levelname", "levelno",
-            "msecs", "relativeCreated", "thread", "threadName", "processName",
-            "process", "taskName", "stack_info", "exc_info", "exc_text",
+            "message",
+            "asctime",
+            "name",
+            "msg",
+            "args",
+            "created",
+            "filename",
+            "pathname",
+            "module",
+            "lineno",
+            "funcName",
+            "levelname",
+            "levelno",
+            "msecs",
+            "relativeCreated",
+            "thread",
+            "threadName",
+            "processName",
+            "process",
+            "taskName",
+            "stack_info",
+            "exc_info",
+            "exc_text",
         }
         for key, value in record.__dict__.items():
             if key not in skip:
@@ -81,7 +100,14 @@ class TextFormatter(logging.Formatter):
         base = super().format(record)
         extras = []
         skip = {
-            "message", "asctime", "name", "msg", "args", "created", "filename", "logger_display"
+            "message",
+            "asctime",
+            "name",
+            "msg",
+            "args",
+            "created",
+            "filename",
+            "logger_display",
         }
         for key, value in record.__dict__.items():
             if key not in skip and value is not None:
@@ -98,10 +124,10 @@ class _ColoredStreamHandler(logging.StreamHandler):
 
     _RESET = "\033[0m"
     _LEVEL_COLORS = {
-        logging.DEBUG: "\033[2m",      # dim
-        logging.INFO: "\033[32m",      # green
-        logging.WARNING: "\033[33m",   # yellow
-        logging.ERROR: "\033[31m",     # red
+        logging.DEBUG: "\033[2m",  # dim
+        logging.INFO: "\033[32m",  # green
+        logging.WARNING: "\033[33m",  # yellow
+        logging.ERROR: "\033[31m",  # red
     }
     _RICH_STYLES = {
         logging.DEBUG: "dim",
@@ -117,6 +143,7 @@ class _ColoredStreamHandler(logging.StreamHandler):
         if use_color:
             try:
                 from rich.console import Console
+
                 self._rich_console = Console(
                     file=stream or sys.stdout,
                     force_terminal=True,
@@ -199,9 +226,7 @@ def configure_logging() -> None:
             file_handler.addFilter(_FlowbookFilter())
             flowbook_logger.addHandler(file_handler)
         except OSError:
-            flowbook_logger.warning(
-                "Could not open log file %s, logging to stdout only", file_path
-            )
+            flowbook_logger.warning("Could not open log file %s, logging to stdout only", file_path)
 
 
 def get_logger(name: str) -> logging.Logger:

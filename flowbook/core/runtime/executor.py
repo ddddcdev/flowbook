@@ -130,9 +130,7 @@ def _persist_output(
     store.put(out_key, cast(JsonValue, value), **kwargs)
 
 
-def _result_artifacts_from_plan(
-    plan: object, info: RunInfo
-) -> list[dict[str, str | None]] | None:
+def _result_artifacts_from_plan(plan: object, info: RunInfo) -> list[dict[str, str | None]] | None:
     """Build result_artifacts list from plan if declared. Validates paths exist in outputs."""
     ra = getattr(plan, "result_artifacts", None)
     if not ra:

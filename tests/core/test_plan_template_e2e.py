@@ -43,7 +43,7 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
                     "op": "add",
                     "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},
                 }
-            ]
+            ],
         }
     }
     config_store.put_spec(
@@ -293,7 +293,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
                     "op": "add",
                     "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},  # requires x, y
                 }
-            ]
+            ],
         }
     }
     config_store.put_spec(

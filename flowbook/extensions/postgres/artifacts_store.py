@@ -257,12 +257,14 @@ class PostgresArtifactsStore(ArtifactsStore):
         for r in rows:
             key = build_artifact_key(r[0], r[1], r[2])
             created_at = r[5]
-            result.append({
-                "key": key,
-                "content_type": r[3],
-                "meta": r[4] or {},
-                "created_at": created_at.isoformat() if created_at else None,
-            })
+            result.append(
+                {
+                    "key": key,
+                    "content_type": r[3],
+                    "meta": r[4] or {},
+                    "created_at": created_at.isoformat() if created_at else None,
+                }
+            )
         return result
 
     def get_artifact_meta(self, key: str) -> dict[str, Any] | None:
@@ -596,8 +598,13 @@ class PostgresArtifactsStore(ArtifactsStore):
                 rows = conn.execute(text(raw_sql)).all()
 
         cols = [
-            "run_id", "entity_key", "result_artifacts_json",
-            "status", "config_json", "created_at", "updated_at",
+            "run_id",
+            "entity_key",
+            "result_artifacts_json",
+            "status",
+            "config_json",
+            "created_at",
+            "updated_at",
         ]
         result = []
         for row in rows:
