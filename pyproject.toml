@@ -1,6 +1,6 @@
 [project]
 name = "flowbook"
-version = "0.1.0a6"
+version = "0.1.0a7"
 description = "Config-driven data flow framework with pluggable ops and extensions (Excel, Postgres, FastAPI)."
 authors = [{ name = "d4c.dev", email = "info@d4c.dev" }]
 readme = "README.md"
@@ -68,6 +68,9 @@ flowbook = "flowbook.core.registry.extensions:register_steps"
 
 [project.entry-points."flowbook.cli"]
 flowbook = "flowbook.extensions.cli.cli:register_cli"
+
+[project.entry-points."flowbook.api"]
+# Extensions register here (e.g. flowbook_demo = "flowbook_demo.api:register_api")
 
 [dependency-groups]
 dev = [

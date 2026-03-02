@@ -1,0 +1,17 @@
+{
+  "plan": {
+    "name": "import_csv",
+    "steps": [
+      {
+        "name": "read",
+        "op": "read_csv_bytes",
+        "inputs": {
+          "src_csv_bytes": "@src_csv_bytes"
+        }
+      }
+    ]
+  },
+  "result_artifacts": [
+    {"step": "read", "key": "df", "label": "Imported table"}
+  ]
+}

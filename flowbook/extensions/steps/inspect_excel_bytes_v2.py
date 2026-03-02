@@ -8,7 +8,7 @@ from typing import Any
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
 
-from flowbook.core.configs.spec_types import InputProfile
+from flowbook.core.configs.spec_types import InputProfile, Routing
 from flowbook.core.registry.base_op import BaseOp
 from flowbook.core.registry.spec import InputsBase, OutputsBase
 from flowbook.core.registry.step_decorator import register_from_steps, step
@@ -35,6 +35,18 @@ def _normalize_date(value: object) -> str | None:
             return s
         return None
     return None
+
+
+def _resolve_plan_name(store: RunStore, detected_kind: str | None) -> str | None:
+    """Resolve plan_name from Routing config (default profile)."""
+    try:
+        routing = store.configs.get_spec(Routing, "default")
+    except KeyError:
+        return None
+    kind_map = routing.get("map") or {}
+    if detected_kind and detected_kind in kind_map:
+        return kind_map[detected_kind]
+    return routing.get("default")
 
 
 def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
@@ -102,11 +114,14 @@ class InspectExcelBytesV2Op(BaseOp):
                 raw_value = _get_cell_value(ws, cell)
                 effective_date = _normalize_date(raw_value)
 
+        plan_name = _resolve_plan_name(store, detected_kind)
+
         result = {
             "schema_version": "inspect_result_v2",
             "input_profile_name": input_profile_name,
             "filename": filename,
             "detected_kind": detected_kind,
+            "plan_name": plan_name,
             "effective_date": effective_date,
             "evidence": {
                 "matcher": "filename_regex",

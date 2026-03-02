@@ -9,20 +9,20 @@ from flowbook import (
     Registry,
     register_steps,
 )
-from flowbook.core.configs.spec_types import PlanTemplate
+from flowbook.core.configs.spec_types import Plan
 from flowbook.extensions.steps.add import AddOp
-from flowbook.extensions.steps.plan_from_template import PlanFromTemplateOp
+from flowbook.extensions.steps.load_plan import LoadPlanOp
 
 pytestmark = pytest.mark.e2e
 
 
-def test_plan_from_template_reads_template_from_config_store() -> None:
+def test_load_plan_reads_plan_from_config_store() -> None:
     """
-    Plan templates loaded from ConfigStore via RunStore.configs.
+    Plans loaded from ConfigStore via RunStore.configs.
 
     Scenario:
-    1. Store a plan template in ConfigStore (kind="plan_template", name="tmpl_add")
-    2. Use plan_from_template step to load and return the template's plan
+    1. Store a plan in ConfigStore (kind="plan", name="plan_add")
+    2. Use load_plan step to load and return the plan
     3. Execute that plan (add operation) with inputs x=2, y=3
     4. Verify planner output and final result (sum=5)
     """
@@ -33,10 +33,10 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
     registry = Registry()
     register_steps(registry)
 
-    # ---- Put template in config store ----
-    template_spec = {
+    # ---- Put plan in config store ----
+    plan_spec = {
         "plan": {
-            "name": "tmpl_add",
+            "name": "plan_add",
             "steps": [
                 {
                     "name": "add",
@@ -47,9 +47,9 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
         }
     }
     config_store.put_spec(
-        PlanTemplate,
-        "tmpl_add",
-        template_spec,
+        Plan,
+        "plan_add",
+        plan_spec,
         config_id="test_config_v1",
     )
 
@@ -61,15 +61,15 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
         # ---- Set inputs ----
         run.put_input("x", 2)
         run.put_input("y", 3)
-        run.put_input("template_name", "tmpl_add")
+        run.put_input("plan_name", "plan_add")
 
-        # ---- Planner config: use plan_from_template ----
+        # ---- Planner config: use load_plan ----
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
                 }
             ]
         }
@@ -83,12 +83,12 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
         planner_step = info1.steps[0]
         assert planner_step.name == "planner"
         assert planner_step.status == "succeeded"
-        assert PlanFromTemplateOp.Outputs.PLAN in planner_step.outputs, (
+        assert LoadPlanOp.Outputs.PLAN in planner_step.outputs, (
             f"plan not in outputs: {planner_step.outputs}"
         )
 
         # ✅ Load and verify plan from artifact
-        plan_key = planner_step.outputs[PlanFromTemplateOp.Outputs.PLAN]
+        plan_key = planner_step.outputs[LoadPlanOp.Outputs.PLAN]
         plan = run.get_dict(plan_key)
 
         assert isinstance(plan, dict), f"plan should be dict, got {type(plan).__name__}"
@@ -96,7 +96,10 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
         assert len(plan["steps"]) == 1
         assert plan["steps"][0]["name"] == "add"
         assert plan["steps"][0]["op"] == "add"
-        assert plan["steps"][0]["inputs"] == {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"}
+        assert plan["steps"][0]["inputs"] == {
+            AddOp.Inputs.X: "@x",
+            AddOp.Inputs.Y: "@y",
+        }
 
         # ✅ Verify plan execution succeeded
         assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
@@ -112,43 +115,9 @@ def test_plan_from_template_reads_template_from_config_store() -> None:
         assert result == 5, f"expected 5, got {result}"
 
 
-def test_plan_from_template_missing_template_name() -> None:
+def test_load_plan_missing_plan_name() -> None:
     """
-    Verify clear error when template_name is not provided in inputs.
-    """
-    artifacts_store = InMemoryArtifactsStore()
-    config_store = InMemoryConfigStore()
-
-    registry = Registry()
-    register_steps(registry)
-
-    engine = Engine(
-        store=artifacts_store,
-        registry=registry,
-        config_store=config_store,
-    )
-    with engine.create_run() as run:
-        # Missing template_name input
-        planner_config = {
-            "steps": [
-                {
-                    "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {},  # ← No template_name
-                }
-            ]
-        }
-
-        try:
-            run.exec_with_planner_once(planner_config=planner_config)
-            raise AssertionError("should raise error for missing template_name")
-        except RuntimeError as e:
-            assert "planner run failed" in str(e)
-
-
-def test_plan_from_template_template_not_found() -> None:
-    """
-    Verify clear error when template is not in ConfigStore.
+    Verify clear error when plan_name is not provided in inputs.
     """
     artifacts_store = InMemoryArtifactsStore()
     config_store = InMemoryConfigStore()
@@ -162,28 +131,27 @@ def test_plan_from_template_template_not_found() -> None:
         config_store=config_store,
     )
     with engine.create_run() as run:
-        run.put_input("template_name", "nonexistent_template")
-
+        # Missing plan_name input
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {},  # ← No plan_name
                 }
             ]
         }
 
         try:
             run.exec_with_planner_once(planner_config=planner_config)
-            raise AssertionError("should raise error for missing template")
+            raise AssertionError("should raise error for missing plan_name")
         except RuntimeError as e:
             assert "planner run failed" in str(e)
 
 
-def test_plan_from_template_missing_plan_key() -> None:
+def test_load_plan_plan_not_found() -> None:
     """
-    Verify clear error when template spec doesn't have "plan" key.
+    Verify clear error when plan is not in ConfigStore.
     """
     artifacts_store = InMemoryArtifactsStore()
     config_store = InMemoryConfigStore()
@@ -191,10 +159,45 @@ def test_plan_from_template_missing_plan_key() -> None:
     registry = Registry()
     register_steps(registry)
 
-    # Put template without "plan" key
+    engine = Engine(
+        store=artifacts_store,
+        registry=registry,
+        config_store=config_store,
+    )
+    with engine.create_run() as run:
+        run.put_input("plan_name", "nonexistent_plan")
+
+        planner_config = {
+            "steps": [
+                {
+                    "name": "planner",
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                }
+            ]
+        }
+
+        try:
+            run.exec_with_planner_once(planner_config=planner_config)
+            raise AssertionError("should raise error for missing plan")
+        except RuntimeError as e:
+            assert "planner run failed" in str(e)
+
+
+def test_load_plan_missing_plan_key() -> None:
+    """
+    Verify clear error when plan spec doesn't have "plan" key.
+    """
+    artifacts_store = InMemoryArtifactsStore()
+    config_store = InMemoryConfigStore()
+
+    registry = Registry()
+    register_steps(registry)
+
+    # Put plan without "plan" key
     config_store.put_spec(
-        PlanTemplate,
-        "bad_template",
+        Plan,
+        "bad_plan",
         {"description": "missing plan"},  # ← No "plan" key
         config_id="test_config_v1",
     )
@@ -205,14 +208,14 @@ def test_plan_from_template_missing_plan_key() -> None:
         config_store=config_store,
     )
     with engine.create_run() as run:
-        run.put_input("template_name", "bad_template")
+        run.put_input("plan_name", "bad_plan")
 
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
                 }
             ]
         }
@@ -224,7 +227,7 @@ def test_plan_from_template_missing_plan_key() -> None:
             assert "planner run failed" in str(e)
 
 
-def test_plan_from_template_plan_not_dict() -> None:
+def test_load_plan_plan_not_dict() -> None:
     """
     Verify clear error when plan value is not a dict.
     """
@@ -234,10 +237,10 @@ def test_plan_from_template_plan_not_dict() -> None:
     registry = Registry()
     register_steps(registry)
 
-    # Put template with plan as non-dict
+    # Put plan with plan as non-dict
     config_store.put_spec(
-        PlanTemplate,
-        "bad_plan_template",
+        Plan,
+        "plan_non_dict",
         {"plan": "not a dict"},  # ← plan is string, not dict
         config_id="test_config_v1",
     )
@@ -248,14 +251,14 @@ def test_plan_from_template_plan_not_dict() -> None:
         config_store=config_store,
     )
     with engine.create_run() as run:
-        run.put_input("template_name", "bad_plan_template")
+        run.put_input("plan_name", "plan_non_dict")
 
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
                 }
             ]
         }
@@ -272,8 +275,8 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
     Preflight validation: plan execution fails fast if referenced inputs are missing.
 
     Scenario:
-    1. Store a plan template requiring x and y inputs
-    2. Planner produces the plan successfully with template_name only
+    1. Store a plan requiring x and y inputs
+    2. Planner produces the plan successfully with plan_name only
     3. Plan execution should fail at preflight validation (missing x, y)
     4. Error message includes run_id, missing keys, and step references
     """
@@ -283,10 +286,10 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
     registry = Registry()
     register_steps(registry)
 
-    # Put template requiring x and y
-    template_spec = {
+    # Put plan requiring x and y
+    plan_spec = {
         "plan": {
-            "name": "tmpl_add",
+            "name": "plan_add",
             "steps": [
                 {
                     "name": "add",
@@ -297,9 +300,9 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
         }
     }
     config_store.put_spec(
-        PlanTemplate,
-        "tmpl_add",
-        template_spec,
+        Plan,
+        "plan_add",
+        plan_spec,
         config_id="test_config_v1",
     )
 
@@ -307,15 +310,15 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
         store=artifacts_store, registry=registry, config_store=config_store, meta={"env": "test"}
     )
     with engine.create_run() as run:
-        # Set only template_name; omit x and y
-        run.put_input("template_name", "tmpl_add")
+        # Set only plan_name; omit x and y
+        run.put_input("plan_name", "plan_add")
 
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
                 }
             ]
         }

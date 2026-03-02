@@ -75,11 +75,11 @@ class ResultArtifactSpec(TypedDict):
     label: NotRequired[str]
 
 
-class PlanTemplate(ConfigSpecKind):
-    KIND: str = "plan_template"
+class Plan(ConfigSpecKind):
+    KIND: str = "plan"
 
     class Spec(TypedDict):
-        """Spec for kind='plan_template'. plan is a plan config.
+        """Spec for kind='plan'. plan is a plan config.
         result_artifacts: optional list of (step, key) paths to treat as main results.
         When present, these paths are used instead of last step's first output.
         """
@@ -101,7 +101,7 @@ class Routing(ConfigSpecKind):
     KIND: str = "routing"
 
     class Spec(TypedDict, total=False):
-        """Spec for kind='routing'. map: kind -> template_name; default fallback."""
+        """Spec for kind='routing'. map: kind -> plan_name; default fallback."""
 
         map: dict[str, str]
         default: str | None

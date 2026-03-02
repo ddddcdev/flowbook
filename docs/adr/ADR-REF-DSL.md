@@ -32,5 +32,5 @@ Previously, every string in step inputs was treated as a logical binding name. T
 
 ## Consequences
 
-- Plan configs and plan templates must use `@read/df` (not `read/df`) for refs.
-- Literals (mapping name, template name, etc.) stay as plain strings.
+- Plan configs and plans must use `@read/df` (not `read/df`) for refs.
+- Literals (mapping name, plan name, etc.) stay as plain strings.

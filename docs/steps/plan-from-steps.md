@@ -45,17 +45,17 @@ Input values starting with `@` are **refs**; the rest is the logical address.
 
 See [ref-and-path-grammar.md](../spec/ref-and-path-grammar.md) for details.
 
-## Plan templates
+## Plans
 
-The `plan_from_template` op loads a pre-defined plan from ConfigStore (`PlanTemplate` kind). Use when the plan structure is fixed and only bindings vary.
+The `load_plan` op loads a pre-defined plan from ConfigStore (`Plan` kind). Use when the plan structure is fixed and only bindings vary.
 
 ```json
 {
   "steps": [
     {
       "name": "planner",
-      "op": "plan_from_template",
-      "inputs": {"template_name": "import_excel_region"}
+      "op": "load_plan",
+      "inputs": {"plan_name": "import_excel_region"}
     }
   ]
 }
@@ -95,6 +95,6 @@ Bindings: `put_input("x", 1)`, `put_input("y", 2)`.
 ```
 
 **Planner + plan** (two-phase):
-1. Run planner: `plan_from_template` with `template_name`.
+1. Run planner: `load_plan` with `plan_name`.
 2. Planner outputs `plan` (plan config).
 3. Execute that plan in the same session (same run_id, bindings available).

@@ -120,6 +120,77 @@ def _created_at_for_sort(e: object) -> str:
     return getattr(e, "created_at", None) or ""
 
 
+def _format_datetime_display(val: str | None) -> str:
+    """Format datetime for display: YYYY-MM-DD HH:mm:ss (truncate microseconds)."""
+    if not val:
+        return ""
+    s = str(val).strip()
+    if not s:
+        return ""
+    # Match ISO format: 2026-03-02T21:41:04.123456+09:00 or 2026-03-02T12:36:23.903Z
+    m = re.match(r"(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})", s)
+    if m:
+        return f"{m.group(1)} {m.group(2)}"
+    return s[:19] if len(s) >= 19 else s  # fallback: first 19 chars
+
+
+def _fetch_inspect_results_from_api(
+    base: str,
+    entity_key_filter: str | None,
+    exact_match: bool = False,
+) -> list[dict]:
+    """Fetch inspect results from /results and /artifacts APIs. No session_state."""
+    try:
+        params = {}
+        if exact_match and entity_key_filter:
+            params["entity_key"] = entity_key_filter
+        r = requests.get(api(base, "/results"), params=params or None, timeout=10)
+        r.raise_for_status()
+        entries = r.json().get("entries", [])
+    except requests.RequestException:
+        return []
+    out = []
+    for e in entries:
+        cfg = e.get("config_json")
+        if not cfg:
+            continue
+        try:
+            cfg_obj = json.loads(cfg) if isinstance(cfg, str) else cfg
+        except json.JSONDecodeError:
+            continue
+        if cfg_obj.get("name") != "inspect" or e.get("status") != "succeeded":
+            continue
+        ra = e.get("result_artifacts")
+        if not ra or not isinstance(ra, list):
+            continue
+        path_item = ra[0]
+        path = path_item.get("path") if isinstance(path_item, dict) else None
+        if not path:
+            continue
+        run_id = e.get("run_id", "")
+        entity_key = e.get("entity_key", "")
+        key = f"{run_id}/{entity_key}/{path}"
+        try:
+            r2 = requests.get(api(base, f"/artifacts/{key}/raw"), timeout=10)
+            r2.raise_for_status()
+            profile = r2.json()
+        except (requests.RequestException, json.JSONDecodeError):
+            continue
+        if not isinstance(profile, dict):
+            continue
+        if entity_key_filter and not exact_match:
+            if not _entity_matches(entity_key, entity_key_filter, "partial"):
+                continue
+        out.append({
+            "run_id": run_id,
+            "entity_key": entity_key,
+            "profile": profile,
+            "created_at": e.get("created_at") or "",
+            "updated_at": e.get("updated_at") or "",
+        })
+    return out[:50]
+
+
 def _read_df_artifact_key_from_result(entry: dict) -> str | None:
     """Extract read/df artifact key from result entry. Returns None if not found."""
     ra = entry.get("result_artifacts")
@@ -147,6 +218,9 @@ def _result_entry_for_display(entry: dict) -> dict:
     out = dict(entry)
     if "result_artifacts" in out and out["result_artifacts"] is not None:
         out["result_artifacts"] = json.dumps(out["result_artifacts"], ensure_ascii=False)
+    for k in ("created_at", "updated_at"):
+        if k in out and out[k]:
+            out[k] = _format_datetime_display(out[k])
     return out
 
 
@@ -317,8 +391,8 @@ _DEMO_HINT = """Use this app to try the full flow: Inspect → Import → Export
 → `flowbook fixture generate -o tests/fixtures/excel/`
 
 **Sequence:**
-1. **Inspect** — Upload the file above, entity_key `demo/excel`, inspect profile `source`
-2. **Import** — Same file, template `import_excel_region`, creates read/df artifact
+1. **Inspect** — Upload the file above, entity_key `demo/excel`, profile `demo_excel_inspect`
+2. **Import** — Same file, plan `import_excel_region`, creates read/df artifact
 3. **Export** — From Import’s read/df, mapping `detect_region_test`, creates write/bytes
 4. **Results** — Select the row with read/df or write/bytes
 5. **Download** — Use the selected result’s artifact (as Excel or raw)
@@ -441,59 +515,156 @@ def main() -> None:
             st.error(str(e))
 
     with tab_inspect:
-        st.subheader("Inspect Excel (optional)")
-        st.caption("Detect kind and effective date from the uploaded xlsx before import.")
-        file_inspect = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="inspect_file")
-        if file_inspect and st.button("Run inspect", key="inspect_btn"):
+        st.subheader("Inspect (optional)")
+        st.caption(
+            "Detect kind and effective date from file or filename. "
+            "Profile with date_rule requires file upload; else filename only."
+        )
+        input_profile_name = st.text_input(
+            "input_profile_name",
+            value=st.session_state.get("inspect_input_profile", "demo_excel_inspect"),
+            key="inspect_input_profile",
+        )
+        file_inspect = st.file_uploader(
+            "Upload file (optional for filename-only profiles)",
+            type=["xlsx", "xls", "csv"],
+            key="inspect_file",
+        )
+        filename_inspect = st.text_input(
+            "filename (required when file omitted)",
+            value="",
+            placeholder="e.g. eb-details_2026-01.csv",
+            key="inspect_filename",
+        )
+        can_inspect = file_inspect is not None or (filename_inspect and filename_inspect.strip())
+        if can_inspect and st.button("Run inspect", key="inspect_btn"):
             with st.spinner("Inspecting..."):
                 try:
-                    r = requests.post(
-                        api(base, "/inspect"),
-                        files={
+                    data_form = {
+                        "entity_key": entity_key_for_actions,
+                        "input_profile_name": input_profile_name,
+                    }
+                    if file_inspect:
+                        files = {
                             "file": (
                                 file_inspect.name,
                                 file_inspect.getvalue(),
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "application/octet-stream",
                             )
-                        },
-                        data={
-                            "entity_key": entity_key_for_actions,
-                            "input_profile_name": "source",
-                        },
-                        timeout=30,
-                    )
+                        }
+                        r = requests.post(
+                            api(base, "/inspect"),
+                            files=files,
+                            data=data_form,
+                            timeout=30,
+                        )
+                    else:
+                        data_form["filename"] = filename_inspect.strip()
+                        r = requests.post(
+                            api(base, "/inspect"),
+                            data=data_form,
+                            timeout=30,
+                        )
                     r.raise_for_status()
                     data = r.json()
+                    profile = data["profile"]
+                    st.session_state["inspect_profile"] = profile
                     st.success(f"Run ID: `{data['run_id']}`")
-                    st.json(data["profile"])
+                    st.json(profile)
+                    if profile.get("plan_name"):
+                        st.caption(f"plan_name: `{profile['plan_name']}`")
+                    if profile.get("detected_kind"):
+                        st.caption(f"detected_kind: `{profile['detected_kind']}`")
                 except requests.RequestException as e:
                     st.error(str(e))
 
     with tab_import:
-        st.subheader("Import Excel (table extract)")
-        st.caption("Upload xlsx, set entity_key (e.g. demo/excel). Creates read/df artifact.")
-        file = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="import_file")
-        if file and st.button("Run import"):
+        st.subheader("Import (table extract)")
+        st.caption(
+            "Select an Inspect result to use its parameters. Upload file and run Import."
+        )
+        if st.button("Refresh", key="import_inspect_refresh"):
+            st.rerun()
+        inspect_results = _fetch_inspect_results_from_api(
+            base, entity_key_filter_value, exact_match
+        )
+        selected_profile = None
+        selected_row_idx = None
+        if inspect_results:
+            sorted_results = sorted(
+                inspect_results,
+                key=lambda r: r.get("updated_at") or "",
+                reverse=True,
+            )
+            df_rows = [
+                {
+                    "updated_at": _format_datetime_display(r.get("updated_at")),
+                    "run_id": r.get("run_id") or "",
+                    "entity_key": r.get("entity_key") or "",
+                }
+                for r in sorted_results
+            ]
+            df = pd.DataFrame(df_rows)
+            event = st.dataframe(
+                df,
+                key="import_inspect_df",
+                width="stretch",
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+            )
+            if event.selection and event.selection.rows:
+                selected_row_idx = event.selection.rows[0]
+                if 0 <= selected_row_idx < len(sorted_results):
+                    selected_profile = sorted_results[selected_row_idx].get("profile") or {}
+        if selected_profile:
+            plan_name = selected_profile.get("plan_name") or "import_excel_region"
+            ek = entity_key_for_actions
+            if selected_profile.get("effective_date") and selected_profile.get("detected_kind"):
+                ek = f"{selected_profile['effective_date']}/{selected_profile['detected_kind']}"
+            inputs_dict = {
+                "entity_key": ek,
+                "sheet_name": "data",
+                "region_profile_name": "detail_region",
+                "mapping_name": "detect_region_test",
+            }
+            st.caption("Import parameters (from selection)")
+            st.text_input(
+                "plan_name",
+                value=plan_name,
+                disabled=True,
+                key="import_plan_display",
+            )
+            st.json(inputs_dict)
+            inputs_json = json.dumps(inputs_dict)
+        else:
+            if not inspect_results:
+                st.info("No Inspect results. Run Inspect first, then click Refresh.")
+            else:
+                st.info("Select a row to set import parameters.")
+            plan_name = ""
+            inputs_json = "{}"
+        file = st.file_uploader(
+            "Upload file",
+            type=["xlsx", "xls", "csv"],
+            key="import_file",
+        )
+        if file and selected_profile and st.button("Run import"):
             with st.spinner("Importing..."):
                 try:
+                    inputs_dict = json.loads(inputs_json) if inputs_json.strip() else {}
                     r = requests.post(
                         api(base, "/import"),
                         files={
                             "file": (
                                 file.name,
                                 file.getvalue(),
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "application/octet-stream",
                             )
                         },
                         data={
-                            "template_name": "import_excel_region",
-                            "entity_key": entity_key_for_actions,
-                            "input_profile_name": "source",
-                            "sheet_name": "data",
-                            "header_row": 0,
-                            "header_col": 0,
-                            "region_profile_name": "detail_region",
-                            "mapping_name": "detect_region_test",
+                            "plan_name": plan_name,
+                            "inputs": json.dumps(inputs_dict),
                         },
                         timeout=60,
                     )
@@ -646,6 +817,9 @@ def main() -> None:
                     else (e.model_dump() if hasattr(e, "model_dump") else dict(e))
                 )
                 d.pop("meta", None)
+                for k in ("created_at", "updated_at"):
+                    if k in d and d[k]:
+                        d[k] = _format_datetime_display(d[k])
                 display_entries.append(d)
             df = pd.DataFrame(display_entries)
             event = st.dataframe(
@@ -885,8 +1059,8 @@ def main() -> None:
                         "entity_key": e.get("entity_key", ""),
                         "display_name": (e.get("meta") or {}).get("display_name", ""),
                         "desc": (e.get("meta") or {}).get("desc", ""),
-                        "created_at": e.get("created_at", ""),
-                        "updated_at": e.get("updated_at", ""),
+                        "created_at": _format_datetime_display(e.get("created_at")),
+                        "updated_at": _format_datetime_display(e.get("updated_at")),
                     }
                     for e in entries
                 ]
@@ -896,7 +1070,7 @@ def main() -> None:
             st.info("No entities. Click Refresh or run Import to auto-register entities.")
 
     with tab_configs:
-        st.subheader("Configs (input_profiles, mappings, templates, routing)")
+        st.subheader("Configs (input_profiles, mappings, plans, routing)")
         if st.button("Refresh list", key="configs_refresh"):
             try:
                 r = requests.get(api(base, "/configs"), timeout=10)

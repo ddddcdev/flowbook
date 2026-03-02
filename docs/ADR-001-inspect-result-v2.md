@@ -46,8 +46,8 @@ Consumers of the inspect result MUST use only the following keys for the stated 
 
 | Consumer | Keys used | Purpose |
 |----------|-----------|--------|
-| **Routing** | `detected_kind` | Look up template name from routing config (`map[detected_kind]` or `default`). Null means use `default`. |
-| **Plan selection** | (derived from routing) | Plan is chosen by the template name resolved from `detected_kind` via routing. No direct key beyond `detected_kind`. |
+| **Routing** | `detected_kind` | Look up plan name from routing config (`map[detected_kind]` or `default`). Null means use `default`. |
+| **Plan selection** | (derived from routing) | Plan is chosen by the plan name resolved from `detected_kind` via routing. No direct key beyond `detected_kind`. |
 | **Tests / assertions** | `schema_version`, `input_profile_name`, `detected_kind`, `effective_date`, `evidence` | Assert output shape and values. |
 | **Logging (recommended)** | `detected_kind`, `input_profile_name` | On failure, log which profile and kind were used so operators can trace. |
 
@@ -56,4 +56,4 @@ For `inspect_result_v1` (filename-based inspect): same consumer contract; the re
 ## References
 
 - Implementation: `extensions/steps/inspect_excel_bytes_v2.py` (result construction), `extensions/steps/inspect.py` (v1).
-- Routing: resolves template name from `result["detected_kind"]` and routing config (e.g. `test_excel_real_e2e._resolve_template_name`).
+- Routing: resolves plan name from `result["detected_kind"]` and routing config (e.g. `test_excel_real_e2e._resolve_plan_name`).

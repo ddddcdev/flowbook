@@ -66,7 +66,7 @@ def seed_configs_from_dir(config_dir: str | Path) -> int:
 
     from sqlalchemy import text
 
-    from flowbook.core.configs.spec_types import InputProfile, Mapping, PlanTemplate, Routing
+    from flowbook.core.configs.spec_types import InputProfile, Mapping, Plan, Routing
     from flowbook.extensions.postgres.config_store import PostgresConfigStore
     from flowbook.extensions.postgres.config_store import metadata as configs_meta
 
@@ -85,7 +85,7 @@ def seed_configs_from_dir(config_dir: str | Path) -> int:
     type_map: dict[str, Any] = {
         "input_profiles": InputProfile,
         "mappings": Mapping,
-        "templates": PlanTemplate,
+        "plans": Plan,
         "routing": Routing,
     }
 
@@ -111,7 +111,7 @@ def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None)
 
     from sqlalchemy import text
 
-    from flowbook.core.configs.spec_types import InputProfile, Mapping, PlanTemplate, Routing
+    from flowbook.core.configs.spec_types import InputProfile, Mapping, Plan, Routing
     from flowbook.extensions.postgres.config_store import PostgresConfigStore
     from flowbook.extensions.postgres.config_store import metadata as configs_meta
 
@@ -133,7 +133,7 @@ def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None)
     type_map: dict[str, Any] = {
         "input_profiles": InputProfile,
         "mappings": Mapping,
-        "templates": PlanTemplate,
+        "plans": Plan,
         "routing": Routing,
     }
 
@@ -151,7 +151,7 @@ def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None)
 
 
 def seed_config_for_api() -> int:
-    """Seed hardcoded InputProfile and PlanTemplates for API smoke test. Returns exit code."""
+    """Seed hardcoded InputProfile and Plans for API smoke test. Returns exit code."""
     url = os.environ.get("FLOWBOOK_DATABASE_URL")
     if not url:
         print(
@@ -162,7 +162,7 @@ def seed_config_for_api() -> int:
 
     url = _normalize_url(url)
 
-    from flowbook.core.configs.spec_types import InputProfile, PlanTemplate
+    from flowbook.core.configs.spec_types import InputProfile, Plan
     from flowbook.extensions.postgres.config_store import PostgresConfigStore
     from flowbook.extensions.postgres.config_store import metadata as configs_meta
 
@@ -171,7 +171,7 @@ def seed_config_for_api() -> int:
 
     store.put_spec(
         InputProfile,
-        "source",
+        "demo_excel_inspect",
         {
             "kind_rules": [
                 {"pattern": r"^fileA_.*\.xlsx$", "kind": "fileA"},
@@ -181,10 +181,10 @@ def seed_config_for_api() -> int:
         },
         config_id=str(uuid.uuid4()),
     )
-    print("Seeded InputProfile: source")
+    print("Seeded InputProfile: demo_excel_inspect")
 
     store.put_spec(
-        PlanTemplate,
+        Plan,
         "import_excel",
         {
             "plan": {
@@ -204,10 +204,10 @@ def seed_config_for_api() -> int:
         },
         config_id=str(uuid.uuid4()),
     )
-    print("Seeded PlanTemplate: import_excel")
+    print("Seeded Plan: import_excel")
 
     store.put_spec(
-        PlanTemplate,
+        Plan,
         "export_excel",
         {
             "plan": {
@@ -223,7 +223,7 @@ def seed_config_for_api() -> int:
         },
         config_id=str(uuid.uuid4()),
     )
-    print("Seeded PlanTemplate: export_excel")
+    print("Seeded Plan: export_excel")
 
     print("Done. Start the API and use /inspect, /import, /export.")
     return 0

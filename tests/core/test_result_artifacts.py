@@ -13,11 +13,11 @@ from flowbook import (
     Registry,
     register_steps,
 )
-from flowbook.core.configs.spec_types import PlanTemplate
+from flowbook.core.configs.spec_types import Plan
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.executor import ResultArtifactsValidationError
 from flowbook.extensions.steps.add import AddOp
-from flowbook.extensions.steps.plan_from_template import PlanFromTemplateOp
+from flowbook.extensions.steps.load_plan import LoadPlanOp
 
 pytestmark = pytest.mark.e2e
 
@@ -127,14 +127,14 @@ def test_exec_plan_result_artifacts_path_not_produced_raises() -> None:
             run.exec_plan(plan_config=plan_config)
 
 
-def test_plan_from_template_with_result_artifacts_passes_through() -> None:
-    """plan_from_template includes result_artifacts in output; exec merges and runs."""
+def test_load_plan_with_result_artifacts_passes_through() -> None:
+    """load_plan includes result_artifacts in output; exec merges and runs."""
     artifacts_store = InMemoryArtifactsStore()
     config_store = InMemoryConfigStore()
 
-    template_spec = {
+    plan_spec = {
         "plan": {
-            "name": "tmpl_add",
+            "name": "plan_add",
             "steps": [
                 {
                     "name": "add",
@@ -146,9 +146,9 @@ def test_plan_from_template_with_result_artifacts_passes_through() -> None:
         "result_artifacts": [{"step": "add", "key": "sum", "label": "Total"}],
     }
     config_store.put_spec(
-        PlanTemplate,
-        "tmpl_add",
-        template_spec,
+        Plan,
+        "plan_add",
+        plan_spec,
         config_id="test_config_v1",
     )
 
@@ -164,14 +164,14 @@ def test_plan_from_template_with_result_artifacts_passes_through() -> None:
     with engine.create_run() as run:
         run.put_input("x", 2)
         run.put_input("y", 3)
-        run.put_input("template_name", "tmpl_add")
+        run.put_input("plan_name", "plan_add")
 
         planner_config = {
             "steps": [
                 {
                     "name": "planner",
-                    "op": "plan_from_template",
-                    "inputs": {PlanFromTemplateOp.Inputs.TEMPLATE_NAME: "@template_name"},
+                    "op": "load_plan",
+                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
                 }
             ]
         }

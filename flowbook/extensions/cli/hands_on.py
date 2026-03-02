@@ -114,7 +114,7 @@ def run(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     )
                 },
-                data={"entity_key": "demo/excel", "input_profile_name": "source"},
+                data={"entity_key": "demo/excel", "input_profile_name": "demo_excel_inspect"},
                 timeout=30.0,
             )
         r.raise_for_status()
@@ -138,10 +138,12 @@ def run(
                     )
                 },
                 data={
-                    "template_name": "import_excel_region",
-                    "entity_key": "demo/excel",
-                    "sheet_name": "data",
-                    "region_profile_name": "detail_region",
+                    "plan_name": "import_excel_region",
+                    "inputs": json.dumps({
+                        "entity_key": "demo/excel",
+                        "sheet_name": "data",
+                        "region_profile_name": "detail_region",
+                    }),
                 },
                 timeout=60.0,
             )
