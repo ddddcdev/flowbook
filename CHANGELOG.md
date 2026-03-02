@@ -11,18 +11,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - **API extensions**: `flowbook.api` entry point and `discover_api_extensions(app)` for third-party routers (same pattern as `flowbook.cli`).
-- **Inspect API**: `inspect_filename` step (filename-only kind detection with `template_name` from Routing). `inspect_excel_bytes_v2` now returns `template_name`.
+- **Inspect API**: `inspect_filename` step (filename-only kind detection with `plan_name` from Routing). `inspect_excel_bytes_v2` now returns `plan_name`.
 - **Inspect API**: Profile-based behavior—`date_rule` present → `inspect_excel_bytes_v2` (file required); else → `inspect_filename` (file optional, `filename` Form).
-- **Import API**: `read_csv_bytes` step and `import_csv` template. CSV support via `src_csv_bytes`.
+- **Import API**: `read_csv_bytes` step and `import_csv` plan. CSV support via `src_csv_bytes`.
 - **Import API**: Generic `inputs` (JSON Form). File type by extension: `.csv` → `src_csv_bytes`, `.xlsx`/`.xls` → `src_excel_bytes`.
-- **Export API**: `ExportRequest.inputs` and `/export/from_artifact` `template_name` + `inputs` for extensibility.
-- **Streamlit**: Inspect tab—xlsx/xls/csv, optional file, `input_profile_name`, filename input. Import tab—`template_name`, `inputs` JSON, "Apply from Inspect" flow linking.
+- **Export API**: `ExportRequest.inputs` and `/export/from_artifact` `plan_name` + `inputs` for extensibility.
+- **Streamlit**: Inspect tab—xlsx/xls/csv, optional file, `input_profile_name`, filename input. Import tab—`plan_name`, `inputs` JSON, "Apply from Inspect" flow linking.
 
 ### Changed
 
 - **Inspect API**: `file` optional when profile has no `date_rule`. `filename` Form required when file omitted.
 - **Import API**: All params (`entity_key`, `sheet_name`, etc.) moved into `inputs` JSON.
-- **Export API**: `template_name` and `inputs` added to `/export/from_artifact` (defaults preserve existing behavior).
+- **Export API**: `plan_name` and `inputs` added to `/export/from_artifact` (defaults preserve existing behavior).
+
+### Breaking
+
+- Renamed `template_name` → `plan_name` (API, inspect result, routing).
+- Renamed `plan_from_template` → `load_plan` step.
+- Renamed `PlanTemplate` → `Plan` (config kind `plan`). Config dir `templates/` → `plans/`.
+- Renamed InputProfile `source` → `demo_excel_inspect`.
 
 [0.1.0a7]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a7
 
