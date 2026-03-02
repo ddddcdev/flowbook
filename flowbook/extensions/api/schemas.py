@@ -50,6 +50,7 @@ class RunResponse(BaseModel):
 class ExportRequest(BaseModel):
     template_name: str
     bindings: dict[str, str] = {}
+    inputs: dict[str, Any] = {}
 
 
 # ---- /artifacts ----

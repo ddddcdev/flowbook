@@ -2,12 +2,13 @@
 Route: POST /export (JSON), POST /export (Form)
 
 Execute an export plan on existing artifacts (no file upload).
-- JSON: template_name + bindings (logical name -> artifact key)
-- Form: source_artifact_key + mapping_name (uses export_excel_region template)
+- JSON: template_name + bindings + inputs
+- Form: source_artifact_key + template_name + inputs (export_excel_region default)
 """
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form
@@ -44,6 +45,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
 
     - **template_name**: plan template to resolve from config store
     - **bindings**: map of logical name -> full artifact key
+    - **inputs**: optional key-value params for the template
     """
     engine = get_engine()
     with engine.create_run() as session:
@@ -52,6 +54,8 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
                 session.bind(name, artifact_key)
 
             session.put_input("template_name", req.template_name)
+            for k, v in req.inputs.items():
+                session.put_input(k, v)
 
             planner_config: dict[str, Any] = {
                 "name": "export",
@@ -87,6 +91,17 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
             raise to_http_error(e, run_id=session.run_id) from e
 
 
+def _parse_export_inputs(inputs_str: str) -> dict[str, Any]:
+    """Parse inputs JSON. Returns {} on empty or invalid."""
+    if not inputs_str or not inputs_str.strip():
+        return {}
+    try:
+        parsed = json.loads(inputs_str)
+        return parsed if isinstance(parsed, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
 @router.post(
     "/export/from_artifact",
     response_model=RunResponse,
@@ -96,10 +111,12 @@ async def export_from_artifact(
     source_artifact_key: Annotated[str, Form(...)],
     entity_key: Annotated[str, Form()] = "default",
     mapping_name: Annotated[str, Form()] = "detect_region_test",
+    template_name: Annotated[str, Form()] = "export_excel_region",
+    inputs: Annotated[str, Form()] = "{}",
 ) -> RunResponse:
     """
     Run export plan on an existing import: load DataFrame at source_artifact_key,
-    apply mapping, write xlsx. Uses export_excel_region template.
+    apply mapping, write xlsx. template_name and inputs allow extensibility.
     """
     engine = get_engine()
     try:
@@ -114,14 +131,26 @@ async def export_from_artifact(
             )
         ) from None
 
+    inputs_dict = _parse_export_inputs(inputs)
+    entity_key = inputs_dict.get("entity_key", entity_key)
+    if not isinstance(entity_key, str):
+        entity_key = "default"
+
     with engine.create_run(entity_key=entity_key) as session:
         try:
-            session.put_input("template_name", "export_excel_region")
-            session.put_input("artifact_key", source_artifact_key)
-            session.put_input("mapping_name", mapping_name)
-            # Download filename: entity_key-based
             safe_key = entity_key.replace("/", "_").replace("\\", "_")
-            session.put_input("output_filename", f"{safe_key}_exported.xlsx")
+            base_inputs: dict[str, Any] = {
+                "artifact_key": source_artifact_key,
+                "mapping_name": mapping_name,
+                "output_filename": f"{safe_key}_exported.xlsx",
+            }
+            merged = {**base_inputs, **inputs_dict}
+
+            session.put_input("template_name", template_name)
+            for k, v in merged.items():
+                if k == "entity_key":
+                    continue
+                session.put_input(k, v)
 
             planner_config = {
                 "name": "export",
