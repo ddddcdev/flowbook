@@ -441,59 +441,147 @@ def main() -> None:
             st.error(str(e))
 
     with tab_inspect:
-        st.subheader("Inspect Excel (optional)")
-        st.caption("Detect kind and effective date from the uploaded xlsx before import.")
-        file_inspect = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="inspect_file")
-        if file_inspect and st.button("Run inspect", key="inspect_btn"):
+        st.subheader("Inspect (optional)")
+        st.caption(
+            "Detect kind and effective date from file or filename. "
+            "Profile with date_rule requires file upload; else filename only."
+        )
+        input_profile_name = st.text_input(
+            "input_profile_name",
+            value=st.session_state.get("inspect_input_profile", "source"),
+            key="inspect_input_profile",
+        )
+        file_inspect = st.file_uploader(
+            "Upload file (optional for filename-only profiles)",
+            type=["xlsx", "xls", "csv"],
+            key="inspect_file",
+        )
+        filename_inspect = st.text_input(
+            "filename (required when file omitted)",
+            value="",
+            placeholder="e.g. eb-details_2026-01.csv",
+            key="inspect_filename",
+        )
+        can_inspect = file_inspect is not None or (filename_inspect and filename_inspect.strip())
+        if can_inspect and st.button("Run inspect", key="inspect_btn"):
             with st.spinner("Inspecting..."):
                 try:
-                    r = requests.post(
-                        api(base, "/inspect"),
-                        files={
+                    data_form = {
+                        "entity_key": entity_key_for_actions,
+                        "input_profile_name": input_profile_name,
+                    }
+                    if file_inspect:
+                        files = {
                             "file": (
                                 file_inspect.name,
                                 file_inspect.getvalue(),
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "application/octet-stream",
                             )
-                        },
-                        data={
-                            "entity_key": entity_key_for_actions,
-                            "input_profile_name": "source",
-                        },
-                        timeout=30,
-                    )
+                        }
+                        r = requests.post(
+                            api(base, "/inspect"),
+                            files=files,
+                            data=data_form,
+                            timeout=30,
+                        )
+                    else:
+                        data_form["filename"] = filename_inspect.strip()
+                        r = requests.post(
+                            api(base, "/inspect"),
+                            data=data_form,
+                            timeout=30,
+                        )
                     r.raise_for_status()
                     data = r.json()
+                    st.session_state["inspect_profile"] = data["profile"]
                     st.success(f"Run ID: `{data['run_id']}`")
-                    st.json(data["profile"])
+                    profile = data["profile"]
+                    st.json(profile)
+                    if profile.get("template_name"):
+                        st.caption(f"template_name: `{profile['template_name']}`")
+                    if profile.get("detected_kind"):
+                        st.caption(f"detected_kind: `{profile['detected_kind']}`")
                 except requests.RequestException as e:
                     st.error(str(e))
 
     with tab_import:
-        st.subheader("Import Excel (table extract)")
-        st.caption("Upload xlsx, set entity_key (e.g. demo/excel). Creates read/df artifact.")
-        file = st.file_uploader("Upload xlsx", type=["xlsx", "xls"], key="import_file")
+        st.subheader("Import (table extract)")
+        st.caption(
+            "Upload xlsx/xls/csv. template_name and inputs (entity_key, sheet_name, etc.) "
+            "can be applied from Inspect result."
+        )
+        inspect_profile = st.session_state.get("inspect_profile") or {}
+        default_template = inspect_profile.get("template_name") or "import_excel_region"
+        template_name = st.text_input(
+            "template_name",
+            value=st.session_state.get("import_template_name", default_template),
+            key="import_template_name",
+        )
+        default_inputs = inspect_profile.get("entity_key") or entity_key_for_actions
+        if inspect_profile.get("effective_date") and inspect_profile.get("detected_kind"):
+            eff = inspect_profile["effective_date"]
+            kind = inspect_profile["detected_kind"]
+            default_inputs = f"{eff}/{kind}"
+        default_inputs_json = json.dumps(
+            {
+                "entity_key": default_inputs,
+                "sheet_name": "data",
+                "region_profile_name": "detail_region",
+                "mapping_name": "detect_region_test",
+            },
+            indent=2,
+        )
+        inputs_json = st.text_area(
+            "inputs (JSON)",
+            value=st.session_state.get("import_inputs_json", default_inputs_json),
+            height=120,
+            key="import_inputs",
+        )
+        if st.button("Apply from Inspect", key="import_apply_inspect"):
+            if inspect_profile:
+                tmpl = inspect_profile.get("template_name") or "import_excel_region"
+                ek = entity_key_for_actions
+                if inspect_profile.get("effective_date") and inspect_profile.get("detected_kind"):
+                    ek = f"{inspect_profile['effective_date']}/{inspect_profile['detected_kind']}"
+                st.session_state["import_template_name"] = tmpl
+                st.session_state["import_inputs_json"] = json.dumps(
+                    {
+                        "entity_key": ek,
+                        "sheet_name": "data",
+                        "region_profile_name": "detail_region",
+                        "mapping_name": "detect_region_test",
+                    },
+                    indent=2,
+                )
+                st.rerun()
+            else:
+                st.warning("Run Inspect first to apply its result.")
+        file = st.file_uploader(
+            "Upload file",
+            type=["xlsx", "xls", "csv"],
+            key="import_file",
+        )
         if file and st.button("Run import"):
             with st.spinner("Importing..."):
                 try:
+                    inputs_dict = {}
+                    try:
+                        inputs_dict = json.loads(inputs_json) if inputs_json.strip() else {}
+                    except json.JSONDecodeError:
+                        st.error("Invalid inputs JSON")
+                        raise
                     r = requests.post(
                         api(base, "/import"),
                         files={
                             "file": (
                                 file.name,
                                 file.getvalue(),
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "application/octet-stream",
                             )
                         },
                         data={
-                            "template_name": "import_excel_region",
-                            "entity_key": entity_key_for_actions,
-                            "input_profile_name": "source",
-                            "sheet_name": "data",
-                            "header_row": 0,
-                            "header_col": 0,
-                            "region_profile_name": "detail_region",
-                            "mapping_name": "detect_region_test",
+                            "template_name": template_name,
+                            "inputs": json.dumps(inputs_dict),
                         },
                         timeout=60,
                     )
