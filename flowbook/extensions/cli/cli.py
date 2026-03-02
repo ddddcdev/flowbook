@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -175,16 +176,45 @@ def register_cli(app: Typer) -> None:
                 return parent
         return Path.cwd()
 
+    def _kill_processes_on_port(port: int) -> None:
+        """Kill any process listening on the given port (force port availability)."""
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                for pid_str in result.stdout.strip().split():
+                    try:
+                        subprocess.run(
+                            ["kill", "-9", pid_str],
+                            capture_output=True,
+                            timeout=2,
+                        )
+                    except (ValueError, subprocess.TimeoutExpired):
+                        pass
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
     @api_app.callback(invoke_without_command=True)
     def api_default(
         ctx: Context,  # pyright: ignore[reportInvalidTypeForm]
         host: str = t.Option("127.0.0.1", "--host", "-H", help="Bind host"),
         port: int = t.Option(8000, "--port", "-p", help="Bind port"),
         reload: bool = t.Option(True, "--reload/--no-reload", help="Enable auto-reload"),
+        kill_port: bool = t.Option(
+            True,
+            "--kill-port/--no-kill-port",
+            help="Kill processes on port before starting (default: on)",
+        ),
     ) -> None:
         """Run flowbook API server (uvicorn). Use 'api up' / 'api down' for Docker."""
         if ctx.invoked_subcommand is not None:
             return
+        if kill_port:
+            _kill_processes_on_port(port)
         try:
             import uvicorn
         except ImportError:
