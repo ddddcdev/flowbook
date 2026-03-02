@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0a7] - 2026-03-02
+
 ### Added
 
 - **API extensions**: `flowbook.api` entry point and `discover_api_extensions(app)` for third-party routers (same pattern as `flowbook.cli`).
@@ -21,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Inspect API**: `file` optional when profile has no `date_rule`. `filename` Form required when file omitted.
 - **Import API**: All params (`entity_key`, `sheet_name`, etc.) moved into `inputs` JSON.
 - **Export API**: `template_name` and `inputs` added to `/export/from_artifact` (defaults preserve existing behavior).
+
+[0.1.0a7]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a7
 
 ## [0.1.0a6] - 2026-03-01
 
