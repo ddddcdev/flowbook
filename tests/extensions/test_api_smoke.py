@@ -106,6 +106,64 @@ def client() -> TestClient:
     return TestClient(app)
 
 
+@pytest.fixture()
+def client_in_memory(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    """Force in-memory store for tests that verify empty runs/results/entities.
+    Unsets FLOWBOOK_DATABASE_URL so Postgres does not persist data across tests."""
+    monkeypatch.delenv("FLOWBOOK_DATABASE_URL", raising=False)
+    get_engine.cache_clear()
+    engine = get_engine()
+    assert engine.config_store is not None
+    engine.config_store.put_spec(
+        InputProfile,
+        "demo_excel_inspect",
+        {
+            "kind_rules": [{"pattern": r"^fileA_.*\.xlsx$", "kind": "fileA"}],
+            "inspect_step_name": "inspect_excel_bytes_v2",
+        },
+        config_id=str(uuid.uuid4()),
+    )
+    engine.config_store.put_spec(
+        Plan,
+        "import_excel",
+        {
+            "plan": {
+                "name": "import_excel",
+                "steps": [
+                    {
+                        "name": "read",
+                        "op": "read_excel_bytes",
+                        "inputs": {
+                            "src_excel_bytes": "@src_excel_bytes",
+                            "sheet": "@sheet_name",
+                            "header": "@header_row",
+                        },
+                    }
+                ],
+            }
+        },
+        config_id=str(uuid.uuid4()),
+    )
+    engine.config_store.put_spec(
+        Plan,
+        "export_excel",
+        {
+            "plan": {
+                "name": "export_excel",
+                "steps": [
+                    {
+                        "name": "write",
+                        "op": "write_excel",
+                        "inputs": {"df": "@in_key"},
+                    }
+                ],
+            }
+        },
+        config_id=str(uuid.uuid4()),
+    )
+    return TestClient(app)
+
+
 # ---- helpers ----
 
 
@@ -196,6 +254,32 @@ def test_inspect_unknown_profile_returns_error(client: TestClient):
     assert r.status_code == 400
     detail = r.json()["detail"]
     assert "reason" in detail
+
+
+def test_configs_inspectable_filter(client: TestClient):
+    """inspectable=true filters input_profiles to those with inspect_step_name."""
+    engine = get_engine()
+    assert engine.config_store is not None
+    engine.config_store.put_spec(
+        InputProfile,
+        "detail_region",
+        {"kind_rules": [{"pattern": ".*", "kind": "detail"}], "column_hints": ["A", "B"]},
+        config_id=str(uuid.uuid4()),
+    )
+
+    r_all = client.get("/configs", params={"kind": "input_profile"})
+    assert r_all.status_code == 200
+    names_all = [c["name"] for c in r_all.json()["configs"]]
+    assert "demo_excel_inspect" in names_all
+    assert "detail_region" in names_all
+
+    r_inspectable = client.get(
+        "/configs", params={"kind": "input_profile", "inspectable": "true"}
+    )
+    assert r_inspectable.status_code == 200
+    names_inspectable = [c["name"] for c in r_inspectable.json()["configs"]]
+    assert "demo_excel_inspect" in names_inspectable
+    assert "detail_region" not in names_inspectable
 
 
 def test_inspect_profile_without_inspect_step_name_returns_error(client: TestClient):
@@ -319,36 +403,36 @@ def test_artifacts_get_not_found(client: TestClient):
     assert "reason" in detail
 
 
-def test_runs_list_empty_with_in_memory_store(client: TestClient):
+def test_runs_list_empty_with_in_memory_store(client_in_memory: TestClient):
     """In-memory store returns empty list for runs."""
-    r = client.get("/runs")
+    r = client_in_memory.get("/runs")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 
 
-def test_results_list_empty_with_in_memory_store(client: TestClient):
+def test_results_list_empty_with_in_memory_store(client_in_memory: TestClient):
     """In-memory store returns empty list for results."""
-    r = client.get("/results")
+    r = client_in_memory.get("/results")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 
 
-def test_results_get_404_with_in_memory_store(client: TestClient):
+def test_results_get_404_with_in_memory_store(client_in_memory: TestClient):
     """In-memory store returns 404 for result get."""
-    r = client.get("/results/run1/entity1")
+    r = client_in_memory.get("/results/run1/entity1")
     assert r.status_code == 404
 
 
-def test_latest_results_list_empty_with_in_memory_store(client: TestClient):
+def test_latest_results_list_empty_with_in_memory_store(client_in_memory: TestClient):
     """In-memory store returns empty list for latest_results."""
-    r = client.get("/latest_results")
+    r = client_in_memory.get("/latest_results")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 
 
-def test_entities_list_empty_with_in_memory_store(client: TestClient):
+def test_entities_list_empty_with_in_memory_store(client_in_memory: TestClient):
     """In-memory store returns empty list for entities."""
-    r = client.get("/entities")
+    r = client_in_memory.get("/entities")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 

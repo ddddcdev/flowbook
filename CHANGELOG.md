@@ -14,11 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **kind_rule.plan_name**: When a kind_rule has `plan_name`, use it directly; else resolve from EntityPlanMap.
 - **match_mode**: `InputProfile.match_mode` and `KindRule.match_mode` (`"start"` | `"search"`). `"search"` uses `re.search`; default `"start"` uses `re.match`.
 - **GET /configs?kind=**: Optional `kind` query parameter to filter config list (e.g. `?kind=input_profile`).
+- **GET /configs?inspectable=true**: When `kind=input_profile`, return only profiles with `inspect_step_name`. Inspect tab uses this to avoid region-only profiles (e.g. `detail_region`).
 - **Streamlit**: Inspect tab uses selectbox populated from `GET /configs?kind=input_profile`. Two demo profiles: `demo_excel_inspect` (Excel, file required), `demo_csv_inspect` (CSV, filename only). entity_key from inspect result uses `detected_kind` (entity_key = kind).
 
 ### Changed
 
-- **entity_key = kind**: Demo configs use `demo/excel` and `demo/csv` as kinds. EntityPlanMap maps these to plans. Date passed via inputs, not entity_key.
+- **entity_key = kind**: Demo configs use `demo/excel`, `demo/detail`, `demo/csv` as kinds. EntityPlanMap maps these to plans. Date passed via inputs, not entity_key.
+- **Entity seed**: demo/detail, demo/csv added to schema, initdb, db reset. Aligned with EntityPlanMap.
 - **Streamlit Import**: When selecting an inspect result, entity_key is `detected_kind` (not `effective_date/detected_kind`).
 
 ## [0.1.0a7] - 2026-03-02

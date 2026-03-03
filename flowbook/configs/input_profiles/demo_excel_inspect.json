@@ -1,5 +1,6 @@
 {
   "kind_rules": [
+    { "pattern": "^test_detect_region_input\\.xlsx$", "kind": "demo/detail" },
     { "pattern": "^fileA_.*\\.xlsx$", "kind": "demo/excel" },
     { "pattern": "^real_input\\.xlsx$", "kind": "demo/excel" },
     { "pattern": "^demo_input\\.xlsx$", "kind": "demo/excel" },

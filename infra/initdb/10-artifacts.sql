@@ -90,9 +90,11 @@ BEFORE UPDATE ON entities
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
--- Seed initial entities
+-- Seed initial entities (aligned with EntityPlanMap: demo/excel, demo/detail, demo/csv)
 INSERT INTO entities (entity_key, meta, created_at, updated_at)
 VALUES
   ('demo', '{"display_name": "Demo", "desc": "Top-level demo scope"}'::jsonb, now(), now()),
-  ('demo/excel', '{"display_name": "Demo Excel", "desc": "Excel import/export demo"}'::jsonb, now(), now())
+  ('demo/excel', '{"display_name": "Demo Excel", "desc": "Excel import/export demo"}'::jsonb, now(), now()),
+  ('demo/detail', '{"display_name": "Demo Detail", "desc": "Excel region detection (detail-style)"}'::jsonb, now(), now()),
+  ('demo/csv', '{"display_name": "Demo CSV", "desc": "CSV import"}'::jsonb, now(), now())
 ON CONFLICT (entity_key) DO NOTHING;
