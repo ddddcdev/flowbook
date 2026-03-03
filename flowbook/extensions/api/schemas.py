@@ -42,6 +42,7 @@ class RunResponse(BaseModel):
     artifacts_written: list[str] = []
     errors: list[str] = []
     steps: list[dict[str, Any]] = []
+    warnings: list[str] = []
 
 
 # ---- /export ----

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **API warnings**: `RunResponse.warnings` added. POST /import, POST /export, POST /export/from_artifact return `check_warn` (and other step `_warnings`) aggregated in response. When upserting results, warnings are merged into `meta.warnings`; GET /results and /latest_results return them via `meta`.
 - **results.meta**: `meta` JSONB column on results table. `create_run(meta=)` accepts optional meta dict. Import API passes `inputs.meta` to `create_run`.
 - **EntityPlanMap**: Renamed config kind `Routing` → `EntityPlanMap`. Config dir `routing/` → `entity_plan_maps/`. `InputProfile.entity_plan_map_name` selects which map to use (default: `"default"`).
 - **InputProfile.inspect_step_name**: Required. Select inspect step (`inspect_excel_bytes_v2` or `inspect_filename`). No inference from `date_rule`.

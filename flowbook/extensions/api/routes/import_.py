@@ -33,6 +33,7 @@ def _run_info_to_response(info: Any) -> RunResponse:
             }
             for s in info.steps
         ],
+        warnings=list(info.warnings),
     )
 
 

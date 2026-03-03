@@ -35,6 +35,7 @@ def _run_info_to_response(info: Any) -> RunResponse:
             }
             for s in info.steps
         ],
+        warnings=list(info.warnings),
     )
 
 
@@ -86,6 +87,7 @@ def export_artifacts(req: ExportRequest) -> RunResponse:
                     }
                     for s in exec_info.steps
                 ],
+                warnings=list(exec_info.warnings),
             )
         except Exception as e:
             raise to_http_error(e, run_id=session.run_id) from e
