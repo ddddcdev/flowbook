@@ -46,19 +46,28 @@ async def inspect(
     except KeyError as e:
         raise to_http_error(ValueError(f"input_profile '{input_profile_name}' not found")) from e
 
-    has_date_rule = bool(input_profile.get("date_rule"))
+    inspect_step = input_profile.get("inspect_step_name")
+    if not inspect_step:
+        raise to_http_error(
+            ValueError(
+                f"input_profile '{input_profile_name}' must have 'inspect_step_name' "
+                "(e.g. 'inspect_excel_bytes_v2' or 'inspect_filename')"
+            )
+        ) from None
+
+    needs_file = inspect_step == "inspect_excel_bytes_v2"
     contents: bytes = b""
 
-    if has_date_rule:
+    if needs_file:
         if file is None:
             raise to_http_error(
-                ValueError("Profile has date_rule; file upload is required")
+                ValueError("Profile requires file upload (inspect_excel_bytes_v2)")
             ) from None
         contents = await file.read()
         fn = file.filename or "unknown.xlsx"
         if not (fn.lower().endswith(".xlsx") or fn.lower().endswith(".xls")):
             raise to_http_error(
-                ValueError("Profile with date_rule requires Excel (.xlsx, .xls)")
+                ValueError("File must be Excel (.xlsx, .xls) for this profile")
             ) from None
     else:
         if file is not None:
@@ -75,14 +84,14 @@ async def inspect(
             session.put_input("input_profile_name", input_profile_name)
             session.put_input("src_excel_filename", fn)
 
-            if has_date_rule:
+            if needs_file:
                 session.put_input_bytes("src_excel_bytes", contents)
                 config = {
                     "name": "inspect",
                     "steps": [
                         {
                             "name": "inspect",
-                            "op": "inspect_excel_bytes_v2",
+                            "op": inspect_step,
                             "inputs": {
                                 "input_profile_name": "@input_profile_name",
                                 "src_excel_bytes": "@src_excel_bytes",
@@ -98,7 +107,7 @@ async def inspect(
                     "steps": [
                         {
                             "name": "inspect",
-                            "op": "inspect_filename",
+                            "op": inspect_step,
                             "inputs": {
                                 "input_profile_name": "@input_profile_name",
                                 "filename": "@filename",

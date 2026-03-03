@@ -1,0 +1,6 @@
+{
+  "kind_rules": [
+    { "pattern": ".*\\.csv$", "kind": "demo/csv" }
+  ],
+  "inspect_step_name": "inspect_filename"
+}

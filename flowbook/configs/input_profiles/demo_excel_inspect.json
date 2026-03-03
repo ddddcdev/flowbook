@@ -1,9 +1,10 @@
 {
   "kind_rules": [
-    { "pattern": "^fileA_.*\\.xlsx$", "kind": "fileA" },
-    { "pattern": "^real_input\\.xlsx$", "kind": "fileA" },
-    { "pattern": "^demo_input\\.xlsx$", "kind": "fileA" },
-    { "pattern": ".*\\.xlsx$", "kind": "fileA" }
+    { "pattern": "^fileA_.*\\.xlsx$", "kind": "demo/excel" },
+    { "pattern": "^real_input\\.xlsx$", "kind": "demo/excel" },
+    { "pattern": "^demo_input\\.xlsx$", "kind": "demo/excel" },
+    { "pattern": ".*\\.xlsx$", "kind": "demo/excel" }
   ],
-  "date_rule": { "sheet": "meta", "cell": "B2" }
+  "date_rule": { "sheet": "meta", "cell": "B2" },
+  "inspect_step_name": "inspect_excel_bytes_v2"
 }

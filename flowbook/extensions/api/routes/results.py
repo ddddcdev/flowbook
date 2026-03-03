@@ -51,6 +51,7 @@ def _dict_to_entry(d: dict) -> ResultEntry:
         status=d["status"],
         result_artifacts=_result_artifacts_to_entries(d.get("result_artifacts")),
         config_json=d.get("config_json"),
+        meta=d.get("meta") or {},
         created_at=d.get("created_at"),
         updated_at=d.get("updated_at"),
     )
@@ -98,6 +99,7 @@ def get_result(run_id: str, entity_key: str) -> ResultGetResponse:
             status=row["status"],
             result_artifacts=_result_artifacts_to_entries(row.get("result_artifacts")),
             config_json=row.get("config_json"),
+            meta=row.get("meta") or {},
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
         )
@@ -148,6 +150,7 @@ def get_latest_result(entity_key: str) -> LatestResultGetResponse:
             status=row["status"],
             result_artifacts=_result_artifacts_to_entries(row.get("result_artifacts")),
             config_json=row.get("config_json"),
+            meta=row.get("meta") or {},
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
         )

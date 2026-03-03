@@ -55,7 +55,8 @@ def client() -> TestClient:
         {
             "kind_rules": [
                 {"pattern": r"^fileA_.*\.xlsx$", "kind": "fileA"},
-            ]
+            ],
+            "inspect_step_name": "inspect_excel_bytes_v2",
         },
         config_id=str(uuid.uuid4()),
     )
@@ -195,6 +196,29 @@ def test_inspect_unknown_profile_returns_error(client: TestClient):
     assert r.status_code == 400
     detail = r.json()["detail"]
     assert "reason" in detail
+
+
+def test_inspect_profile_without_inspect_step_name_returns_error(client: TestClient):
+    """Profile without inspect_step_name must return 400 (no inference from date_rule)."""
+    engine = get_engine()
+    assert engine.config_store is not None
+    engine.config_store.put_spec(
+        InputProfile,
+        "no_inspect_step",
+        {"kind_rules": [{"pattern": r".*\.xlsx$", "kind": "fileA"}]},
+        config_id=str(uuid.uuid4()),
+    )
+
+    xlsx = _make_xlsx_bytes()
+    r = client.post(
+        "/inspect",
+        files={"file": _upload_file("fileA_sample.xlsx", xlsx)},
+        data={"input_profile_name": "no_inspect_step"},
+    )
+
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert "inspect_step_name" in str(detail)
 
 
 # ---- import ----

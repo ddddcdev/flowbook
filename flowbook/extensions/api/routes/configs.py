@@ -6,7 +6,7 @@ List and get config specs from the Postgres config store.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from sqlalchemy import text
 
 from flowbook.extensions.api.deps import get_engine
@@ -24,22 +24,36 @@ def _config_store():
 
 
 @router.get("", response_model=ConfigsListResponse, summary="List configs")
-def list_configs() -> ConfigsListResponse:
-    """List all config (kind, name) entries."""
+def list_configs(
+    kind: str | None = Query(None, description="Filter by config kind (e.g. input_profile)"),
+) -> ConfigsListResponse:
+    """List config (kind, name) entries. Optional kind filter."""
     store = _config_store()
     try:
         if hasattr(store, "engine") and getattr(store, "engine", None) is not None:
             engine = store.engine  # type: ignore[reportAttributeAccessIssue]
             with engine.begin() as conn:
-                rows = conn.execute(
-                    text(
-                        "SELECT kind, name FROM configs WHERE is_active = true ORDER BY kind, name"
-                    )
-                ).fetchall()
+                if kind:
+                    rows = conn.execute(
+                        text(
+                            "SELECT kind, name FROM configs "
+                            "WHERE is_active = true AND kind = :kind ORDER BY kind, name"
+                        ),
+                        {"kind": kind},
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        text(
+                            "SELECT kind, name FROM configs "
+                            "WHERE is_active = true ORDER BY kind, name"
+                        )
+                    ).fetchall()
             pairs = [(r[0], r[1]) for r in rows]
         else:
             # InMemoryConfigStore
             pairs = list(getattr(store, "_specs", {}).keys())
+            if kind:
+                pairs = [(k, n) for k, n in pairs if k == kind]
             pairs.sort()
         return ConfigsListResponse(configs=[ConfigEntry(kind=k, name=n) for k, n in pairs])
     except Exception as e:

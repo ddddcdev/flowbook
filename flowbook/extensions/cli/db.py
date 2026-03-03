@@ -66,7 +66,7 @@ def seed_configs_from_dir(config_dir: str | Path) -> int:
 
     from sqlalchemy import text
 
-    from flowbook.core.configs.spec_types import InputProfile, Mapping, Plan, Routing
+    from flowbook.core.configs.spec_types import EntityPlanMap, InputProfile, Mapping, Plan
     from flowbook.extensions.postgres.config_store import PostgresConfigStore
     from flowbook.extensions.postgres.config_store import metadata as configs_meta
 
@@ -86,7 +86,7 @@ def seed_configs_from_dir(config_dir: str | Path) -> int:
         "input_profiles": InputProfile,
         "mappings": Mapping,
         "plans": Plan,
-        "routing": Routing,
+        "entity_plan_maps": EntityPlanMap,
     }
 
     total = _seed_configs_from_dir_into_store(store, root, type_map)
@@ -111,7 +111,7 @@ def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None)
 
     from sqlalchemy import text
 
-    from flowbook.core.configs.spec_types import InputProfile, Mapping, Plan, Routing
+    from flowbook.core.configs.spec_types import EntityPlanMap, InputProfile, Mapping, Plan
     from flowbook.extensions.postgres.config_store import PostgresConfigStore
     from flowbook.extensions.postgres.config_store import metadata as configs_meta
 
@@ -134,7 +134,7 @@ def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None)
         "input_profiles": InputProfile,
         "mappings": Mapping,
         "plans": Plan,
-        "routing": Routing,
+        "entity_plan_maps": EntityPlanMap,
     }
 
     total = _seed_configs_from_dir_into_store(store, bundled, type_map)

@@ -21,16 +21,20 @@ ALTER TABLE runs ADD COLUMN IF NOT EXISTS config_json text;
 -- results: canonical result per (run_id, entity_key)
 -- result_artifacts_json: JSON array of {path, label}. When plan has no result_artifacts,
 -- last step's first output is stored as [{"path": "step/key", "label": null}].
+-- meta: jsonb for target_month, effective_date, etc. (caller-defined keys).
 CREATE TABLE IF NOT EXISTS results (
   run_id      text NOT NULL REFERENCES runs(run_id),
   entity_key  text NOT NULL,
   result_artifacts_json text,
   status      text NOT NULL,
   config_json  text,
+  meta        jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id, entity_key)
 );
+
+ALTER TABLE results ADD COLUMN IF NOT EXISTS meta jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 -- artifacts: composite PK (run_id, entity_key, artifact_path)
 -- key format: {run_id}/{entity_key}/{artifact_path}

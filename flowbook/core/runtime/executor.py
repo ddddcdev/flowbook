@@ -184,9 +184,11 @@ def _upsert_result(
     run_config_json: str | None = None,
     entity_config_json: str | None = None,
     result_artifacts: list[dict[str, str | None]] | None = None,
+    meta: dict | None = None,
 ) -> None:
     """Upsert results if store supports it.
-    result_artifacts: list of {path, label} for main results. Always set when run has outputs."""
+    result_artifacts: list of {path, label} for main results. Always set when run has outputs.
+    meta: optional JSONB for target_month, effective_date, etc."""
     upsert = getattr(store, "upsert_result", None)
     if callable(upsert):
         upsert(
@@ -196,6 +198,7 @@ def _upsert_result(
             run_config_json=run_config_json,
             entity_config_json=entity_config_json,
             result_artifacts=result_artifacts,
+            meta=meta,
         )
 
 
@@ -219,6 +222,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
         "running",
         run_config_json=ctx.run_config_json,
         entity_config_json=ctx.entity_config_json,
+        meta=ctx.meta,
     )
 
     try:
@@ -323,6 +327,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
             run_config_json=ctx.run_config_json,
             entity_config_json=ctx.entity_config_json,
             result_artifacts=result_artifacts_list,
+            meta=ctx.meta,
         )
         info.status = "succeeded"
         primary_path = result_artifacts_list[0]["path"] if result_artifacts_list else None
@@ -358,6 +363,7 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
             run_config_json=ctx.run_config_json,
             entity_config_json=ctx.entity_config_json,
             result_artifacts=result_artifacts_list,
+            meta=ctx.meta,
         )
         failed_step = info.steps[-1].name if info.steps else None
         primary_path = result_artifacts_list[0]["path"] if result_artifacts_list else None

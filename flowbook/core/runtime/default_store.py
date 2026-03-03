@@ -48,6 +48,7 @@ class DefaultRunStore(RunStore):
         run_config_json: str | None = None,
         entity_config_json: str | None = None,
         result_artifacts: list[dict[str, str | None]] | None = None,
+        meta: dict | None = None,
     ) -> None:
         """Upsert results if underlying artifacts store supports it."""
         upsert = getattr(self.artifacts, "upsert_result", None)
@@ -59,4 +60,5 @@ class DefaultRunStore(RunStore):
                 run_config_json=run_config_json,
                 entity_config_json=entity_config_json,
                 result_artifacts=result_artifacts,
+                meta=meta,
             )

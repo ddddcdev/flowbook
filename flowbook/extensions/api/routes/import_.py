@@ -71,8 +71,11 @@ async def import_file(
     entity_key = inputs_dict.get("entity_key", "default")
     if not isinstance(entity_key, str):
         entity_key = "default"
+    run_meta = inputs_dict.pop("meta", None)
+    if run_meta is not None and not isinstance(run_meta, dict):
+        run_meta = None
 
-    with engine.create_run(entity_key=entity_key) as session:
+    with engine.create_run(entity_key=entity_key, meta=run_meta) as session:
         try:
             contents = await file.read()
             filename = file.filename or ""

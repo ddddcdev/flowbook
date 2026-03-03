@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from flowbook.core.configs.spec_types import InputProfile, Routing
+from flowbook.core.configs.spec_types import EntityPlanMap, InputProfile
 from flowbook.core.registry.base_op import BaseOp
 from flowbook.core.registry.spec import InputsBase, OutputsBase
 from flowbook.core.registry.step_decorator import register_from_steps, step
@@ -62,6 +62,8 @@ class InspectFilenameKindOp(BaseOp):
         if kind_rules is None:
             raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
 
+        profile_match_mode = config.get("match_mode") or "start"
+
         path = Path(path_str)
         filename = path.name
         detected_kind = None
@@ -69,7 +71,9 @@ class InspectFilenameKindOp(BaseOp):
         for rule in kind_rules:
             pattern = rule.get("pattern")
             kind = rule.get("kind")
-            if pattern and kind and re.match(pattern, filename):
+            rule_mode = rule.get("match_mode") or profile_match_mode
+            matcher = re.search if rule_mode == "search" else re.match
+            if pattern and kind and matcher(pattern, filename):
                 detected_kind = kind
                 matched_pattern = pattern
                 break
@@ -88,21 +92,26 @@ class InspectFilenameKindOp(BaseOp):
         return {self.Outputs.RESULT: result}
 
 
-def _resolve_plan_name(store: RunStore, detected_kind: str | None) -> str | None:
-    """Resolve plan_name from Routing config (default profile)."""
+def _resolve_plan_name(
+    store: RunStore,
+    detected_kind: str | None,
+    entity_plan_map_name: str | None = None,
+) -> str | None:
+    """Resolve plan_name from EntityPlanMap config. Uses entity_plan_map_name or 'default'."""
+    map_name = entity_plan_map_name or "default"
     try:
-        routing = store.configs.get_spec(Routing, "default")
+        epm = store.configs.get_spec(EntityPlanMap, map_name)
     except KeyError:
         return None
-    kind_map = routing.get("map") or {}
+    kind_map = epm.get("map") or {}
     if detected_kind and detected_kind in kind_map:
         return kind_map[detected_kind]
-    return routing.get("default")
+    return epm.get("default")
 
 
 @step("inspect_filename")
 class InspectFilenameOp(BaseOp):
-    """Identifies input kind from filename only. Returns plan_name from routing."""
+    """Identifies input kind from filename only. Returns plan_name from EntityPlanMap."""
 
     class Inputs(InputsBase):
         INPUT_PROFILE_NAME = "input_profile_name"
@@ -122,17 +131,27 @@ class InspectFilenameOp(BaseOp):
         if kind_rules is None:
             raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
 
+        profile_match_mode = config.get("match_mode") or "start"
+
         detected_kind = None
         matched_pattern = None
+        matched_rule: dict[str, Any] | None = None
         for rule in kind_rules:
             pattern = rule.get("pattern")
             kind = rule.get("kind")
-            if pattern and kind and re.match(pattern, filename):
+            rule_mode = rule.get("match_mode") or profile_match_mode
+            matcher = re.search if rule_mode == "search" else re.match
+            if pattern and kind and matcher(pattern, filename):
                 detected_kind = kind
                 matched_pattern = pattern
+                matched_rule = rule
                 break
 
-        plan_name = _resolve_plan_name(store, detected_kind)
+        if matched_rule and matched_rule.get("plan_name"):
+            plan_name = matched_rule["plan_name"]
+        else:
+            entity_plan_map_name = config.get("entity_plan_map_name")
+            plan_name = _resolve_plan_name(store, detected_kind, entity_plan_map_name)
 
         result = {
             "schema_version": "inspect_filename_v1",
