@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0a8] - 2026-03-03
+
 ### Added
 
 - **API warnings**: `RunResponse.warnings` added. POST /import, POST /export, POST /export/from_artifact return `check_warn` (and other step `_warnings`) aggregated in response. When upserting results, warnings are merged into `meta.warnings`; GET /results and /latest_results return them via `meta`.
@@ -23,6 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **entity_key = kind**: Demo configs use `demo/excel`, `demo/detail`, `demo/csv` as kinds. EntityPlanMap maps these to plans. Date passed via inputs, not entity_key.
 - **Entity seed**: demo/detail, demo/csv added to schema, initdb, db reset. Aligned with EntityPlanMap.
 - **Streamlit Import**: When selecting an inspect result, entity_key is `detected_kind` (not `effective_date/detected_kind`).
+
+### Breaking
+
+- **EntityPlanMap**: Config kind `Routing` → `EntityPlanMap`. Config dir `routing/` → `entity_plan_maps/`. Migrate config dir and update kind references.
+- **InputProfile.inspect_step_name**: Now required. No inference from `date_rule`. Existing profiles must add `inspect_step_name` explicitly.
 
 ## [0.1.0a7] - 2026-03-02
 
@@ -49,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `PlanTemplate` → `Plan` (config kind `plan`). Config dir `templates/` → `plans/`.
 - Renamed InputProfile `source` → `demo_excel_inspect`.
 
+[0.1.0a8]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a8
 [0.1.0a7]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a7
 
 ## [0.1.0a6] - 2026-03-01
