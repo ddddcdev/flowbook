@@ -39,6 +39,8 @@ class KindRule(TypedDict, total=False):
 
     pattern: str
     kind: str
+    plan_name: str
+    match_mode: str  # "start" (re.match) or "search" (re.search). Default "start".
 
 
 class DateRule(TypedDict, total=False):
@@ -56,6 +58,9 @@ class InputProfile(ConfigSpecKind):
 
         kind_rules: list[KindRule]
         date_rule: NotRequired[DateRule | dict[str, Any]]
+        entity_plan_map_name: NotRequired[str]
+        inspect_step_name: NotRequired[str]
+        match_mode: NotRequired[str]  # "start" or "search". Profile-level default.
 
 
 class Mapping(ConfigSpecKind):
@@ -97,11 +102,15 @@ class LookupTable(ConfigSpecKind):
         artifact_key: str
 
 
-class Routing(ConfigSpecKind):
-    KIND: str = "routing"
+class EntityPlanMap(ConfigSpecKind):
+    KIND: str = "entity_plan_map"
 
     class Spec(TypedDict, total=False):
-        """Spec for kind='routing'. map: kind -> plan_name; default fallback."""
+        """Spec for kind='entity_plan_map'. map: kind -> plan_name; default fallback."""
 
         map: dict[str, str]
         default: str | None
+
+
+# Deprecated alias for backward compatibility
+Routing = EntityPlanMap

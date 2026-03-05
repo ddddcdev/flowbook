@@ -42,6 +42,7 @@ class RunResponse(BaseModel):
     artifacts_written: list[str] = []
     errors: list[str] = []
     steps: list[dict[str, Any]] = []
+    warnings: list[str] = []
 
 
 # ---- /export ----
@@ -147,6 +148,7 @@ class ResultEntry(BaseModel):
     status: str
     result_artifacts: list[ResultArtifactEntry] | None = None
     config_json: str | None = None
+    meta: dict = {}
     created_at: str | None = None
     updated_at: str | None = None
 
@@ -161,6 +163,7 @@ class ResultGetResponse(BaseModel):
     status: str
     result_artifacts: list[ResultArtifactEntry] | None = None
     config_json: str | None = None
+    meta: dict = {}
     created_at: str | None = None
     updated_at: str | None = None
 
@@ -175,5 +178,6 @@ class LatestResultGetResponse(BaseModel):
     status: str
     result_artifacts: list[ResultArtifactEntry] | None = None
     config_json: str | None = None
+    meta: dict = {}
     created_at: str | None = None
     updated_at: str | None = None

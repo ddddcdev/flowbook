@@ -15,10 +15,10 @@ from flowbook import (
     register_steps,
 )
 from flowbook.core.configs.spec_types import (
+    EntityPlanMap,
     InputProfile,
     Mapping,
     Plan,
-    Routing,
 )
 from flowbook.extensions.steps.apply_mapping import ApplyMappingOp
 from flowbook.extensions.steps.inspect_excel_bytes_v2 import InspectExcelBytesV2Op
@@ -30,12 +30,12 @@ pytestmark = pytest.mark.e2e
 
 
 def _resolve_plan_name(config_store: InMemoryConfigStore, detected_kind: str | None) -> str:
-    routing = config_store.get_spec(Routing, "default")
-    map_obj = routing.get("map") or {}
+    epm = config_store.get_spec(EntityPlanMap, "default")
+    map_obj = epm.get("map") or {}
     plan_name = (
-        map_obj.get(detected_kind, routing.get("default"))
+        map_obj.get(detected_kind, epm.get("default"))
         if detected_kind is not None
-        else routing.get("default")
+        else epm.get("default")
     )
     if plan_name is None:
         raise RuntimeError(f"plan_name is None for detected_kind={detected_kind}")
@@ -56,6 +56,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
             {"pattern": r"^fileB_.*\.xlsx$", "kind": "fileB"},
         ],
         "date_rule": {"sheet": "meta", "cell": "B2"},
+        "inspect_step_name": "inspect_excel_bytes_v2",
     }
     config_store.put_spec(
         InputProfile,
@@ -64,11 +65,11 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         config_id=str(uuid4()),
     )
 
-    routing_spec = {"map": {"fileA": "plan_fileA"}, "default": None}
+    entity_plan_map_spec = {"map": {"fileA": "plan_fileA"}, "default": None}
     config_store.put_spec(
-        Routing,
+        EntityPlanMap,
         "default",
-        routing_spec,
+        entity_plan_map_spec,
         config_id=str(uuid4()),
     )
 

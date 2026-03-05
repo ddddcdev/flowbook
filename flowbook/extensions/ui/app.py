@@ -26,6 +26,23 @@ def api(base: str, path: str) -> str:
     return f"{base.rstrip('/')}{path}"
 
 
+def _fetch_input_profile_names(
+    base: str, *, inspectable: bool = False
+) -> list[str]:
+    """Fetch input_profile config names from GET /configs?kind=input_profile.
+    When inspectable=True, only profiles with inspect_step_name are returned."""
+    try:
+        params: dict[str, str | bool] = {"kind": "input_profile"}
+        if inspectable:
+            params["inspectable"] = True
+        r = requests.get(api(base, "/configs"), params=params, timeout=10)
+        r.raise_for_status()
+        configs = r.json().get("configs", [])
+        return [c["name"] for c in configs]
+    except requests.RequestException:
+        return []
+
+
 def _filename_from_artifact_key(key: str, fallback: str = "artifact.bin") -> str:
     """Derive download filename from artifact key."""
     parts = key.split("/")
@@ -386,13 +403,14 @@ def _entity_key_options(base: str) -> list[str]:
 
 _DEMO_HINT = """Use this app to try the full flow: Inspect → Import → Export → Results → Download.
 
-**Dummy file** (generate if missing):
-`tests/fixtures/excel/test_detect_region_input.xlsx`
-→ `flowbook fixture generate -o tests/fixtures/excel/`
+**Fixtures** (generate if missing):
+- Excel: `tests/fixtures/excel/test_detect_region_input.xlsx` (profile `demo_excel_inspect`)
+- CSV: `tests/fixtures/csv/demo_input.csv` (profile `demo_csv_inspect`)
+→ `flowbook fixture generate -o tests/fixtures/excel --csv-dir tests/fixtures/csv`
 
 **Sequence:**
 1. **Inspect** — Upload the file above, entity_key `demo/excel`, profile `demo_excel_inspect`
-2. **Import** — Same file, plan `import_excel_region`, creates read/df artifact
+2. **Import** — Same file, plan `import_excel_simple`, creates read/df artifact
 3. **Export** — From Import’s read/df, mapping `detect_region_test`, creates write/bytes
 4. **Results** — Select the row with read/df or write/bytes
 5. **Download** — Use the selected result’s artifact (as Excel or raw)
@@ -518,11 +536,14 @@ def main() -> None:
         st.subheader("Inspect (optional)")
         st.caption(
             "Detect kind and effective date from file or filename. "
-            "Profile with date_rule requires file upload; else filename only."
+            "Excel profile (date_rule) requires file upload; CSV profile uses filename only."
         )
-        input_profile_name = st.text_input(
-            "input_profile_name",
-            value=st.session_state.get("inspect_input_profile", "demo_excel_inspect"),
+        input_profile_opts = _fetch_input_profile_names(base, inspectable=True)
+        if not input_profile_opts:
+            input_profile_opts = ["demo_excel_inspect", "demo_csv_inspect"]
+        input_profile_name = st.selectbox(
+            "input_profile",
+            options=input_profile_opts,
             key="inspect_input_profile",
         )
         file_inspect = st.file_uploader(
@@ -600,7 +621,9 @@ def main() -> None:
                 {
                     "updated_at": _format_datetime_display(r.get("updated_at")),
                     "run_id": r.get("run_id") or "",
-                    "entity_key": r.get("entity_key") or "",
+                    "entity": (r.get("profile") or {}).get("detected_kind")
+                    or r.get("entity_key")
+                    or "",
                 }
                 for r in sorted_results
             ]
@@ -618,16 +641,25 @@ def main() -> None:
                 if 0 <= selected_row_idx < len(sorted_results):
                     selected_profile = sorted_results[selected_row_idx].get("profile") or {}
         if selected_profile:
-            plan_name = selected_profile.get("plan_name") or "import_excel_region"
-            ek = entity_key_for_actions
-            if selected_profile.get("effective_date") and selected_profile.get("detected_kind"):
-                ek = f"{selected_profile['effective_date']}/{selected_profile['detected_kind']}"
-            inputs_dict = {
-                "entity_key": ek,
-                "sheet_name": "data",
-                "region_profile_name": "detail_region",
-                "mapping_name": "detect_region_test",
-            }
+            plan_name = selected_profile.get("plan_name") or "import_excel_simple"
+            ek = (
+                selected_profile.get("detected_kind")
+                if selected_profile.get("detected_kind")
+                else entity_key_for_actions
+            )
+            if plan_name == "import_excel_region":
+                inputs_dict = {
+                    "entity_key": ek,
+                    "sheet_name": "data",
+                    "region_profile_name": "detail_region",
+                    "mapping_name": "detect_region_test",
+                }
+            else:
+                inputs_dict = {
+                    "entity_key": ek,
+                    "sheet_name": 0,
+                    "header_row": 0,
+                }
             st.caption("Import parameters (from selection)")
             st.text_input(
                 "plan_name",
@@ -1070,7 +1102,7 @@ def main() -> None:
             st.info("No entities. Click Refresh or run Import to auto-register entities.")
 
     with tab_configs:
-        st.subheader("Configs (input_profiles, mappings, plans, routing)")
+        st.subheader("Configs (input_profiles, mappings, plans, entity_plan_maps)")
         if st.button("Refresh list", key="configs_refresh"):
             try:
                 r = requests.get(api(base, "/configs"), timeout=10)

@@ -21,16 +21,20 @@ ALTER TABLE runs ADD COLUMN IF NOT EXISTS config_json text;
 -- results: canonical result per (run_id, entity_key)
 -- result_artifacts_json: JSON array of {path, label}. When plan has no result_artifacts,
 -- last step's first output is stored as [{"path": "step/key", "label": null}].
+-- meta: jsonb for target_month, effective_date, etc. (caller-defined keys).
 CREATE TABLE IF NOT EXISTS results (
   run_id      text NOT NULL REFERENCES runs(run_id),
   entity_key  text NOT NULL,
   result_artifacts_json text,
   status      text NOT NULL,
   config_json  text,
+  meta        jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (run_id, entity_key)
 );
+
+ALTER TABLE results ADD COLUMN IF NOT EXISTS meta jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 -- artifacts: composite PK (run_id, entity_key, artifact_path)
 -- key format: {run_id}/{entity_key}/{artifact_path}
@@ -86,9 +90,11 @@ BEFORE UPDATE ON entities
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
--- Seed initial entities
+-- Seed initial entities (aligned with EntityPlanMap: demo/excel, demo/detail, demo/csv)
 INSERT INTO entities (entity_key, meta, created_at, updated_at)
 VALUES
   ('demo', '{"display_name": "Demo", "desc": "Top-level demo scope"}'::jsonb, now(), now()),
-  ('demo/excel', '{"display_name": "Demo Excel", "desc": "Excel import/export demo"}'::jsonb, now(), now())
+  ('demo/excel', '{"display_name": "Demo Excel", "desc": "Excel import/export demo"}'::jsonb, now(), now()),
+  ('demo/detail', '{"display_name": "Demo Detail", "desc": "Excel region detection (detail-style)"}'::jsonb, now(), now()),
+  ('demo/csv', '{"display_name": "Demo CSV", "desc": "CSV import"}'::jsonb, now(), now())
 ON CONFLICT (entity_key) DO NOTHING;

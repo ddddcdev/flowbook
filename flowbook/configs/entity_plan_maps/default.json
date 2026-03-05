@@ -1,0 +1,8 @@
+{
+  "map": {
+    "demo/excel": "import_excel_simple",
+    "demo/detail": "import_excel_region",
+    "demo/csv": "import_csv"
+  },
+  "default": "import_excel_simple"
+}

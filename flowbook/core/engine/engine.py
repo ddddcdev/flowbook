@@ -27,6 +27,7 @@ class Engine:
         run_id: str | None = None,
         entity_key: str = "default",
         entity_keys: list[str] | None = None,
+        meta: dict[str, Any] | None = None,
     ) -> RunSession:
         run_id = run_id or new_run_id()
         logger.info(
@@ -39,10 +40,11 @@ class Engine:
             upsert_run(run_id, "running")
         config_store = self.config_store or NullConfigStore()
         run_store = DefaultRunStore(artifacts=self.store, configs=config_store)
+        run_meta = meta if meta is not None else (self.meta or {})
         return RunSession(
             run_id=run_id,
             entity_key=entity_key,
             store=run_store,
             registry=self.registry,
-            meta=self.meta or {},
+            meta=run_meta,
         )

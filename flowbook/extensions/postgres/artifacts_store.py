@@ -75,6 +75,7 @@ results = Table(
     Column("result_artifacts_json", Text, nullable=True),
     Column("status", Text, nullable=False),
     Column("config_json", Text, nullable=True),
+    Column("meta", JSON, nullable=False, server_default="{}"),
     Column(
         "created_at",
         TIMESTAMP(timezone=True),
@@ -134,12 +135,16 @@ def _result_row_to_dict(row: Any) -> dict[str, Any]:
             result_artifacts = json.loads(row.result_artifacts_json)
         except (json.JSONDecodeError, TypeError):
             pass
+    meta = {}
+    if hasattr(row, "meta") and row.meta is not None:
+        meta = dict(row.meta) if isinstance(row.meta, dict) else {}
     return {
         "run_id": row.run_id,
         "entity_key": row.entity_key,
         "result_artifacts": result_artifacts,
         "status": row.status,
         "config_json": row.config_json,
+        "meta": meta,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
@@ -500,20 +505,24 @@ class PostgresArtifactsStore(ArtifactsStore):
         run_config_json: str | None = None,
         entity_config_json: str | None = None,
         result_artifacts: list[dict[str, str | None]] | None = None,
+        meta: dict | None = None,
     ) -> None:
         """Upsert results row for (run_id, entity_key). Ensures runs and entities exist first.
         result_artifacts: list of {path, label} for main results. When plan has no result_artifacts,
         executor derives from last step's output.
+        meta: optional JSONB for target_month, effective_date, etc.
         """
         self.upsert_run(run_id, status, config_json=run_config_json)
         self.upsert_entity(entity_key)
         result_artifacts_json = json.dumps(result_artifacts) if result_artifacts else None
+        meta_dict = meta if meta is not None else {}
         vals = {
             "run_id": run_id,
             "entity_key": entity_key,
             "status": status,
             "result_artifacts_json": result_artifacts_json,
             "config_json": entity_config_json,
+            "meta": meta_dict,
         }
         set_cols: dict[str, object] = {
             "status": status,
@@ -523,6 +532,8 @@ class PostgresArtifactsStore(ArtifactsStore):
             set_cols["result_artifacts_json"] = result_artifacts_json
         if entity_config_json is not None:
             set_cols["config_json"] = entity_config_json
+        if meta is not None:
+            set_cols["meta"] = meta_dict
         stmt = (
             pg_insert(results)
             .values(**vals)
@@ -581,7 +592,8 @@ class PostgresArtifactsStore(ArtifactsStore):
     ) -> list[dict[str, Any]]:
         """List latest result per entity_key (updated_at max). No new table."""
         cols_str = (
-            "run_id, entity_key, result_artifacts_json, status, config_json, created_at, updated_at"
+            "run_id, entity_key, result_artifacts_json, status, config_json, meta, "
+            "created_at, updated_at"
         )
         raw_sql = (
             f"SELECT {cols_str} FROM ("
@@ -603,6 +615,7 @@ class PostgresArtifactsStore(ArtifactsStore):
             "result_artifacts_json",
             "status",
             "config_json",
+            "meta",
             "created_at",
             "updated_at",
         ]
@@ -617,6 +630,8 @@ class PostgresArtifactsStore(ArtifactsStore):
                     pass
             d["result_artifacts"] = result_artifacts
             del d["result_artifacts_json"]
+            meta_val = d.get("meta")
+            d["meta"] = dict(meta_val) if isinstance(meta_val, dict) else {}
             for k in ("created_at", "updated_at"):
                 v = d.get(k)
                 if v is not None and hasattr(v, "isoformat"):

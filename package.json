@@ -8,7 +8,7 @@
   },
   "scripts": {
     "db:fresh": "docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v && docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d",
-    "typecheck": "pyright",
+    "typecheck": "uv run pyright",
     "lint": "uv run ruff check .",
     "fmt": "uv run ruff format .",
     "test": "uv run pytest -q",
@@ -30,7 +30,5 @@
     "url": "https://github.com/ddddcdev/flowbook/issues"
   },
   "homepage": "https://github.com/ddddcdev/flowbook#readme",
-  "devDependencies": {
-    "pyright": "^1.1.408"
-  }
+  "devDependencies": {}
 }

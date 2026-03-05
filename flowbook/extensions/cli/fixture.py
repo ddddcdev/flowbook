@@ -4,6 +4,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# CSV fixture content for demo_csv_inspect / import_csv
+DEMO_CSV_CONTENT = """LineNo,Item,Qty,Extra1,Extra2,Note,Date
+1,a,10,x,100,memo1,2025-01-15
+2,b,20,,200,,2024-12-01
+3,c,30,z,300,memo3,2025-02-01
+4,d,40,,,,"2024-06-01"
+"""
+
+
+def generate_csv(output_dir: str | Path) -> Path:
+    """Generate demo_input.csv for demo_csv_inspect / import_csv. Returns output path."""
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "demo_input.csv"
+    out_path.write_text(DEMO_CSV_CONTENT.strip(), encoding="utf-8")
+    return out_path
+
 
 def generate(output_dir: str | Path) -> Path:
     """Generate test_detect_region_input.xlsx. Returns output path."""
@@ -65,3 +82,10 @@ def generate(output_dir: str | Path) -> Path:
 
     wb.save(out_path)
     return out_path
+
+
+def generate_all(output_dir: str | Path) -> tuple[Path, Path]:
+    """Generate both Excel and CSV fixtures. Returns (excel_path, csv_path)."""
+    excel_path = generate(output_dir)
+    csv_path = generate_csv(output_dir)
+    return excel_path, csv_path

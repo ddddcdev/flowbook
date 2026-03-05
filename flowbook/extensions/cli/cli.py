@@ -357,13 +357,22 @@ def register_cli(app: Typer) -> None:
             "-o",
             help="Output directory for generated fixture",
         ),
+        csv_dir: str | None = t.Option(
+            None,
+            "--csv-dir",
+            help="Also generate CSV fixture to this dir (e.g. tests/fixtures/csv)",
+        ),
     ) -> None:
         """Generate test_detect_region_input.xlsx for hands-on / e2e."""
         from flowbook.extensions.cli.fixture import generate as gen_fixture
+        from flowbook.extensions.cli.fixture import generate_csv as gen_csv
 
         try:
             out_path = gen_fixture(output)
             t.echo(f"Wrote {out_path}")
+            if csv_dir:
+                csv_path = gen_csv(csv_dir)
+                t.echo(f"Wrote {csv_path}")
         except ImportError as e:
             t.echo(str(e), err=True)
             raise t.Exit(1) from e

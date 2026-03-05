@@ -1,6 +1,6 @@
 [project]
 name = "flowbook"
-version = "0.1.0a7"
+version = "0.1.0a8"
 description = "Config-driven data flow framework with pluggable ops and extensions (Excel, Postgres, FastAPI)."
 authors = [{ name = "d4c.dev", email = "info@d4c.dev" }]
 readme = "README.md"
@@ -55,6 +55,7 @@ dev = [
     "pre-commit>=4.0.0",
     "pytest>=9.0.2",
     "ruff>=0.14.14",
+    "pyright>=1.1.408",
     "psycopg2-binary>=2.9.11",
     "twine>=6.2.0",
     "keyrings-alt>=5.0.2",
@@ -79,6 +80,7 @@ dev = [
     "httpx>=0.28.0",
     "pytest>=9.0.2",
     "ruff>=0.14.14",
+    "pyright>=1.1.408",
     "pre-commit>=4.0.0",
     "twine>=6.2.0",
     "keyrings-alt>=5.0.2",
