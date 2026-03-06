@@ -1,17 +1,25 @@
 """
-Routes: GET /configs, GET /configs/{kind}/{name}
-
-List and get config specs from the Postgres config store.
+Routes: GET /configs, GET /configs/{kind}/{name}, POST /configs, PUT /configs/{kind}/{name},
+        POST /configs/{kind}/{name}/activate, POST /configs/{kind}/{name}/deactivate
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+import uuid
+
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
+from flowbook.core.configs.spec_types import KIND_TO_SPEC_TYPE
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
-from flowbook.extensions.api.schemas import ConfigEntry, ConfigGetResponse, ConfigsListResponse
+from flowbook.extensions.api.schemas import (
+    ConfigCreateRequest,
+    ConfigEntry,
+    ConfigGetResponse,
+    ConfigsListResponse,
+    ConfigUpdateRequest,
+)
 
 router = APIRouter(prefix="/configs", tags=["configs"])
 
@@ -100,3 +108,98 @@ def get_config(kind: str, name: str) -> ConfigGetResponse:
             raise HTTPException(status_code=404, detail={"reason": str(e)}) from e
         raise to_http_error(e) from e
     return ConfigGetResponse(kind=kind, name=name, spec=spec)
+
+
+def _spec_type_for_kind(kind: str):
+    """Resolve spec_type from kind. Raises HTTPException 400 if unknown."""
+    try:
+        return KIND_TO_SPEC_TYPE[kind]
+    except KeyError:
+        raise HTTPException(
+            status_code=400,
+            detail={"reason": f"unknown kind '{kind}'. Known: {sorted(KIND_TO_SPEC_TYPE.keys())}"},
+        ) from None
+
+
+@router.post("", status_code=201, summary="Create config")
+def create_config(body: ConfigCreateRequest) -> ConfigGetResponse:
+    """Create a config. config_id is generated server-side."""
+    store = _config_store()
+    try:
+        spec_type = _spec_type_for_kind(body.kind)
+        config_id = str(uuid.uuid4())
+        store.put_spec(spec_type, body.name, body.spec, config_id=config_id)
+        spec = store._get_spec_by_kind(body.kind, body.name)
+        return ConfigGetResponse(kind=body.kind, name=body.name, spec=spec)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"reason": str(e)}) from e
+    except Exception as e:
+        raise to_http_error(e) from e
+
+
+@router.put("/{kind}/{name}", response_model=ConfigGetResponse, summary="Update config (upsert)")
+def update_config(kind: str, name: str, body: ConfigUpdateRequest) -> ConfigGetResponse:
+    """Upsert config spec. Creates if not exists."""
+    store = _config_store()
+    try:
+        spec_type = _spec_type_for_kind(kind)
+        config_id = str(uuid.uuid4())
+        store.put_spec(spec_type, name, body.spec, config_id=config_id)
+        spec = store._get_spec_by_kind(kind, name)
+        return ConfigGetResponse(kind=kind, name=name, spec=spec)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"reason": str(e)}) from e
+    except Exception as e:
+        raise to_http_error(e) from e
+
+
+@router.post("/{kind}/{name}/activate", status_code=204, summary="Activate config")
+def activate_config(kind: str, name: str) -> None:
+    """Set is_active=true. Postgres only."""
+    store = _config_store()
+    if not hasattr(store, "engine") or getattr(store, "engine", None) is None:
+        raise HTTPException(
+            status_code=501,
+            detail={"reason": "activate/deactivate requires Postgres config store"},
+        )
+    with store.engine.begin() as conn:  # type: ignore[union-attr]
+        r = conn.execute(
+            text(
+                "UPDATE configs SET is_active = true, updated_at = now() "
+                "WHERE kind = :kind AND name = :name"
+            ),
+            {"kind": kind, "name": name},
+        )
+        if r.rowcount == 0:
+            raise HTTPException(
+                status_code=404,
+                detail={"reason": f"config not found: kind={kind} name={name}"},
+            )
+
+
+@router.post("/{kind}/{name}/deactivate", status_code=204, summary="Deactivate config")
+def deactivate_config(kind: str, name: str) -> None:
+    """Set is_active=false. Postgres only. Deactivated configs are excluded from list/get."""
+    store = _config_store()
+    if not hasattr(store, "engine") or getattr(store, "engine", None) is None:
+        raise HTTPException(
+            status_code=501,
+            detail={"reason": "activate/deactivate requires Postgres config store"},
+        )
+    with store.engine.begin() as conn:  # type: ignore[union-attr]
+        r = conn.execute(
+            text(
+                "UPDATE configs SET is_active = false, updated_at = now() "
+                "WHERE kind = :kind AND name = :name"
+            ),
+            {"kind": kind, "name": name},
+        )
+        if r.rowcount == 0:
+            raise HTTPException(
+                status_code=404,
+                detail={"reason": f"config not found: kind={kind} name={name}"},
+            )

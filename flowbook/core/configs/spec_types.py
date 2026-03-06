@@ -114,3 +114,12 @@ class EntityPlanMap(ConfigSpecKind):
 
 # Deprecated alias for backward compatibility
 Routing = EntityPlanMap
+
+# Registry for update_config step: kind string -> spec_type
+KIND_TO_SPEC_TYPE: dict[str, type[ConfigSpecKind]] = {
+    InputProfile.KIND: InputProfile,
+    Mapping.KIND: Mapping,
+    Plan.KIND: Plan,
+    LookupTable.KIND: LookupTable,
+    EntityPlanMap.KIND: EntityPlanMap,
+}

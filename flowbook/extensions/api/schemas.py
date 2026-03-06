@@ -95,6 +95,20 @@ class ConfigGetResponse(BaseModel):
     spec: dict[str, Any]
 
 
+class ConfigCreateRequest(BaseModel):
+    """Body for POST /configs."""
+
+    kind: str
+    name: str
+    spec: dict[str, Any]
+
+
+class ConfigUpdateRequest(BaseModel):
+    """Body for PUT /configs/{kind}/{name}."""
+
+    spec: dict[str, Any]
+
+
 # ---- /runs ----
 
 
