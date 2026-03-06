@@ -123,6 +123,7 @@ dmypy.json
 .pyre/
 
 # Local / session docs (chat summaries, scratch; do not commit)
+.local
 .local/
 
 # Hands-on demo outputs (entity_key-based names)
