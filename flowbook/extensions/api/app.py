@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from flowbook.core.logging import configure_logging
 from flowbook.extensions.api.extensions import discover_api_extensions
 from flowbook.extensions.api.routes.artifacts import router as artifacts_router
+from flowbook.extensions.api.routes.chat import router as chat_router
 from flowbook.extensions.api.routes.configs import router as configs_router
 from flowbook.extensions.api.routes.entities import router as entities_router
 from flowbook.extensions.api.routes.export import router as export_router
@@ -40,6 +41,7 @@ def health() -> dict[str, str]:
 
 
 app.include_router(inspect_router)
+app.include_router(chat_router)
 app.include_router(import_router)
 app.include_router(export_router)
 app.include_router(artifacts_router)

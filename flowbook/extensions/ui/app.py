@@ -12,6 +12,7 @@ import io
 import json
 import os
 import re
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -401,30 +402,51 @@ def _entity_key_options(base: str) -> list[str]:
         return ["demo/excel"]
 
 
-_DEMO_HINT = """Use this app to try the full flow: Inspect → Import → Export → Results → Download.
+def _load_demo_about() -> str:
+    """Load demo_about.md from same dir as this module."""
+    p = Path(__file__).resolve().parent / "demo_about.md"
+    try:
+        return p.read_text(encoding="utf-8")
+    except OSError:
+        return ""
 
-**Fixtures** (generate if missing):
-- Excel: `tests/fixtures/excel/test_detect_region_input.xlsx` (profile `demo_excel_inspect`)
-- CSV: `tests/fixtures/csv/demo_input.csv` (profile `demo_csv_inspect`)
-→ `flowbook fixture generate -o tests/fixtures/excel --csv-dir tests/fixtures/csv`
 
-**Sequence:**
-1. **Inspect** — Upload the file above, entity_key `demo/excel`, profile `demo_excel_inspect`
-2. **Import** — Same file, plan `import_excel_simple`, creates read/df artifact
-3. **Export** — From Import’s read/df, mapping `detect_region_test`, creates write/bytes
-4. **Results** — Select the row with read/df or write/bytes
-5. **Download** — Use the selected result’s artifact (as Excel or raw)
+def _load_flowbook_context() -> str:
+    """Load flowbook_context.md (chat-optimized flowbook overview) from same dir as this module."""
+    p = Path(__file__).resolve().parent / "flowbook_context.md"
+    try:
+        return p.read_text(encoding="utf-8")
+    except OSError:
+        return ""
 
-Connects to the flowbook API (FastAPI). Use Health tab to verify API is running."""
+
+_CHAT_SYSTEM_PREFIX = (
+    "Use the context below for flowbook-specific questions. "
+    "Do not state unfounded claims as facts; if unsure, say so. "
+    "General knowledge is fine when relevant. Keep responses concise (a few sentences)."
+)
+
+
+def _build_chat_system_prompt() -> str:
+    """Hidden context for AI: demo_about + flowbook_context. App extension only."""
+    parts = [_CHAT_SYSTEM_PREFIX]
+    about = _load_demo_about()
+    if about:
+        parts.append(
+            "\n\nYou help users with this app. "
+            "Use the following info to answer when asked about it.\n\n" + about
+        )
+    ctx = _load_flowbook_context()
+    if ctx:
+        parts.append("\n\n---\n\n" + ctx)
+    return "\n".join(parts)
+
 
 
 def main() -> None:
     st.set_page_config(page_title="flowbook", page_icon="📊", layout="wide")
     st.title("flowbook API demo")
     base = st.session_state.get("api_base", DEFAULT_BASE)
-
-    with st.sidebar.popover("About this demo", icon=":material/info:"):
-        st.caption(_DEMO_HINT)
 
     entity_key_opts = _entity_key_options(base)
     custom_keys = st.session_state.get("custom_entity_keys", set())
@@ -455,6 +477,7 @@ def main() -> None:
 
     tab_names = [
         "Health",
+        "Chat",
         "Inspect",
         "Import",
         "Export",
@@ -466,14 +489,15 @@ def main() -> None:
     ]
     tabs = st.tabs(tab_names)
     tab_health = tabs[0]
-    tab_inspect = tabs[1]
-    tab_import = tabs[2]
-    tab_export = tabs[3]
-    tab_results = tabs[4]
-    tab_artifacts = tabs[5]
-    tab_entities = tabs[6]
-    tab_configs = tabs[7]
-    tab_steps = tabs[8]
+    tab_chat = tabs[1]
+    tab_inspect = tabs[2]
+    tab_import = tabs[3]
+    tab_export = tabs[4]
+    tab_results = tabs[5]
+    tab_artifacts = tabs[6]
+    tab_entities = tabs[7]
+    tab_configs = tabs[8]
+    tab_steps = tabs[9]
 
     with tab_health:
         st.subheader("API connection")
@@ -488,6 +512,49 @@ def main() -> None:
             st.error(
                 "API not reachable. Start: uv run uvicorn flowbook.extensions.api.app:app --reload"
             )
+
+    with tab_chat:
+        st.subheader("Chat")
+        if "chat_messages" not in st.session_state:
+            st.session_state["chat_messages"] = []
+
+        for msg in st.session_state["chat_messages"]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+        if not st.session_state["chat_messages"]:
+            with st.chat_message("assistant"):
+                st.caption("Ask me anything.")
+
+        if prompt := st.chat_input("Message"):
+            st.session_state["chat_messages"].append({"role": "user", "content": prompt})
+            st.rerun()
+
+        # Pending: last message is user, fetch response
+        msgs = st.session_state["chat_messages"]
+        if msgs and msgs[-1]["role"] == "user":
+            pending = msgs[-1]["content"]
+            history = msgs[:-1]
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    try:
+                        r = requests.post(
+                            api(base, "/chat/"),
+                            json={
+                                "prompt": pending,
+                                "messages": [
+                            {"role": m["role"], "content": m["content"]} for m in history
+                        ],
+                                "system_prompt": _build_chat_system_prompt(),
+                            },
+                            timeout=60,
+                        )
+                        r.raise_for_status()
+                        response = r.json().get("response", "")
+                    except requests.RequestException as e:
+                        response = f"Error: {e}"
+            st.session_state["chat_messages"].append({"role": "assistant", "content": response})
+            st.rerun()
 
     with tab_steps:
         st.subheader("Steps (ops)")

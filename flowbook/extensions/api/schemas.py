@@ -77,6 +77,24 @@ class ArtifactGetResponse(BaseModel):
     value: Any
 
 
+# ---- /chat ----
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    prompt: str
+    messages: list[ChatMessage] = []
+    system_prompt: str | None = None
+
+
+class ChatResponse(BaseModel):
+    response: str
+
+
 # ---- /configs ----
 
 

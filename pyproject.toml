@@ -35,6 +35,8 @@ full = [
     "uvicorn>=0.40.0",
     "python-multipart>=0.0.22",
 ]
+# AI: OpenAI for chat_completion step. Install flowbook[ai] for chat.
+ai = ["openai>=1.0.0"]
 # Demo: bundled configs for hands-on. Install flowbook[full] then optionally flowbook[demo].
 # No extra deps; adds package data for flowbook db reset --config-dir bundled
 demo = []
@@ -75,6 +77,7 @@ flowbook = "flowbook.extensions.cli.cli:register_cli"
 
 [dependency-groups]
 dev = [
+    "openai>=1.0.0",
     "typer>=0.12.0",
     "rich>=13.0.0",
     "httpx>=0.28.0",
