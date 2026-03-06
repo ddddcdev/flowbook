@@ -1,4 +1,4 @@
-"""Hello AI step: single-turn OpenAI completion demo. Requires flowbook[ai] and OPENAI_API_KEY."""
+"""Chat completion step: single-turn OpenAI completion. Requires flowbook[ai] and OPENAI_API_KEY."""
 
 from __future__ import annotations
 
@@ -11,14 +11,16 @@ from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
-@step("hello_ai")
-class HelloAIOp(BaseOp):
-    """Single-turn OpenAI completion. Demo step for AI integration."""
+@step("chat_completion")
+class ChatCompletionOp(BaseOp):
+    """Single-turn OpenAI chat completion."""
 
     class Inputs(InputsBase):
         PROMPT = "prompt"
+        MESSAGES = "messages"
+        SYSTEM_PROMPT = "system_prompt"
         REQUIRED = (PROMPT,)
-        OPTIONAL = ()
+        OPTIONAL = (MESSAGES, SYSTEM_PROMPT)
 
     class Outputs(OutputsBase):
         RESPONSE = "response"
@@ -28,7 +30,7 @@ class HelloAIOp(BaseOp):
             from openai import OpenAI
         except ImportError as e:
             raise RuntimeError(
-                "hello_ai requires openai. Install with: pip install flowbook[ai]"
+                "chat_completion requires openai. Install with: pip install flowbook[ai]"
             ) from e
 
         prompt = inputs[self.Inputs.PROMPT]
@@ -40,10 +42,20 @@ class HelloAIOp(BaseOp):
             raise RuntimeError("OPENAI_API_KEY environment variable is not set")
 
         client = OpenAI(api_key=api_key)
+        messages = []
+        system = inputs.get(self.Inputs.SYSTEM_PROMPT)
+        if isinstance(system, str) and system.strip():
+            messages.append({"role": "system", "content": system.strip()})
+        history = inputs.get(self.Inputs.MESSAGES)
+        if isinstance(history, list):
+            for m in history:
+                if isinstance(m, dict) and m.get("role") and m.get("content") is not None:
+                    messages.append({"role": m["role"], "content": str(m["content"])})
+        messages.append({"role": "user", "content": prompt})
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=256,
+            messages=messages,
+            max_tokens=512,
         )
         content = resp.choices[0].message.content or ""
         return {self.Outputs.RESPONSE: content}

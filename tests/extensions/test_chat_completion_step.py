@@ -1,4 +1,4 @@
-"""Tests for hello_ai step."""
+"""Tests for chat_completion step."""
 
 from __future__ import annotations
 
@@ -14,13 +14,13 @@ from flowbook import (
     Registry,
     register_steps,
 )
-from flowbook.extensions.steps.hello_ai import HelloAIOp
+from flowbook.extensions.steps.chat_completion import ChatCompletionOp
 
 pytestmark = pytest.mark.e2e
 
 
-def test_hello_ai_returns_response() -> None:
-    """hello_ai with mocked OpenAI returns response."""
+def test_chat_completion_returns_response() -> None:
+    """chat_completion with mocked OpenAI returns response."""
     mock_content = "Hello from AI!"
 
     with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -48,8 +48,8 @@ def test_hello_ai_returns_response() -> None:
                         "steps": [
                             {
                                 "name": "ai",
-                                "op": "hello_ai",
-                                "inputs": {HelloAIOp.Inputs.PROMPT: "Say hello"},
+                                "op": "chat_completion",
+                                "inputs": {ChatCompletionOp.Inputs.PROMPT: "Say hello"},
                             }
                         ]
                     }
@@ -57,13 +57,13 @@ def test_hello_ai_returns_response() -> None:
 
     assert info.status == "succeeded"
     step_info = info.steps[0]
-    response_key = step_info.outputs[HelloAIOp.Outputs.RESPONSE]
+    response_key = step_info.outputs[ChatCompletionOp.Outputs.RESPONSE]
     response = run.get(response_key)
     assert response == mock_content
 
 
-def test_hello_ai_missing_api_key_raises() -> None:
-    """hello_ai without OPENAI_API_KEY raises RuntimeError."""
+def test_chat_completion_missing_api_key_raises() -> None:
+    """chat_completion without OPENAI_API_KEY raises RuntimeError."""
     with patch.dict("os.environ", {}, clear=True):
         artifacts_store = InMemoryArtifactsStore()
         config_store = InMemoryConfigStore()
@@ -81,8 +81,8 @@ def test_hello_ai_missing_api_key_raises() -> None:
                     "steps": [
                         {
                             "name": "ai",
-                            "op": "hello_ai",
-                            "inputs": {HelloAIOp.Inputs.PROMPT: "Hi"},
+                            "op": "chat_completion",
+                            "inputs": {ChatCompletionOp.Inputs.PROMPT: "Hi"},
                         }
                     ]
                 }
@@ -96,8 +96,8 @@ def test_hello_ai_missing_api_key_raises() -> None:
     not os.environ.get("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY not set; real API test skipped",
 )
-def test_hello_ai_real_api() -> None:
-    """hello_ai with real OpenAI API (runs when OPENAI_API_KEY is set)."""
+def test_chat_completion_real_api() -> None:
+    """chat_completion with real OpenAI API (runs when OPENAI_API_KEY is set)."""
     artifacts_store = InMemoryArtifactsStore()
     config_store = InMemoryConfigStore()
     registry = Registry()
@@ -114,8 +114,8 @@ def test_hello_ai_real_api() -> None:
                 "steps": [
                     {
                         "name": "ai",
-                        "op": "hello_ai",
-                        "inputs": {HelloAIOp.Inputs.PROMPT: "Reply with exactly: OK"},
+                        "op": "chat_completion",
+                        "inputs": {ChatCompletionOp.Inputs.PROMPT: "Reply with exactly: OK"},
                     }
                 ]
             }
@@ -123,7 +123,7 @@ def test_hello_ai_real_api() -> None:
 
     assert info.status == "succeeded"
     step_info = info.steps[0]
-    response_key = step_info.outputs[HelloAIOp.Outputs.RESPONSE]
+    response_key = step_info.outputs[ChatCompletionOp.Outputs.RESPONSE]
     response = run.get(response_key)
     assert isinstance(response, str)
     assert len(response) > 0

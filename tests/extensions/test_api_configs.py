@@ -85,6 +85,33 @@ def test_post_configs_unknown_kind_returns_400(client_in_memory: TestClient) -> 
     assert resp.status_code == 400
 
 
+def test_chat_returns_response(client_in_memory: TestClient) -> None:
+    """POST /chat/ returns response from chat_completion."""
+    import os
+    from unittest.mock import MagicMock, patch
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        with patch("openai.OpenAI") as mock_cls:
+            mock_resp = MagicMock()
+            mock_resp.choices = [MagicMock()]
+            mock_resp.choices[0].message.content = "Hello back!"
+            mock_cls.return_value.chat.completions.create.return_value = mock_resp
+
+            resp = client_in_memory.post(
+                "/chat/",
+                json={
+                    "prompt": "Say hello",
+                    "messages": [
+                        {"role": "user", "content": "hi"},
+                        {"role": "assistant", "content": "Hi there!"},
+                    ],
+                },
+            )
+
+    assert resp.status_code == 200
+    assert resp.json()["response"] == "Hello back!"
+
+
 def test_activate_deactivate_in_memory_returns_501(client_in_memory: TestClient) -> None:
     """activate/deactivate with InMemory returns 501."""
     client_in_memory.post(
