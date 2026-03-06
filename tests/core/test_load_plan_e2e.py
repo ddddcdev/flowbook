@@ -194,9 +194,9 @@ def test_load_plan_missing_plan_key() -> None:
     registry = Registry()
     register_steps(registry)
 
-    # Put plan without "plan" key
-    config_store.put_spec(
-        Plan,
+    # Put plan without "plan" key (bypass put_spec validation to test load_plan behavior)
+    config_store._put_spec_by_kind(
+        Plan.KIND,
         "bad_plan",
         {"description": "missing plan"},  # ← No "plan" key
         config_id="test_config_v1",

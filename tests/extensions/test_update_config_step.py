@@ -12,11 +12,31 @@ from flowbook import (
     register_steps,
 )
 from flowbook.core.configs.spec_types import Plan
+from flowbook.core.configs.validation import validate_spec
 from flowbook.extensions.steps.add import AddOp
 from flowbook.extensions.steps.load_plan import LoadPlanOp
 from flowbook.extensions.steps.update_config import UpdateConfigOp
 
 pytestmark = pytest.mark.e2e
+
+
+def test_validate_spec_accepts_valid_specs() -> None:
+    """validate_spec passes for specs with required keys."""
+    validate_spec("plan", {"plan": {"steps": []}})
+    validate_spec("input_profile", {"kind_rules": []})
+    validate_spec("mapping", {"ops": []})
+    validate_spec("lookup_table", {"artifact_key": "some_key"})
+    validate_spec("entity_plan_map", {"map": {"a": "b"}, "default": None})
+
+
+def test_validate_spec_raises_for_missing_keys() -> None:
+    """validate_spec raises ValueError when required keys are missing."""
+    with pytest.raises(ValueError, match="missing required keys"):
+        validate_spec("plan", {})
+    with pytest.raises(ValueError, match="kind_rules"):
+        validate_spec("input_profile", {})
+    with pytest.raises(ValueError, match="unknown kind"):
+        validate_spec("unknown", {})
 
 
 def test_update_config_roundtrip() -> None:
@@ -177,6 +197,41 @@ def test_update_config_unknown_kind_raises() -> None:
     assert info.status == "failed"
     assert len(info.errors) >= 1
     assert "unknown" in info.errors[0].lower() or "unknown_kind" in info.errors[0]
+
+
+def test_update_config_missing_required_keys_fails() -> None:
+    """Spec missing required keys causes plan to fail with validation error."""
+    artifacts_store = InMemoryArtifactsStore()
+    config_store = InMemoryConfigStore()
+
+    registry = Registry()
+    register_steps(registry)
+
+    engine = Engine(
+        store=artifacts_store,
+        registry=registry,
+        config_store=config_store,
+    )
+    with engine.create_run() as run:
+        info = run.exec_plan(
+            plan_config={
+                "steps": [
+                    {
+                        "name": "writer",
+                        "op": "update_config",
+                        "inputs": {
+                            UpdateConfigOp.Inputs.KIND: "plan",
+                            UpdateConfigOp.Inputs.NAME: "bad_plan",
+                            UpdateConfigOp.Inputs.SPEC: {},  # missing "plan" key
+                        },
+                    }
+                ]
+            }
+        )
+
+    assert info.status == "failed"
+    assert len(info.errors) >= 1
+    assert "missing" in info.errors[0].lower() or "required" in info.errors[0].lower()
 
 
 def test_update_config_config_id_optional() -> None:

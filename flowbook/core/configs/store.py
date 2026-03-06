@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Protocol, TypeVar, cast
 
 from flowbook.core.configs.spec_types import ConfigSpecKind
+from flowbook.core.configs.validation import validate_spec
 
 TSpecKind = TypeVar("TSpecKind", bound=ConfigSpecKind)
 
@@ -36,7 +37,8 @@ class ConfigStore(Protocol):
         *,
         config_id: str,
     ) -> None:
-        """Store a spec by Outer type; kind derived from spec_type.KIND."""
-        self._put_spec_by_kind(
-            spec_type.KIND, name, cast(dict[str, Any], spec), config_id=config_id
-        )
+        """Store a spec by Outer type; kind derived from spec_type.KIND. Validates before write."""
+        kind = spec_type.KIND
+        spec_dict = cast(dict[str, Any], spec)
+        validate_spec(kind, spec_dict)
+        self._put_spec_by_kind(kind, name, spec_dict, config_id=config_id)

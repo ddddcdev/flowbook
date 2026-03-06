@@ -98,7 +98,10 @@ def test_read_excel_detect_region_op() -> None:
     config_store.put_spec(
         InputProfile,
         "detail_region",
-        {"column_hints": ["LineNo", "Item", "Qty", "Extra1", "Extra2", "Note", "Date"]},
+        {
+            "kind_rules": [],
+            "column_hints": ["LineNo", "Item", "Qty", "Extra1", "Extra2", "Note", "Date"],
+        },
         config_id=str(uuid4()),
     )
 
@@ -139,7 +142,7 @@ def test_read_excel_detect_region_op_without_filename() -> None:
     config_store.put_spec(
         InputProfile,
         "detail_region",
-        {"column_hints": ["LineNo", "Item", "Qty"]},
+        {"kind_rules": [], "column_hints": ["LineNo", "Item", "Qty"]},
         config_id=str(uuid4()),
     )
 
