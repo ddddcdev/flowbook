@@ -10,8 +10,6 @@ from flowbook import (
     register_steps,
 )
 from flowbook.core.configs.spec_types import Plan
-from flowbook.extensions.steps.add import AddOp
-from flowbook.extensions.steps.load_plan import LoadPlanOp
 
 pytestmark = pytest.mark.e2e
 
@@ -41,7 +39,7 @@ def test_load_plan_reads_plan_from_config_store() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},
+                    "inputs": {"x": "@x", "y": "@y"},
                 }
             ],
         }
@@ -69,7 +67,7 @@ def test_load_plan_reads_plan_from_config_store() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }
@@ -83,12 +81,10 @@ def test_load_plan_reads_plan_from_config_store() -> None:
         planner_step = info1.steps[0]
         assert planner_step.name == "planner"
         assert planner_step.status == "succeeded"
-        assert LoadPlanOp.Outputs.PLAN in planner_step.outputs, (
-            f"plan not in outputs: {planner_step.outputs}"
-        )
+        assert "plan" in planner_step.outputs, f"plan not in outputs: {planner_step.outputs}"
 
         # ✅ Load and verify plan from artifact
-        plan_key = planner_step.outputs[LoadPlanOp.Outputs.PLAN]
+        plan_key = planner_step.outputs["plan"]
         plan = run.get_dict(plan_key)
 
         assert isinstance(plan, dict), f"plan should be dict, got {type(plan).__name__}"
@@ -96,10 +92,7 @@ def test_load_plan_reads_plan_from_config_store() -> None:
         assert len(plan["steps"]) == 1
         assert plan["steps"][0]["name"] == "add"
         assert plan["steps"][0]["op"] == "add"
-        assert plan["steps"][0]["inputs"] == {
-            AddOp.Inputs.X: "@x",
-            AddOp.Inputs.Y: "@y",
-        }
+        assert plan["steps"][0]["inputs"] == {"x": "@x", "y": "@y"}
 
         # ✅ Verify plan execution succeeded
         assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
@@ -107,10 +100,10 @@ def test_load_plan_reads_plan_from_config_store() -> None:
         add_step = info2.steps[0]
         assert add_step.name == "add"
         assert add_step.status == "succeeded"
-        assert AddOp.Outputs.SUM in add_step.outputs
+        assert "sum" in add_step.outputs
 
         # ✅ Verify final result (2 + 3 = 5)
-        sum_key = add_step.outputs[AddOp.Outputs.SUM]
+        sum_key = add_step.outputs["sum"]
         result = run.get(sum_key)
         assert result == 5, f"expected 5, got {result}"
 
@@ -172,7 +165,7 @@ def test_load_plan_plan_not_found() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }
@@ -215,7 +208,7 @@ def test_load_plan_missing_plan_key() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }
@@ -258,7 +251,7 @@ def test_load_plan_plan_not_dict() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }
@@ -294,7 +287,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},  # requires x, y
+                    "inputs": {"x": "@x", "y": "@y"},  # requires x, y
                 }
             ],
         }
@@ -318,7 +311,7 @@ def test_preflight_validates_required_inputs_in_plan_execution() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }

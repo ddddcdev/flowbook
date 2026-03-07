@@ -5,43 +5,42 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
+from pydantic import ConfigDict
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("merge_df")
 class MergeDfOp(BaseOp):
-    class Inputs(InputsBase):
-        LEFT = "left"
-        RIGHT = "right"
-        ON = "on"
-        LEFT_ON = "left_on"
-        RIGHT_ON = "right_on"
-        HOW = "how"
-        REQUIRED = (LEFT, RIGHT)
-        OPTIONAL = (ON, LEFT_ON, RIGHT_ON, HOW)
+    """Merge two DataFrames (SQL-style join)."""
 
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Inputs(BaseInputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        left: DataFrame
+        right: DataFrame
+        on: str | list[str] | None = None
+        left_on: str | list[str] | None = None
+        right_on: str | list[str] | None = None
+        how: str = "inner"
+
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        left = inputs[self.Inputs.LEFT]
-        right = inputs[self.Inputs.RIGHT]
-        if not isinstance(left, pd.DataFrame) or not isinstance(right, pd.DataFrame):
-            raise TypeError("merge_df left and right must be DataFrames")
-        how = inputs.get(self.Inputs.HOW, "inner")
-        kwargs: dict[str, Any] = {"how": how}
-        if self.Inputs.ON in inputs:
-            kwargs["on"] = inputs[self.Inputs.ON]
-        if self.Inputs.LEFT_ON in inputs:
-            kwargs["left_on"] = inputs[self.Inputs.LEFT_ON]
-        if self.Inputs.RIGHT_ON in inputs:
-            kwargs["right_on"] = inputs[self.Inputs.RIGHT_ON]
-        out = pd.merge(left, right, **kwargs)
-        return {self.Outputs.DF: out}
+        inp = self.Inputs.model_validate(inputs)
+        kwargs: dict[str, Any] = {"how": inp.how}
+        if inp.on is not None:
+            kwargs["on"] = inp.on
+        if inp.left_on is not None:
+            kwargs["left_on"] = inp.left_on
+        if inp.right_on is not None:
+            kwargs["right_on"] = inp.right_on
+        out = pd.merge(inp.left, inp.right, **kwargs)
+        return self.Outputs(df=out).model_dump(mode="python")
 
 
 register = register_from_steps()

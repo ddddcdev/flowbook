@@ -5,42 +5,38 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
+from pydantic import ConfigDict
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("aggregate_df")
 class AggregateDfOp(BaseOp):
-    class Inputs(InputsBase):
-        DF = "df"
-        GROUP_BY = "group_by"
-        AGG = "agg"
-        REQUIRED = (DF, AGG)
-        OPTIONAL = (GROUP_BY,)
+    """Aggregate DataFrame by group_by with agg dict (col -> sum, mean, etc.)."""
+    class Inputs(BaseInputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
+        agg: dict[str, Any]
+        group_by: str | list[str] | None = None
 
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        df = inputs[self.Inputs.DF]
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError("aggregate_df df must be a DataFrame")
-        agg_spec = inputs[self.Inputs.AGG]
-        if not isinstance(agg_spec, dict):
-            raise TypeError("aggregate_df agg must be a dict")
-        group_by = inputs.get(self.Inputs.GROUP_BY)
+        inp = self.Inputs.model_validate(inputs)
+        group_by = inp.group_by
         if group_by is not None:
-            if isinstance(group_by, str):
-                group_by = [group_by]
-            out = df.groupby(group_by).agg(agg_spec).reset_index()
+            keys = [group_by] if isinstance(group_by, str) else list(group_by)
+            out = inp.df.groupby(keys).agg(inp.agg).reset_index()
         else:
-            out = df.agg(agg_spec)
+            out = inp.df.agg(inp.agg)
             if isinstance(out, pd.Series):
                 out = out.to_frame().T
-        return {self.Outputs.DF: out}
+        return self.Outputs(df=out).model_dump(mode="python")
 
 
 register = register_from_steps()

@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 from flowbook import Engine, InMemoryArtifactsStore, Registry, register_steps
-from flowbook.extensions.steps.inspect import InspectOp
 
 pytestmark = pytest.mark.unit
 
@@ -19,8 +18,8 @@ def test_inspect_step_writes_control_artifacts() -> None:
                 "name": "inspect",
                 "op": "inspect",
                 "inputs": {
-                    InspectOp.Inputs.SOURCE_URI: "@source_uri",
-                    InspectOp.Inputs.READ_SPEC: "@read_spec",
+                    "source_uri": "@source_uri",
+                    "read_spec": "@read_spec",
                 },
             }
         ]
@@ -35,7 +34,7 @@ def test_inspect_step_writes_control_artifacts() -> None:
         info = run.exec_plan(plan_config=config)
         assert info.status == "succeeded"
 
-        inspect_key = info.steps[0].outputs[InspectOp.Outputs.INSPECT_RESULT]
+        inspect_key = info.steps[0].outputs["inspect_result"]
         r = run.get_dict(inspect_key)
         assert r["source_uri"] == "/tmp/dummy.xlsx"
         assert "warnings" in r

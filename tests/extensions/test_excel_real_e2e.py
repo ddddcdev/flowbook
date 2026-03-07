@@ -20,11 +20,6 @@ from flowbook.core.configs.spec_types import (
     Mapping,
     Plan,
 )
-from flowbook.extensions.steps.apply_mapping import ApplyMappingOp
-from flowbook.extensions.steps.inspect_excel_bytes_v2 import InspectExcelBytesV2Op
-from flowbook.extensions.steps.load_plan import LoadPlanOp
-from flowbook.extensions.steps.read_excel_bytes import ReadExcelBytesOp
-from flowbook.extensions.steps.write_excel import WriteExcelOp
 
 pytestmark = pytest.mark.e2e
 
@@ -95,23 +90,23 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                     "name": "read",
                     "op": "read_excel_bytes",
                     "inputs": {
-                        ReadExcelBytesOp.Inputs.SRC_EXCEL_BYTES: "@src_excel_bytes",
-                        ReadExcelBytesOp.Inputs.SHEET: "@sheet_name",
-                        ReadExcelBytesOp.Inputs.HEADER: "@header_row",
+                        "src_excel_bytes": "@src_excel_bytes",
+                        "sheet": "@sheet_name",
+                        "header": "@header_row",
                     },
                 },
                 {
                     "name": "map",
                     "op": "apply_mapping",
                     "inputs": {
-                        ApplyMappingOp.Inputs.DF: "@read/df",
-                        ApplyMappingOp.Inputs.MAPPING_NAME: "@mapping_name_val",
+                        "df": "@read/df",
+                        "mapping_name": "@mapping_name_val",
                     },
                 },
                 {
                     "name": "write",
                     "op": "write_excel",
-                    "inputs": {WriteExcelOp.Inputs.DF: "@map/df"},
+                    "inputs": {"df": "@map/df"},
                 },
             ],
         }
@@ -146,9 +141,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                     "name": "inspect",
                     "op": "inspect_excel_bytes_v2",
                     "inputs": {
-                        InspectExcelBytesV2Op.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                        InspectExcelBytesV2Op.Inputs.SRC_EXCEL_BYTES: "@src_excel_bytes",
-                        InspectExcelBytesV2Op.Inputs.SRC_EXCEL_FILENAME: "@src_excel_filename",
+                        "input_profile_name": "@input_profile_name",
+                        "src_excel_bytes": "@src_excel_bytes",
+                        "src_excel_filename": "@src_excel_filename",
                     },
                 }
             ]
@@ -157,7 +152,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         inspect_info = inspect_run.exec_plan(plan_config=inspect_config)
         assert inspect_info.status == "succeeded", f"inspect failed: {inspect_info.errors}"
 
-        result_key = inspect_info.steps[0].outputs[InspectExcelBytesV2Op.Outputs.RESULT]
+        result_key = inspect_info.steps[0].outputs["result"]
         result = inspect_run.get_dict(result_key)
         assert result["detected_kind"] == "fileA"
         assert result["effective_date"] == "2026-02-10"
@@ -178,7 +173,7 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }
@@ -189,9 +184,9 @@ def test_excel_bytes_inspect_route_plan_execute_e2e() -> None:
         assert info2.status == "succeeded", f"plan execution failed: {info2.errors}"
 
         write_step = info2.steps[-1]
-        assert WriteExcelOp.Outputs.BYTES in write_step.outputs
+        assert "bytes" in write_step.outputs
 
-        out_bytes_key = write_step.outputs[WriteExcelOp.Outputs.BYTES]
+        out_bytes_key = write_step.outputs["bytes"]
         out_bytes = run.get_bytes(out_bytes_key)
         assert len(out_bytes) > 0
 

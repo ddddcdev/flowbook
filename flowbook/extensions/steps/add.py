@@ -2,25 +2,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
 @step("add")
 class AddOp(BaseOp):
-    class Inputs(InputsBase):
-        X = "x"
-        Y = "y"
-        REQUIRED = (X, Y)
-        OPTIONAL = ()
+    """Add two numbers. Demo step."""
+    class Inputs(BaseInputs):
+        x: int | float
+        y: int | float
 
-    class Outputs(OutputsBase):
-        SUM = "sum"
+    class Outputs(BaseOutputs):
+        sum: int | float
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        return {self.Outputs.SUM: inputs[self.Inputs.X] + inputs[self.Inputs.Y]}
+        inp = self.Inputs.model_validate(inputs)
+        return self.Outputs(sum=inp.x + inp.y).model_dump(mode="python")
 
 
 register = register_from_steps()

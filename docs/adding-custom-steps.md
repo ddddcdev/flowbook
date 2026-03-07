@@ -19,21 +19,18 @@ Create a Python module (e.g. `my_steps.py`) in your project. Define your op(s) a
 ```python
 # my_steps.py
 from flowbook import step, register_from_steps
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseOp, BaseInputs, BaseOutputs
 
 @step("my_op")
 class MyOp(BaseOp):
-    class Inputs(InputsBase):
-        X = "x"
-        REQUIRED = (X,)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        x: int | float
 
-    class Outputs(OutputsBase):
-        OUT = "out"
+    class Outputs(BaseOutputs):
+        out: int | float
 
     def __call__(self, inputs, store):
-        return {self.Outputs.OUT: inputs[self.Inputs.X] * 2}
+        return {"out": inputs["x"] * 2}
 
 register = register_from_steps()
 ```
@@ -44,10 +41,9 @@ register = register_from_steps()
 # my_steps.py
 from flowbook import Registry
 from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
 
 class MyOp(BaseOp):
-    # ... same as above ...
+    # ... same as above (Inputs(BaseInputs), Outputs(BaseOutputs)) ...
 
 def register(registry: Registry) -> None:
     registry.register("my_op", MyOp())
@@ -93,8 +89,9 @@ After the first install, **code changes** in your step modules are picked up on 
 
 ## Inputs and Outputs convention
 
-- **Inputs**: Subclass `InputsBase`. Define key constants (e.g. `X = "x"`) and set `REQUIRED` and `OPTIONAL` tuples. Keys must be disjoint.
-- **Outputs**: Subclass `OutputsBase`. Define key constants (e.g. `OUT = "out"`). Uppercase str attributes become `KEYS` automatically.
+- **Inputs**: Subclass `BaseModel` (Pydantic). Define fields with types; required/optional is inferred from the schema.
+- **Outputs**: Subclass `BaseModel` (Pydantic). Define fields for the returned keys.
+- **Config refs**: Use `Field(json_schema_extra={"x-config-kind": "input_profile"})` on config ref fields.
 - **Docstring**: Add a class docstring; it appears in `flowbook steps show` and API `GET /steps/{op_name}`.
 
 ---

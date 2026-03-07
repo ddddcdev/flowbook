@@ -54,11 +54,11 @@ def _validate_step_contracts(plan: Plan, ctx: RunContext) -> None:
             ) from e
 
         spec = op.Inputs
-        if not spec.allowed_keys():
+        allowed = spec.allowed_keys()
+        if not allowed:
             continue
         param_keys = set(step.inputs.keys())
-        required_set = set(spec.REQUIRED)
-        allowed = spec.allowed_keys()
+        required_set = set(spec.required_keys())
         missing = required_set - param_keys
         surplus = param_keys - allowed
         if missing:
@@ -267,12 +267,13 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
                         info.warnings.append(msg)
 
             out_spec = step_op.Outputs
-            if out_spec.allowed_keys():
+            out_allowed = out_spec.allowed_keys()
+            if out_allowed:
                 public_keys = {k for k in step_output.keys() if not k.startswith("_")}
-                surplus = public_keys - out_spec.allowed_keys()
+                surplus = public_keys - out_allowed
                 if surplus:
                     raise RuntimeError(
-                        f"step '{step.name}' returned keys not in Outputs.KEYS: {sorted(surplus)}"
+                        f"step '{step.name}' returned keys not in Outputs schema: {sorted(surplus)}"
                     )
 
             # Persist outputs to artifacts (all returned keys, except those starting with '_')
@@ -281,6 +282,9 @@ def execute_plan(plan: Plan, ctx: RunContext) -> RunInfo:
             step_meta_dict = step_meta if isinstance(step_meta, dict) else None
             for out_name, out_value in step_output.items():
                 if out_name.startswith("_"):
+                    continue
+                # Skip persisting None: store treats stored null as missing (ArtifactNotFound)
+                if out_value is None:
                     continue
                 path = f"{step.name}/{out_name}"
                 out_key = build_artifact_key(ctx.run_id, ctx.entity_key, path)

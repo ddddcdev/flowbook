@@ -15,9 +15,6 @@ from flowbook import (
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.context import RunContext
 from flowbook.core.runtime.executor import execute_plan
-from flowbook.extensions.steps.aggregate_df import AggregateDfOp
-from flowbook.extensions.steps.concat_df import ConcatDfOp
-from flowbook.extensions.steps.merge_df import MergeDfOp
 
 pytestmark = pytest.mark.unit
 
@@ -65,7 +62,7 @@ def test_merge_df() -> None:
     )
     info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
-    out_key = info.steps[0].outputs[MergeDfOp.Outputs.DF]
+    out_key = info.steps[0].outputs["df"]
     out = store.get_df(out_key)
     assert list(out.columns) == ["id", "a", "b"]
     assert out["id"].tolist() == [1]
@@ -91,7 +88,7 @@ def test_aggregate_df() -> None:
     )
     info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
-    out_key = info.steps[0].outputs[AggregateDfOp.Outputs.DF]
+    out_key = info.steps[0].outputs["df"]
     out = store.get_df(out_key)
     assert out["g"].tolist() == ["x", "y"]
     assert out["v"].tolist() == [3, 3]
@@ -116,7 +113,7 @@ def test_concat_df() -> None:
     )
     info = execute_plan(plan, ctx)
     assert info.status == "succeeded"
-    out_key = info.steps[0].outputs[ConcatDfOp.Outputs.DF]
+    out_key = info.steps[0].outputs["df"]
     out = store.get_df(out_key)
     assert out["x"].tolist() == [1, 2, 3, 4]
 

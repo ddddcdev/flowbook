@@ -10,13 +10,14 @@
     "db:fresh": "docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres down -v && docker compose -f infra/compose.postgres.yml --env-file infra/.env.postgres up -d",
     "typecheck": "uv run pyright",
     "lint": "uv run ruff check .",
+    "lint:fix": "uv run ruff check . --fix",
     "fmt": "uv run ruff format .",
     "test": "uv run pytest -q",
     "test:ci": "FLOWBOOK_DATABASE_URL= uv run pytest -q -m \"not integration and not e2e\"",
     "hands-on": "uv run --env-file .env flowbook hands-on",
     "api": "uv run --env-file .env flowbook api",
     "ci": "npm run lint && npm run typecheck && npm run test:ci",
-    "ci:fix": "npm run fmt && npm run lint && npm run typecheck && npm run test:ci"
+    "ci:fix": "npm run fmt && npm run lint:fix && npm run typecheck && npm run test:ci"
   },
   "repository": {
     "type": "git",

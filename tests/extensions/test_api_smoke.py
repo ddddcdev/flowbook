@@ -211,11 +211,13 @@ def test_steps_get(client: TestClient):
     assert r.status_code == 200
     body = r.json()
     assert body["op_name"] == "add"
-    assert "required_inputs" in body
-    assert "x" in body["required_inputs"]
-    assert "y" in body["required_inputs"]
-    assert "output_keys" in body
-    assert "sum" in body["output_keys"]
+    assert "input_schema" in body
+    req_names = [f["name"] for f in body["input_schema"] if f.get("required")]
+    assert "x" in req_names
+    assert "y" in req_names
+    assert "output_schema" in body
+    out_names = [f["name"] for f in body["output_schema"]]
+    assert "sum" in out_names
 
 
 def test_steps_get_unknown_returns_404(client: TestClient):
@@ -273,9 +275,7 @@ def test_configs_inspectable_filter(client: TestClient):
     assert "demo_excel_inspect" in names_all
     assert "detail_region" in names_all
 
-    r_inspectable = client.get(
-        "/configs", params={"kind": "input_profile", "inspectable": "true"}
-    )
+    r_inspectable = client.get("/configs", params={"kind": "input_profile", "inspectable": "true"})
     assert r_inspectable.status_code == 200
     names_inspectable = [c["name"] for c in r_inspectable.json()["configs"]]
     assert "demo_excel_inspect" in names_inspectable

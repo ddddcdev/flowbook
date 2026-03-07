@@ -422,8 +422,93 @@ def register_cli(app: Typer) -> None:
         t.echo()
         t.echo("## Outputs")
         t.echo("  " + (", ".join(spec.output_keys) if spec.output_keys else "(none)"))
+        if spec.config_refs:
+            t.echo()
+            t.echo("## Config refs")
+            for inp, kind in spec.config_refs.items():
+                t.echo(f"  {inp} -> {kind}")
+
+    @steps_app.command("index")
+    def steps_index() -> None:
+        """Print full index of all step specs (JSON)."""
+        import json
+
+        from flowbook import Registry, discover_steps
+
+        registry = Registry()
+        discover_steps(registry)
+        ops = registry.list_ops()
+        specs = []
+        for op_name in ops:
+            spec = registry.get_op_spec(op_name)
+            specs.append(
+                {
+                    "op_name": spec.op_name,
+                    "docstring": spec.docstring,
+                    "config_refs": spec.config_refs,
+                    "input_schema": spec.input_schema,
+                    "output_schema": spec.output_schema,
+                }
+            )
+        t.echo(json.dumps({"steps": specs}, indent=2))
 
     app.add_typer(steps_app, name="steps")
+
+    # ---- configs ----
+    configs_app = t.Typer(help="Config kinds and schema. Use for AI conf / plan composition.")
+
+    @configs_app.command("index")
+    def configs_index_cli() -> None:
+        """Print config kinds and entries (JSON). Requires engine with config store."""
+        import json
+
+        from flowbook.extensions.api.deps import get_engine
+
+        engine = get_engine()
+        if engine.config_store is None:
+            t.echo("Config store not configured.", err=True)
+            raise t.Exit(1)
+        from flowbook.core.configs.spec_types import KIND_TO_SPEC_TYPE
+
+        kinds = sorted(KIND_TO_SPEC_TYPE.keys())
+        store = engine.config_store
+        try:
+            if hasattr(store, "engine") and getattr(store, "engine", None) is not None:
+                from sqlalchemy import text
+
+                with store.engine.begin() as conn:  # type: ignore[union-attr]
+                    rows = conn.execute(
+                        text(
+                            "SELECT kind, name FROM configs "
+                            "WHERE is_active = true ORDER BY kind, name"
+                        )
+                    ).fetchall()
+                configs = [{"kind": r[0], "name": r[1]} for r in rows]
+            else:
+                pairs = list(getattr(store, "_specs", {}).keys())
+                configs = [{"kind": k, "name": n} for k, n in sorted(pairs)]
+        except Exception as e:
+            t.echo(str(e), err=True)
+            raise t.Exit(1) from e
+        t.echo(json.dumps({"kinds": kinds, "configs": configs}, indent=2))
+
+    @configs_app.command("schema")
+    def configs_schema(
+        kind: str = t.Argument(..., help="Config kind (e.g. input_profile, mapping)"),
+    ) -> None:
+        """Print schema for a config kind (JSON)."""
+        import json
+
+        from flowbook.core.configs.introspect import get_config_kind_schema
+
+        try:
+            schema = get_config_kind_schema(kind)
+            t.echo(json.dumps(schema, indent=2))
+        except ValueError as e:
+            t.echo(str(e), err=True)
+            raise t.Exit(1) from e
+
+    app.add_typer(configs_app, name="configs")
 
     # ---- streamlit ----
     streamlit_app = t.Typer(help="Streamlit UI: run (venv), up/down (Docker).")

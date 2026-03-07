@@ -9,35 +9,32 @@ from __future__ import annotations
 
 from typing import Any
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+import pandas as pd
+from pydantic import ConfigDict
+
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("load_artifact_df")
 class LoadArtifactDfOp(BaseOp):
-    """
-    Load an artifact by key from the store and return it as df.
-    The artifact must be a DataFrame (e.g. run_id/read/df from an import).
-    """
+    """Load DataFrame from artifact store by key. Used by export plans."""
 
-    class Inputs(InputsBase):
-        ARTIFACT_KEY = "artifact_key"
-        REQUIRED = (ARTIFACT_KEY,)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        artifact_key: str
 
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        key = inputs[self.Inputs.ARTIFACT_KEY]
-        if not key or not isinstance(key, str):
-            raise ValueError("artifact_key must be a non-empty string")
-        val = store.get_any(key)
-        if type(val).__name__ != "DataFrame":
-            raise ValueError(f"Artifact {key!r} is not a DataFrame")
-        return {self.Outputs.DF: val}
+        inp = self.Inputs.model_validate(inputs)
+        val = store.get_any(inp.artifact_key)
+        if not isinstance(val, pd.DataFrame):
+            raise ValueError(f"Artifact {inp.artifact_key!r} is not a DataFrame")
+        return self.Outputs(df=val).model_dump(mode="python")
 
 
 register = register_from_steps()

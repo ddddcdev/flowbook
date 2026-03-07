@@ -13,9 +13,6 @@ from flowbook import (
     register_steps,
 )
 from flowbook.core.configs.spec_types import Mapping
-from flowbook.extensions.steps.apply_mapping import ApplyMappingOp
-from flowbook.extensions.steps.read_excel import ReadExcelOp
-from flowbook.extensions.steps.write_excel import WriteExcelOp
 
 pytestmark = pytest.mark.e2e
 
@@ -55,24 +52,24 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
                 "name": "read",
                 "op": "read_excel",
                 "inputs": {
-                    ReadExcelOp.Inputs.PATH: "@excel_path",
-                    ReadExcelOp.Inputs.SHEET: "@sheet_name",
-                    ReadExcelOp.Inputs.HEADER: "@header_row",
+                    "path": "@excel_path",
+                    "sheet": "@sheet_name",
+                    "header": "@header_row",
                 },
             },
             {
                 "name": "map",
                 "op": "apply_mapping",
                 "inputs": {
-                    ApplyMappingOp.Inputs.DF: "@read/df",
-                    ApplyMappingOp.Inputs.MAPPING_NAME: "@mapping_name_val",
+                    "df": "@read/df",
+                    "mapping_name": "@mapping_name_val",
                 },
             },
             {
                 "name": "write",
                 "op": "write_excel",
                 "inputs": {
-                    WriteExcelOp.Inputs.DF: "@map/df",
+                    "df": "@map/df",
                 },
             },
         ]
@@ -98,7 +95,7 @@ def test_excel_read_apply_mapping_write_e2e(tmp_path) -> None:
         assert len(info.steps) == 3
 
         # 6) Verify output bytes and content
-        out_bytes_key = info.steps[2].outputs[WriteExcelOp.Outputs.BYTES]
+        out_bytes_key = info.steps[2].outputs["bytes"]
         out_bytes = run.get_bytes(out_bytes_key)
         out_excel_path = tmp_path / "out.xlsx"
         out_excel_path.write_bytes(out_bytes)

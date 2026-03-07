@@ -27,9 +27,7 @@ def api(base: str, path: str) -> str:
     return f"{base.rstrip('/')}{path}"
 
 
-def _fetch_input_profile_names(
-    base: str, *, inspectable: bool = False
-) -> list[str]:
+def _fetch_input_profile_names(base: str, *, inspectable: bool = False) -> list[str]:
     """Fetch input_profile config names from GET /configs?kind=input_profile.
     When inspectable=True, only profiles with inspect_step_name are returned."""
     try:
@@ -199,13 +197,15 @@ def _fetch_inspect_results_from_api(
         if entity_key_filter and not exact_match:
             if not _entity_matches(entity_key, entity_key_filter, "partial"):
                 continue
-        out.append({
-            "run_id": run_id,
-            "entity_key": entity_key,
-            "profile": profile,
-            "created_at": e.get("created_at") or "",
-            "updated_at": e.get("updated_at") or "",
-        })
+        out.append(
+            {
+                "run_id": run_id,
+                "entity_key": entity_key,
+                "profile": profile,
+                "created_at": e.get("created_at") or "",
+                "updated_at": e.get("updated_at") or "",
+            }
+        )
     return out[:50]
 
 
@@ -442,7 +442,6 @@ def _build_chat_system_prompt() -> str:
     return "\n".join(parts)
 
 
-
 def main() -> None:
     st.set_page_config(page_title="flowbook", page_icon="📊", layout="wide")
     st.title("flowbook API demo")
@@ -543,8 +542,8 @@ def main() -> None:
                             json={
                                 "prompt": pending,
                                 "messages": [
-                            {"role": m["role"], "content": m["content"]} for m in history
-                        ],
+                                    {"role": m["role"], "content": m["content"]} for m in history
+                                ],
                                 "system_prompt": _build_chat_system_prompt(),
                             },
                             timeout=60,
@@ -585,15 +584,32 @@ def main() -> None:
                     spec = r2.json()
                     st.subheader(f"Spec: {op_name}")
                     st.markdown(spec.get("docstring") or "(no docstring)")
-                    st.caption(
-                        "Inputs (required): " + ", ".join(spec.get("required_inputs", []))
-                        or "(none)"
-                    )
-                    st.caption(
-                        "Inputs (optional): " + ", ".join(spec.get("optional_inputs", []))
-                        or "(none)"
-                    )
-                    st.caption("Outputs: " + ", ".join(spec.get("output_keys", [])) or "(none)")
+                    inp_schema = spec.get("input_schema", [])
+                    out_schema = spec.get("output_schema", [])
+                    config_refs = spec.get("config_refs", {})
+                    if config_refs:
+                        st.caption(
+                            "Config refs: "
+                            + ", ".join(f"{k}→{v}" for k, v in config_refs.items())
+                        )
+                    with st.expander("Input schema", expanded=True):
+                        if inp_schema:
+                            st.dataframe(
+                                pd.DataFrame(inp_schema),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                        else:
+                            st.caption("(none)")
+                    with st.expander("Output schema", expanded=True):
+                        if out_schema:
+                            st.dataframe(
+                                pd.DataFrame(out_schema),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                        else:
+                            st.caption("(none)")
             else:
                 st.info("No steps. API may not have discover_steps loaded.")
         except requests.RequestException as e:
@@ -668,9 +684,7 @@ def main() -> None:
 
     with tab_import:
         st.subheader("Import (table extract)")
-        st.caption(
-            "Select an Inspect result to use its parameters. Upload file and run Import."
-        )
+        st.caption("Select an Inspect result to use its parameters. Upload file and run Import.")
         if st.button("Refresh", key="import_inspect_refresh"):
             st.rerun()
         inspect_results = _fetch_inspect_results_from_api(

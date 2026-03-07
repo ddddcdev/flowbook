@@ -15,13 +15,14 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
+from pydantic import ConfigDict, Field
 
 from flowbook.core.configs.spec_types import InputProfile
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 from flowbook.extensions.excel.io import excel_engine_from_filename, read_sheet_to_raw_df
+from flowbook.extensions.steps._types import DataFrame
 
 # Limit scan to avoid reading huge sheets
 DEFAULT_MAX_SCAN_ROWS = 500
@@ -111,52 +112,40 @@ def _extract_region_from_df(
 
 @step("read_excel_detect_region")
 class ReadExcelDetectRegionOp(BaseOp):
-    """
-    Find table region by configurable column hints (from InputProfile.column_hints),
-    then extract that region as a DataFrame. Table may be anywhere; other content
-    may exist in the sheet separated by blank rows/columns.
+    """Find table region by column hints, extract as DataFrame. Supports .xlsx/.xls."""
 
-    Reads the sheet into a raw DataFrame first (engine from filename or default openpyxl),
-    then performs region detection on the DataFrame. This separates format handling
-    from region logic and supports both .xlsx and .xls.
-    """
+    class Inputs(BaseInputs):
+        src_excel_bytes: bytes = Field(description="Excel file bytes")
+        region_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        src_excel_filename: str | None = Field(None, description="Optional filename hint")
+        sheet: int | str | None = Field(None, description="Sheet index or name")
+        output_filename: str | None = None
 
-    class Inputs(InputsBase):
-        SRC_EXCEL_BYTES = "src_excel_bytes"
-        SRC_EXCEL_FILENAME = "src_excel_filename"
-        SHEET = "sheet"
-        REGION_PROFILE_NAME = "region_profile_name"
-        OUTPUT_FILENAME = "output_filename"
-        REQUIRED = (SRC_EXCEL_BYTES, REGION_PROFILE_NAME)
-        OPTIONAL = (SRC_EXCEL_FILENAME, SHEET, OUTPUT_FILENAME)
-
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        src = inputs[self.Inputs.SRC_EXCEL_BYTES]
-        sheet = inputs.get(self.Inputs.SHEET, 0)
-        profile_name = inputs[self.Inputs.REGION_PROFILE_NAME]
-        src_filename = inputs.get(self.Inputs.SRC_EXCEL_FILENAME)
+        inp = self.Inputs.model_validate(inputs)
+        sheet = inp.sheet if inp.sheet is not None else 0
 
-        profile = store.configs.get_spec(InputProfile, profile_name)
+        profile = store.configs.get_spec(InputProfile, inp.region_profile_name)
         column_hints = profile.get("column_hints")
         if not isinstance(column_hints, list) or not column_hints:
             raise ValueError(
-                f"region_profile '{profile_name}' must have 'column_hints': list of column names"
+                f"region_profile '{inp.region_profile_name}' must have 'column_hints': list"
             )
         column_hints = [str(h).strip() for h in column_hints if str(h).strip()]
 
-        engine = excel_engine_from_filename(src_filename)
-        raw_df = read_sheet_to_raw_df(src, sheet=sheet, engine=engine)
+        engine = excel_engine_from_filename(inp.src_excel_filename)
+        raw_df = read_sheet_to_raw_df(inp.src_excel_bytes, sheet=sheet, engine=engine)
 
         header_row_0, hint_to_col_0 = _find_header_row_from_df(raw_df, column_hints)
         df = _extract_region_from_df(raw_df, header_row_0, hint_to_col_0, column_hints)
 
-        result: dict[str, Any] = {self.Outputs.DF: df}
-        if output_filename := inputs.get(self.Inputs.OUTPUT_FILENAME):
-            if isinstance(output_filename, str):
-                result["_meta"] = {"filename": output_filename}
+        result = self.Outputs(df=df).model_dump(mode="python")
+        if inp.output_filename:
+            result["_meta"] = {"filename": inp.output_filename}
         return result
 
 

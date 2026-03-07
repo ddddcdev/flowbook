@@ -2,24 +2,23 @@ from __future__ import annotations
 
 from typing import Any
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
 
 @step("plan_from_two_numbers")
 class PlanFromTwoNumbersOp(BaseOp):
-    """Planner: produces plan with add step. No inputs required for this policy."""
+    """Demo planner: produces plan with add step."""
 
-    class Inputs(InputsBase):
-        REQUIRED = ()
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        pass
 
-    class Outputs(OutputsBase):
-        PLAN = "plan"
+    class Outputs(BaseOutputs):
+        plan: dict[str, Any]
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
+        self.Inputs.model_validate(inputs)
         plan_config = {
             "steps": [
                 {
@@ -29,7 +28,7 @@ class PlanFromTwoNumbersOp(BaseOp):
                 }
             ]
         }
-        return {self.Outputs.PLAN: plan_config}
+        return self.Outputs(plan=plan_config).model_dump(mode="python")
 
 
 register = register_from_steps()

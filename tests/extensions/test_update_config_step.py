@@ -13,9 +13,6 @@ from flowbook import (
 )
 from flowbook.core.configs.spec_types import Plan
 from flowbook.core.configs.validation import validate_spec
-from flowbook.extensions.steps.add import AddOp
-from flowbook.extensions.steps.load_plan import LoadPlanOp
-from flowbook.extensions.steps.update_config import UpdateConfigOp
 
 pytestmark = pytest.mark.e2e
 
@@ -60,7 +57,7 @@ def test_update_config_roundtrip() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: 1, AddOp.Inputs.Y: 2},
+                    "inputs": {"x": 1, "y": 2},
                 }
             ],
         }
@@ -74,9 +71,9 @@ def test_update_config_roundtrip() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            UpdateConfigOp.Inputs.KIND: "plan",
-                            UpdateConfigOp.Inputs.NAME: "plan_add",
-                            UpdateConfigOp.Inputs.SPEC: plan_spec,
+                            "kind": "plan",
+                            "name": "plan_add",
+                            "spec": plan_spec,
                         },
                     }
                 ]
@@ -88,15 +85,15 @@ def test_update_config_roundtrip() -> None:
     step_info = info.steps[0]
     assert step_info.name == "writer"
     assert step_info.status == "succeeded"
-    assert UpdateConfigOp.Outputs.CONFIG_ID in step_info.outputs
-    assert run.get(step_info.outputs[UpdateConfigOp.Outputs.KIND]) == "plan"
-    assert run.get(step_info.outputs[UpdateConfigOp.Outputs.NAME]) == "plan_add"
+    assert "config_id" in step_info.outputs
+    assert run.get(step_info.outputs["kind"]) == "plan"
+    assert run.get(step_info.outputs["name"]) == "plan_add"
 
     # Roundtrip: read back via ConfigStore
     loaded = config_store.get_spec(Plan, "plan_add")
     assert loaded["plan"]["steps"][0]["inputs"] == {
-        AddOp.Inputs.X: 1,
-        AddOp.Inputs.Y: 2,
+        "x": 1,
+        "y": 2,
     }
 
 
@@ -116,7 +113,7 @@ def test_update_config_then_load_plan_in_same_run() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: 10, AddOp.Inputs.Y: 20},
+                    "inputs": {"x": 10, "y": 20},
                 }
             ],
         }
@@ -135,15 +132,15 @@ def test_update_config_then_load_plan_in_same_run() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            UpdateConfigOp.Inputs.KIND: "plan",
-                            UpdateConfigOp.Inputs.NAME: "plan_add",
-                            UpdateConfigOp.Inputs.SPEC: plan_spec,
+                            "kind": "plan",
+                            "name": "plan_add",
+                            "spec": plan_spec,
                         },
                     },
                     {
                         "name": "reader",
                         "op": "load_plan",
-                        "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "plan_add"},
+                        "inputs": {"plan_name": "plan_add"},
                     },
                 ]
             }
@@ -153,14 +150,14 @@ def test_update_config_then_load_plan_in_same_run() -> None:
     assert len(info.steps) == 2
     reader_step = info.steps[1]
     assert reader_step.name == "reader"
-    assert LoadPlanOp.Outputs.PLAN in reader_step.outputs
+    assert "plan" in reader_step.outputs
 
-    plan_key = reader_step.outputs[LoadPlanOp.Outputs.PLAN]
+    plan_key = reader_step.outputs["plan"]
     plan = run.get_dict(plan_key)
     assert plan["steps"][0]["op"] == "add"
     assert plan["steps"][0]["inputs"] == {
-        AddOp.Inputs.X: 10,
-        AddOp.Inputs.Y: 20,
+        "x": 10,
+        "y": 20,
     }
 
 
@@ -185,9 +182,9 @@ def test_update_config_unknown_kind_raises() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            UpdateConfigOp.Inputs.KIND: "unknown_kind",
-                            UpdateConfigOp.Inputs.NAME: "foo",
-                            UpdateConfigOp.Inputs.SPEC: {},
+                            "kind": "unknown_kind",
+                            "name": "foo",
+                            "spec": {},
                         },
                     }
                 ]
@@ -220,9 +217,9 @@ def test_update_config_missing_required_keys_fails() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            UpdateConfigOp.Inputs.KIND: "plan",
-                            UpdateConfigOp.Inputs.NAME: "bad_plan",
-                            UpdateConfigOp.Inputs.SPEC: {},  # missing "plan" key
+                            "kind": "plan",
+                            "name": "bad_plan",
+                            "spec": {},  # missing "plan" key
                         },
                     }
                 ]
@@ -255,9 +252,9 @@ def test_update_config_config_id_optional() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            UpdateConfigOp.Inputs.KIND: "plan",
-                            UpdateConfigOp.Inputs.NAME: "auto_id_plan",
-                            UpdateConfigOp.Inputs.SPEC: {"plan": {"steps": []}},
+                            "kind": "plan",
+                            "name": "auto_id_plan",
+                            "spec": {"plan": {"steps": []}},
                         },
                     }
                 ]
@@ -266,7 +263,7 @@ def test_update_config_config_id_optional() -> None:
 
     assert info.status == "succeeded"
     step_info = info.steps[0]
-    config_id_key = step_info.outputs[UpdateConfigOp.Outputs.CONFIG_ID]
+    config_id_key = step_info.outputs["config_id"]
     config_id = run.get(config_id_key)
     assert isinstance(config_id, str)
     assert len(config_id) == 36  # UUID string format

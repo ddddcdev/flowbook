@@ -14,7 +14,6 @@ from flowbook import (
     Registry,
     register_steps,
 )
-from flowbook.extensions.steps.chat_completion import ChatCompletionOp
 
 pytestmark = pytest.mark.e2e
 
@@ -49,7 +48,7 @@ def test_chat_completion_returns_response() -> None:
                             {
                                 "name": "ai",
                                 "op": "chat_completion",
-                                "inputs": {ChatCompletionOp.Inputs.PROMPT: "Say hello"},
+                                "inputs": {"prompt": "Say hello"},
                             }
                         ]
                     }
@@ -57,7 +56,7 @@ def test_chat_completion_returns_response() -> None:
 
     assert info.status == "succeeded"
     step_info = info.steps[0]
-    response_key = step_info.outputs[ChatCompletionOp.Outputs.RESPONSE]
+    response_key = step_info.outputs["response"]
     response = run.get(response_key)
     assert response == mock_content
 
@@ -82,7 +81,7 @@ def test_chat_completion_missing_api_key_raises() -> None:
                         {
                             "name": "ai",
                             "op": "chat_completion",
-                            "inputs": {ChatCompletionOp.Inputs.PROMPT: "Hi"},
+                            "inputs": {"prompt": "Hi"},
                         }
                     ]
                 }
@@ -115,7 +114,7 @@ def test_chat_completion_real_api() -> None:
                     {
                         "name": "ai",
                         "op": "chat_completion",
-                        "inputs": {ChatCompletionOp.Inputs.PROMPT: "Reply with exactly: OK"},
+                        "inputs": {"prompt": "Reply with exactly: OK"},
                     }
                 ]
             }
@@ -123,7 +122,7 @@ def test_chat_completion_real_api() -> None:
 
     assert info.status == "succeeded"
     step_info = info.steps[0]
-    response_key = step_info.outputs[ChatCompletionOp.Outputs.RESPONSE]
+    response_key = step_info.outputs["response"]
     response = run.get(response_key)
     assert isinstance(response, str)
     assert len(response) > 0

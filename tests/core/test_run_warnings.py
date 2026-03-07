@@ -12,8 +12,7 @@ from flowbook import (
     InMemoryConfigStore,
     Registry,
 )
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.context import RunContext
 from flowbook.core.runtime.executor import execute_plan
@@ -24,15 +23,14 @@ pytestmark = pytest.mark.unit
 class _WarnOp(BaseOp):
     """One-off op that returns _warnings for testing."""
 
-    class Inputs(InputsBase):
-        REQUIRED = ()
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        pass
 
-    class Outputs(OutputsBase):
-        OUT = "out"
+    class Outputs(BaseOutputs):
+        out: int
 
     def __call__(self, inputs: dict[str, Any], store: Any) -> dict[str, Any]:
-        return {self.Outputs.OUT: 42, "_warnings": ["warning one", "warning two"]}
+        return {"out": 42, "_warnings": ["warning one", "warning two"]}
 
 
 def test_run_aggregates_step_warnings_into_run_info() -> None:

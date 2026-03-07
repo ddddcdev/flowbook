@@ -10,7 +10,7 @@ from sqlalchemy import text
 from flowbook import DefaultRunStore
 from flowbook.core.configs.spec_types import Mapping
 from flowbook.extensions.postgres import PostgresArtifactsStore, PostgresConfigStore
-from flowbook.extensions.steps.apply_mapping import ApplyMappingOp, apply_mapping_op
+from flowbook.extensions.steps.apply_mapping import apply_mapping_op
 
 pytestmark = pytest.mark.integration
 
@@ -73,13 +73,13 @@ def test_apply_mapping_op_df_to_df() -> None:
 
         result = apply_mapping_op(
             {
-                ApplyMappingOp.Inputs.DF: df,
-                ApplyMappingOp.Inputs.MAPPING_NAME: mapping_name,
+                "df": df,
+                "mapping_name": mapping_name,
             },
             store,
         )
 
-        out = result[ApplyMappingOp.Outputs.DF]
+        out = result["df"]
         assert list(out.columns) == ["A", "b"]
         assert out["A"].tolist() == [1, 2]
         assert out["b"].tolist() == [10, 30]
