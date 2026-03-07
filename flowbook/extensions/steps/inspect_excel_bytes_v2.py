@@ -68,6 +68,7 @@ def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
 
 @step("inspect_excel_bytes_v2")
 class InspectExcelBytesV2Op(BaseOp):
+    """Inspect Excel bytes: detect kind, date, region. Used by Inspect API."""
     class Inputs(BaseInputs):
         input_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
         src_excel_bytes: bytes = Field(description="Excel file bytes")

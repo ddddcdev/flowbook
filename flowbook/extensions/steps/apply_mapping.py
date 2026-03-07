@@ -14,6 +14,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("apply_mapping")
 class ApplyMappingOp(BaseOp):
+    """Apply mapping config (rename, map, etc.) to DataFrame."""
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame = Field(description="DataFrame")

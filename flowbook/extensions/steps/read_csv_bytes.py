@@ -14,7 +14,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("read_csv_bytes")
 class ReadCsvBytesOp(BaseOp):
-    """Read CSV bytes into a DataFrame."""
+    """Read CSV bytes into DataFrame."""
 
     class Inputs(BaseInputs):
         src_csv_bytes: bytes

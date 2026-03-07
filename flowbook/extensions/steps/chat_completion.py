@@ -12,7 +12,7 @@ from flowbook.core.runtime.store import RunStore
 
 @step("chat_completion")
 class ChatCompletionOp(BaseOp):
-    """Single-turn OpenAI chat completion."""
+    """Single-turn OpenAI chat completion. Uses OPENAI_API_KEY."""
 
     class Inputs(BaseInputs):
         prompt: str

@@ -13,7 +13,7 @@ from flowbook.core.runtime.store import RunStore
 
 @step("update_config")
 class UpdateConfigOp(BaseOp):
-    """Write a config spec to ConfigStore. Used by AI edit flow and plan-driven config updates."""
+    """Write config spec to ConfigStore. Used by AI edit flow."""
 
     class Inputs(BaseInputs):
         kind: str

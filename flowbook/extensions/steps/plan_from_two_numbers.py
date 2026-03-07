@@ -9,7 +9,7 @@ from flowbook.core.runtime.store import RunStore
 
 @step("plan_from_two_numbers")
 class PlanFromTwoNumbersOp(BaseOp):
-    """Planner: produces plan with add step. No inputs required for this policy."""
+    """Demo planner: produces plan with add step."""
 
     class Inputs(BaseInputs):
         pass

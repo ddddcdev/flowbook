@@ -20,10 +20,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("load_artifact_df")
 class LoadArtifactDfOp(BaseOp):
-    """
-    Load an artifact by key from the store and return it as df.
-    The artifact must be a DataFrame (e.g. run_id/read/df from an import).
-    """
+    """Load DataFrame from artifact store by key. Used by export plans."""
 
     class Inputs(BaseInputs):
         artifact_key: str

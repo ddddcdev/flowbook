@@ -15,6 +15,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("concat_df")
 class ConcatDfOp(BaseOp):
+    """Concatenate DataFrames along axis."""
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         dfs: list[DataFrame]

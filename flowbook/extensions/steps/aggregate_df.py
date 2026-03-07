@@ -15,6 +15,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("aggregate_df")
 class AggregateDfOp(BaseOp):
+    """Aggregate DataFrame by group_by with agg dict (col -> sum, mean, etc.)."""
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame

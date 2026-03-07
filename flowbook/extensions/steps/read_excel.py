@@ -13,6 +13,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("read_excel")
 class ReadExcelOp(BaseOp):
+    """Read Excel file (path) into DataFrame."""
     class Inputs(BaseInputs):
         path: str
         sheet: int | str = 0

@@ -14,6 +14,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("read_excel_bytes")
 class ReadExcelBytesOp(BaseOp):
+    """Read Excel bytes into DataFrame. Uses openpyxl."""
     class Inputs(BaseInputs):
         src_excel_bytes: bytes
         sheet: int | str = 0

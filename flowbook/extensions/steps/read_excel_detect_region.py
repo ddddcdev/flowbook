@@ -112,15 +112,7 @@ def _extract_region_from_df(
 
 @step("read_excel_detect_region")
 class ReadExcelDetectRegionOp(BaseOp):
-    """
-    Find table region by configurable column hints (from InputProfile.column_hints),
-    then extract that region as a DataFrame. Table may be anywhere; other content
-    may exist in the sheet separated by blank rows/columns.
-
-    Reads the sheet into a raw DataFrame first (engine from filename or default openpyxl),
-    then performs region detection on the DataFrame. This separates format handling
-    from region logic and supports both .xlsx and .xls.
-    """
+    """Find table region by column hints, extract as DataFrame. Supports .xlsx/.xls."""
 
     class Inputs(BaseInputs):
         src_excel_bytes: bytes = Field(description="Excel file bytes")

@@ -16,6 +16,8 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("lookup_table")
 class LookupTableOp(BaseOp):
+    """Left-join DataFrame with lookup table (from config or inline df)."""
+
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame = Field(description="DataFrame")

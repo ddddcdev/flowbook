@@ -14,6 +14,7 @@ from flowbook.extensions.steps._types import DataFrame
 
 @step("check_warn")
 class CheckWarnOp(BaseOp):
+    """Run checks on DataFrame. Emits warnings for failures; passes df through."""
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame

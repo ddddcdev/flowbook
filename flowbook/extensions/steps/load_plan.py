@@ -12,6 +12,7 @@ from flowbook.core.runtime.store import RunStore
 
 @step("load_plan")
 class LoadPlanOp(BaseOp):
+    """Load plan config by name from ConfigStore. Used by Import/Export planner."""
     class Inputs(BaseInputs):
         plan_name: str = Field(json_schema_extra={"x-config-kind": Plan.KIND})
 
