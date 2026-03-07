@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Config CRUD API**: `POST /configs` (create), `PUT /configs/{kind}/{name}` (upsert), `POST /configs/{kind}/{name}/activate`, `POST /configs/{kind}/{name}/deactivate`.
+- **update_config step**: Write config spec to ConfigStore. Used by AI edit flow.
+- **Spec validation**: `put_spec` enforces validation via `validate_spec`.
+- **chat_completion step**: Single-turn OpenAI chat completion. Uses OPENAI_API_KEY.
+- **hello_ai step**: OpenAI API demo (optional).
+- **POST /chat**: Chat API endpoint.
+- **Streamlit Chat**: Chat tab with demo context.
+- **3b: step/config self-description for AI**:
+  - **OpSpec**: `input_schema`, `output_schema` (name, type, required per field). `config_refs` (input_key → kind). Removed redundant `required_inputs`/`optional_inputs`/`output_keys` from output.
+  - **Config introspect**: `flowbook/core/configs/introspect.py`. `get_config_kind_schema(kind)` returns doc, fields, `item_schema` (KindRule, DateRule, ResultArtifactSpec), `plan_structure` (plan steps), `nested_types`.
+  - **API**: `GET /configs/schema/{kind}`, `GET /configs/index`, `GET /steps/index`. Steps index includes `input_schema`, `output_schema`, `config_refs`.
+  - **CLI**: `flowbook steps index`, `flowbook steps show <op>`, `flowbook configs index`, `flowbook configs schema <kind>`.
+  - **Docs**: `flowbook/docs/ai-config-guide.md` (AI config creation workflow), `flowbook/docs/steps-index.md`, `flowbook/docs/config-schema.md`.
+  - **Streamlit Steps tab**: Input/Output schema display, config_refs.
+  - **package.json**: `lint:fix`, `ci:fix` (ruff --fix).
+
+### Changed
+
+- **Registry**: InputsBase/OutputsBase → BaseInputs/BaseOutputs (Pydantic). Removed `flowbook/core/registry/spec.py`.
+- **Steps**: All steps migrated to BaseInputs/BaseOutputs. Added concise docstrings.
+- **Executor**: Skip persisting None outputs (fixes result_artifacts 404 when plan has no result_artifacts).
+- **CI**: Lint, typecheck, test fixes (concat_df, lookup_table, introspect, etc.).
+
 ## [0.1.0a8] - 2026-03-03
 
 ### Added
