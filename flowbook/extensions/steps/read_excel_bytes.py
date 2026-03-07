@@ -4,32 +4,34 @@ from io import BytesIO
 from typing import Any
 
 import pandas as pd
+from pydantic import ConfigDict
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("read_excel_bytes")
 class ReadExcelBytesOp(BaseOp):
-    class Inputs(InputsBase):
-        SRC_EXCEL_BYTES = "src_excel_bytes"
-        SHEET = "sheet"
-        HEADER = "header"
-        REQUIRED = (SRC_EXCEL_BYTES,)
-        OPTIONAL = (SHEET, HEADER)
+    class Inputs(BaseInputs):
+        src_excel_bytes: bytes
+        sheet: int | str = 0
+        header: int = 0
 
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        src = inputs[self.Inputs.SRC_EXCEL_BYTES]
-        sheet = inputs.get(self.Inputs.SHEET, 0)
-        header = inputs.get(self.Inputs.HEADER, 0)
-
-        df = pd.read_excel(BytesIO(src), engine="openpyxl", sheet_name=sheet, header=header)
-        return {self.Outputs.DF: df}
+        inp = self.Inputs.model_validate(inputs)
+        df = pd.read_excel(
+            BytesIO(inp.src_excel_bytes),
+            engine="openpyxl",
+            sheet_name=inp.sheet,
+            header=inp.header,
+        )
+        return self.Outputs(df=df).model_dump(mode="python")
 
 
 register = register_from_steps()

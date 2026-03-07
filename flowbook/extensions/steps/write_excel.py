@@ -2,31 +2,32 @@ from __future__ import annotations
 
 from typing import Any
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from pydantic import ConfigDict
+
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 from flowbook.extensions.excel.io import write_df_to_excel
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("write_excel")
 class WriteExcelOp(BaseOp):
-    class Inputs(InputsBase):
-        DF = "df"
-        OUTPUT_FILENAME = "output_filename"
-        REQUIRED = (DF,)
-        OPTIONAL = (OUTPUT_FILENAME,)
+    class Inputs(BaseInputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
+        output_filename: str | None = None
 
-    class Outputs(OutputsBase):
-        BYTES = "bytes"
+    class Outputs(BaseOutputs):
+        bytes: bytes
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        df = inputs[self.Inputs.DF]
-        b = write_df_to_excel(df, sheet="out", index=False)
-        result: dict[str, Any] = {self.Outputs.BYTES: b}
-        if output_filename := inputs.get(self.Inputs.OUTPUT_FILENAME):
-            if isinstance(output_filename, str):
-                result["_meta"] = {"filename": output_filename}
+        inp = self.Inputs.model_validate(inputs)
+        result = self.Outputs(bytes=write_df_to_excel(inp.df, sheet="out", index=False)).model_dump(
+            mode="python"
+        )
+        if inp.output_filename:
+            result["_meta"] = {"filename": inp.output_filename}
         return result
 
 

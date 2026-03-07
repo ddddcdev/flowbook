@@ -15,7 +15,6 @@ from flowbook import (
     register_steps,
 )
 from flowbook.core.configs.spec_types import EntityPlanMap, InputProfile
-from flowbook.extensions.steps.inspect import InspectFilenameOp
 
 pytestmark = pytest.mark.unit
 
@@ -67,8 +66,8 @@ def test_inspect_filename_demo_csv_detects_kind():
                     "name": "inspect",
                     "op": "inspect_filename",
                     "inputs": {
-                        InspectFilenameOp.Inputs.INPUT_PROFILE_NAME: "@input_profile_name",
-                        InspectFilenameOp.Inputs.FILENAME: "@filename",
+                        "input_profile_name": "@input_profile_name",
+                        "filename": "@filename",
                     },
                 }
             ],
@@ -77,7 +76,7 @@ def test_inspect_filename_demo_csv_detects_kind():
         info = session.exec_plan(plan_config=config)
         assert info.status == "succeeded", info.errors
 
-        result_key = info.steps[0].outputs[InspectFilenameOp.Outputs.RESULT]
+        result_key = info.steps[0].outputs["result"]
         result = session.get_dict(result_key)
 
         assert result["detected_kind"] == "demo/csv"

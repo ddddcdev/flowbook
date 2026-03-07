@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from flowbook import Registry, register_from_steps, step
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.runtime.store import RunStore
 
 
@@ -14,16 +13,14 @@ from flowbook.core.runtime.store import RunStore
 class DoublerOp(BaseOp):
     """Test op: doubles the input value."""
 
-    class Inputs(InputsBase):
-        X = "x"
-        REQUIRED = (X,)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        x: int | float
 
-    class Outputs(OutputsBase):
-        OUT = "out"
+    class Outputs(BaseOutputs):
+        out: int | float
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        return {self.Outputs.OUT: inputs[self.Inputs.X] * 2}
+        return {"out": inputs["x"] * 2}
 
 
 register = register_from_steps()

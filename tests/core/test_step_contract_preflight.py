@@ -14,7 +14,6 @@ from flowbook import (
     Registry,
     register_steps,
 )
-from flowbook.extensions.steps.load_plan import LoadPlanOp
 
 pytestmark = pytest.mark.unit
 
@@ -49,7 +48,7 @@ def test_preflight_missing_required_input_raises_with_step_and_keys() -> None:
 
     engine = Engine(store=store, registry=registry, config_store=config_store)
     with engine.create_run() as run:
-        run.put_input(LoadPlanOp.Inputs.PLAN_NAME, "some_plan")
+        run.put_input("plan_name", "some_plan")
 
         config = {
             "steps": [
@@ -64,7 +63,7 @@ def test_preflight_missing_required_input_raises_with_step_and_keys() -> None:
         assert info.status == "failed"
         # Either preflight (op.Inputs) or binding validation catches it
         err = info.errors[0]
-        assert "missing" in err.lower() or LoadPlanOp.Inputs.PLAN_NAME in err
+        assert "missing" in err.lower() or "plan_name" in err
         assert "planner" in err
 
 
@@ -76,7 +75,7 @@ def test_preflight_surplus_input_raises_with_step_and_keys() -> None:
 
     engine = Engine(store=store, registry=registry, config_store=config_store)
     with engine.create_run() as run:
-        run.put_input(LoadPlanOp.Inputs.PLAN_NAME, "plan_add")
+        run.put_input("plan_name", "plan_add")
         run.put_input("extra_thing", "x")
 
         config = {
@@ -85,7 +84,7 @@ def test_preflight_surplus_input_raises_with_step_and_keys() -> None:
                     "name": "planner",
                     "op": "load_plan",
                     "inputs": {
-                        LoadPlanOp.Inputs.PLAN_NAME: "plan_name",
+                        "plan_name": "plan_name",
                         "surplus_key": "extra_thing",
                     },
                 }

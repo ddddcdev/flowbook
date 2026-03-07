@@ -45,3 +45,4 @@ def test_registry_list_ops_and_get_op_spec() -> None:
     assert spec.required_inputs == ("x", "y")
     assert spec.optional_inputs == ()
     assert "sum" in spec.output_keys
+    assert spec.config_refs == {}

@@ -7,10 +7,10 @@ from typing import Any
 
 import openpyxl
 from openpyxl.worksheet.worksheet import Worksheet
+from pydantic import Field
 
 from flowbook.core.configs.spec_types import EntityPlanMap, InputProfile
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
@@ -68,29 +68,27 @@ def _get_cell_value(ws: Worksheet, cell_ref: str) -> object | None:
 
 @step("inspect_excel_bytes_v2")
 class InspectExcelBytesV2Op(BaseOp):
-    class Inputs(InputsBase):
-        INPUT_PROFILE_NAME = "input_profile_name"
-        SRC_EXCEL_BYTES = "src_excel_bytes"
-        SRC_EXCEL_FILENAME = "src_excel_filename"
-        REQUIRED = (INPUT_PROFILE_NAME, SRC_EXCEL_BYTES, SRC_EXCEL_FILENAME)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        input_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        src_excel_bytes: bytes = Field(description="Excel file bytes")
+        src_excel_filename: str = Field(description="Filename for kind matching")
 
-    class Outputs(OutputsBase):
-        RESULT = "result"
+    class Outputs(BaseOutputs):
+        result: dict[str, Any]
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
-        src = inputs[self.Inputs.SRC_EXCEL_BYTES]
-        filename = inputs[self.Inputs.SRC_EXCEL_FILENAME]
+        inp = self.Inputs.model_validate(inputs)
 
         try:
-            input_profile = store.configs.get_spec(InputProfile, input_profile_name)
+            input_profile = store.configs.get_spec(InputProfile, inp.input_profile_name)
         except KeyError as e:
-            raise ValueError(f"input_profile '{input_profile_name}' not found in configs") from e
+            raise ValueError(
+                f"input_profile '{inp.input_profile_name}' not found in configs"
+            ) from e
 
         kind_rules = input_profile.get("kind_rules")
         if kind_rules is None:
-            raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
+            raise ValueError(f"input_profile '{inp.input_profile_name}' missing 'kind_rules' key")
 
         profile_match_mode = input_profile.get("match_mode") or "start"
 
@@ -102,7 +100,7 @@ class InspectExcelBytesV2Op(BaseOp):
             kind = rule.get("kind")
             rule_mode = rule.get("match_mode") or profile_match_mode
             matcher = re.search if rule_mode == "search" else re.match
-            if pattern and kind and matcher(pattern, filename):
+            if pattern and kind and matcher(pattern, inp.src_excel_filename):
                 detected_kind = kind
                 matched_pattern = pattern
                 matched_rule = rule
@@ -116,7 +114,7 @@ class InspectExcelBytesV2Op(BaseOp):
         effective_date: str | None = None
 
         if sheet_name and cell:
-            wb = openpyxl.load_workbook(BytesIO(src), data_only=True)
+            wb = openpyxl.load_workbook(BytesIO(inp.src_excel_bytes), data_only=True)
             try:
                 ws = wb[sheet_name]
             except KeyError:
@@ -133,8 +131,8 @@ class InspectExcelBytesV2Op(BaseOp):
 
         result = {
             "schema_version": "inspect_result_v2",
-            "input_profile_name": input_profile_name,
-            "filename": filename,
+            "input_profile_name": inp.input_profile_name,
+            "filename": inp.src_excel_filename,
             "detected_kind": detected_kind,
             "plan_name": plan_name,
             "effective_date": effective_date,
@@ -148,7 +146,7 @@ class InspectExcelBytesV2Op(BaseOp):
                 },
             },
         }
-        return {self.Outputs.RESULT: result}
+        return self.Outputs(result=result).model_dump(mode="python")
 
 
 register = register_from_steps()

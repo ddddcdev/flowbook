@@ -10,6 +10,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
+from flowbook.core.configs.introspect import get_config_kind_schema
 from flowbook.core.configs.spec_types import KIND_TO_SPEC_TYPE
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
@@ -22,6 +23,29 @@ from flowbook.extensions.api.schemas import (
 )
 
 router = APIRouter(prefix="/configs", tags=["configs"])
+
+
+@router.get("/index")
+def configs_index() -> dict:
+    """Index of config kinds and config entries."""
+    kinds = sorted(KIND_TO_SPEC_TYPE.keys())
+    store = _config_store()
+    try:
+        if hasattr(store, "engine") and getattr(store, "engine", None) is not None:
+            engine = store.engine  # type: ignore[reportAttributeAccessIssue]
+            with engine.begin() as conn:
+                rows = conn.execute(
+                    text(
+                        "SELECT kind, name FROM configs WHERE is_active = true ORDER BY kind, name"
+                    )
+                ).fetchall()
+            configs = [{"kind": r[0], "name": r[1]} for r in rows]
+        else:
+            pairs = list(getattr(store, "_specs", {}).keys())
+            configs = [{"kind": k, "name": n} for k, n in sorted(pairs)]
+    except Exception as e:
+        raise to_http_error(e) from e
+    return {"kinds": kinds, "configs": configs}
 
 
 def _config_store():
@@ -89,6 +113,15 @@ def list_configs(
         return ConfigsListResponse(configs=[ConfigEntry(kind=k, name=n) for k, n in pairs])
     except Exception as e:
         raise to_http_error(e) from e
+
+
+@router.get("/schema/{kind}", summary="Get config kind schema")
+def get_config_schema(kind: str) -> dict:
+    """Return schema info for a config kind: docstring and field definitions."""
+    try:
+        return get_config_kind_schema(kind)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"reason": str(e)}) from e
 
 
 @router.get(

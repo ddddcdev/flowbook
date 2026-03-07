@@ -14,6 +14,26 @@ from flowbook.extensions.api.deps import get_engine
 router = APIRouter(prefix="/steps", tags=["steps"])
 
 
+@router.get("/index")
+def steps_index() -> dict:
+    """Full index of all step specs (docstring, inputs, outputs, config_refs)."""
+    engine = get_engine()
+    ops = engine.registry.list_ops()
+    specs = []
+    for op_name in ops:
+        spec = engine.registry.get_op_spec(op_name)
+        specs.append(
+            {
+                "op_name": spec.op_name,
+                "docstring": spec.docstring,
+                "config_refs": spec.config_refs,
+                "input_schema": spec.input_schema,
+                "output_schema": spec.output_schema,
+            }
+        )
+    return {"steps": specs}
+
+
 @router.get("")
 def list_steps() -> dict[str, list[str]]:
     """List all registered op names."""
@@ -33,7 +53,7 @@ def get_step(op_name: str) -> dict:
     return {
         "op_name": spec.op_name,
         "docstring": spec.docstring,
-        "required_inputs": list(spec.required_inputs),
-        "optional_inputs": list(spec.optional_inputs),
-        "output_keys": list(spec.output_keys),
+        "config_refs": spec.config_refs,
+        "input_schema": spec.input_schema,
+        "output_schema": spec.output_schema,
     }

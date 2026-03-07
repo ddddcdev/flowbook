@@ -4,34 +4,29 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
+from pydantic import ConfigDict
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("check_warn")
 class CheckWarnOp(BaseOp):
-    class Inputs(InputsBase):
-        DF = "df"
-        CHECKS = "checks"
-        REQUIRED = (DF, CHECKS)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
+        checks: list[dict[str, Any]]
 
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        df = inputs[self.Inputs.DF]
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError("check_warn df must be a DataFrame")
-        checks = inputs[self.Inputs.CHECKS]
-        if not isinstance(checks, list):
-            raise TypeError("check_warn checks must be a list")
+        inp = self.Inputs.model_validate(inputs)
         warnings: list[str] = []
-        for item in checks:
+        for item in inp.checks:
             if not isinstance(item, dict):
                 continue
             expr = item.get("expr")
@@ -39,14 +34,14 @@ class CheckWarnOp(BaseOp):
             if not isinstance(expr, str) or not expr.strip():
                 continue
             try:
-                mask = df.eval(expr, engine="python")
+                mask = inp.df.eval(expr, engine="python")
                 if getattr(mask, "any", None) and mask.any():
                     warnings.append(str(message))
                 elif isinstance(mask, bool) and mask:
                     warnings.append(str(message))
             except Exception:
                 warnings.append(str(message))
-        result: dict[str, Any] = {self.Outputs.DF: df}
+        result = self.Outputs(df=inp.df).model_dump(mode="python")
         if warnings:
             result["_warnings"] = warnings
         return result

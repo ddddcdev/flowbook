@@ -4,9 +4,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+from pydantic import Field
+
 from flowbook.core.configs.spec_types import EntityPlanMap, InputProfile
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
 
@@ -15,57 +16,51 @@ from flowbook.core.runtime.store import RunStore
 class InspectOp(BaseOp):
     """Contract-first stub: fixed control keys, no file I/O yet."""
 
-    class Inputs(InputsBase):
-        SOURCE_URI = "source_uri"
-        READ_SPEC = "read_spec"
-        REQUIRED = (SOURCE_URI,)
-        OPTIONAL = (READ_SPEC,)
+    class Inputs(BaseInputs):
+        source_uri: str
+        read_spec: dict[str, Any] | None = None
 
-    class Outputs(OutputsBase):
-        INSPECT_RESULT = "inspect_result"
-        READ_SPEC = "read_spec"
+    class Outputs(BaseOutputs):
+        inspect_result: dict[str, Any]
+        read_spec: dict[str, Any]
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        source_uri = inputs.get(self.Inputs.SOURCE_URI)
-        read_spec = inputs.get(self.Inputs.READ_SPEC) or {}
+        inp = self.Inputs.model_validate(inputs)
+        read_spec = inp.read_spec or {}
         result = {
-            "source_uri": source_uri,
+            "source_uri": inp.source_uri,
             "warnings": [],
             "suggested_read_spec": read_spec,
             "columns": [],
         }
-        return {
-            self.Outputs.INSPECT_RESULT: result,
-            self.Outputs.READ_SPEC: result["suggested_read_spec"],
-        }
+        return self.Outputs(
+            inspect_result=result,
+            read_spec=result["suggested_read_spec"],
+        ).model_dump(mode="python")
 
 
 @step("inspect_filename_kind")
 class InspectFilenameKindOp(BaseOp):
     """Identifies input kind from filename pattern only."""
 
-    class Inputs(InputsBase):
-        INPUT_PROFILE_NAME = "input_profile_name"
-        PATH = "path"
-        REQUIRED = (INPUT_PROFILE_NAME, PATH)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        input_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        path: str = Field(description="File path")
 
-    class Outputs(OutputsBase):
-        RESULT = "result"
+    class Outputs(BaseOutputs):
+        result: dict[str, Any]
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
-        path_str = inputs[self.Inputs.PATH]
+        inp = self.Inputs.model_validate(inputs)
 
-        config = store.configs.get_spec(InputProfile, input_profile_name)
+        config = store.configs.get_spec(InputProfile, inp.input_profile_name)
         kind_rules = config.get("kind_rules")
         if kind_rules is None:
-            raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
+            raise ValueError(f"input_profile '{inp.input_profile_name}' missing 'kind_rules' key")
 
         profile_match_mode = config.get("match_mode") or "start"
 
-        path = Path(path_str)
-        filename = path.name
+        path = Path(inp.path)
         detected_kind = None
         matched_pattern = None
         for rule in kind_rules:
@@ -73,23 +68,23 @@ class InspectFilenameKindOp(BaseOp):
             kind = rule.get("kind")
             rule_mode = rule.get("match_mode") or profile_match_mode
             matcher = re.search if rule_mode == "search" else re.match
-            if pattern and kind and matcher(pattern, filename):
+            if pattern and kind and matcher(pattern, path.name):
                 detected_kind = kind
                 matched_pattern = pattern
                 break
 
         result = {
             "schema_version": "inspect_result_v1",
-            "input_profile_name": input_profile_name,
-            "resolved_path": path_str,
-            "filename": filename,
+            "input_profile_name": inp.input_profile_name,
+            "resolved_path": inp.path,
+            "filename": path.name,
             "detected_kind": detected_kind,
             "evidence": {
                 "matched_pattern": matched_pattern,
                 "matcher": "filename_regex",
             },
         }
-        return {self.Outputs.RESULT: result}
+        return self.Outputs(result=result).model_dump(mode="python")
 
 
 def _resolve_plan_name(
@@ -113,23 +108,20 @@ def _resolve_plan_name(
 class InspectFilenameOp(BaseOp):
     """Identifies input kind from filename only. Returns plan_name from EntityPlanMap."""
 
-    class Inputs(InputsBase):
-        INPUT_PROFILE_NAME = "input_profile_name"
-        FILENAME = "filename"
-        REQUIRED = (INPUT_PROFILE_NAME, FILENAME)
-        OPTIONAL = ()
+    class Inputs(BaseInputs):
+        input_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        filename: str = Field(description="Filename only")
 
-    class Outputs(OutputsBase):
-        RESULT = "result"
+    class Outputs(BaseOutputs):
+        result: dict[str, Any]
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        input_profile_name = inputs[self.Inputs.INPUT_PROFILE_NAME]
-        filename = inputs[self.Inputs.FILENAME]
+        inp = self.Inputs.model_validate(inputs)
 
-        config = store.configs.get_spec(InputProfile, input_profile_name)
+        config = store.configs.get_spec(InputProfile, inp.input_profile_name)
         kind_rules = config.get("kind_rules")
         if kind_rules is None:
-            raise ValueError(f"input_profile '{input_profile_name}' missing 'kind_rules' key")
+            raise ValueError(f"input_profile '{inp.input_profile_name}' missing 'kind_rules' key")
 
         profile_match_mode = config.get("match_mode") or "start"
 
@@ -141,7 +133,7 @@ class InspectFilenameOp(BaseOp):
             kind = rule.get("kind")
             rule_mode = rule.get("match_mode") or profile_match_mode
             matcher = re.search if rule_mode == "search" else re.match
-            if pattern and kind and matcher(pattern, filename):
+            if pattern and kind and matcher(pattern, inp.filename):
                 detected_kind = kind
                 matched_pattern = pattern
                 matched_rule = rule
@@ -155,8 +147,8 @@ class InspectFilenameOp(BaseOp):
 
         result = {
             "schema_version": "inspect_filename_v1",
-            "input_profile_name": input_profile_name,
-            "filename": filename,
+            "input_profile_name": inp.input_profile_name,
+            "filename": inp.filename,
             "detected_kind": detected_kind,
             "plan_name": plan_name,
             "effective_date": None,
@@ -165,7 +157,7 @@ class InspectFilenameOp(BaseOp):
                 "matcher": "filename_regex",
             },
         }
-        return {self.Outputs.RESULT: result}
+        return self.Outputs(result=result).model_dump(mode="python")
 
 
 register = register_from_steps()

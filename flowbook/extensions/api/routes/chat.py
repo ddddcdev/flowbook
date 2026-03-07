@@ -14,7 +14,6 @@ from flowbook.core.artifacts.store import JsonValue
 from flowbook.extensions.api.deps import get_engine
 from flowbook.extensions.api.errors import to_http_error
 from flowbook.extensions.api.schemas import ChatRequest, ChatResponse
-from flowbook.extensions.steps.chat_completion import ChatCompletionOp
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -28,12 +27,9 @@ def chat(body: ChatRequest) -> ChatResponse:
 
     engine = get_engine()
     history = [{"role": m.role, "content": m.content} for m in body.messages]
-    inputs = {
-        ChatCompletionOp.Inputs.PROMPT: "@prompt",
-        ChatCompletionOp.Inputs.MESSAGES: "@messages",
-    }
+    inputs = {"prompt": "@prompt", "messages": "@messages"}
     if body.system_prompt is not None:
-        inputs[ChatCompletionOp.Inputs.SYSTEM_PROMPT] = "@system_prompt"
+        inputs["system_prompt"] = "@system_prompt"
 
     try:
         with engine.create_run() as session:
@@ -57,7 +53,7 @@ def chat(body: ChatRequest) -> ChatResponse:
                 raise HTTPException(status_code=500, detail={"reason": err})
 
             step_info = info.steps[0]
-            response_key = step_info.outputs.get(ChatCompletionOp.Outputs.RESPONSE)
+            response_key = step_info.outputs.get("response")
             if not response_key:
                 raise HTTPException(status_code=500, detail={"reason": "No response from step"})
 

@@ -139,11 +139,13 @@ def run(
                 },
                 data={
                     "plan_name": "import_excel_region",
-                    "inputs": json.dumps({
-                        "entity_key": "demo/excel",
-                        "sheet_name": "data",
-                        "region_profile_name": "detail_region",
-                    }),
+                    "inputs": json.dumps(
+                        {
+                            "entity_key": "demo/excel",
+                            "sheet_name": "data",
+                            "region_profile_name": "detail_region",
+                        }
+                    ),
                 },
                 timeout=60.0,
             )

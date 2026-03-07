@@ -120,15 +120,15 @@ def test_read_excel_detect_region_op() -> None:
     with engine.create_run() as run:
         result = op(
             {
-                op.Inputs.SRC_EXCEL_BYTES: xlsx,
-                op.Inputs.SRC_EXCEL_FILENAME: "test.xlsx",
-                op.Inputs.SHEET: "data",
-                op.Inputs.REGION_PROFILE_NAME: "detail_region",
+                "src_excel_bytes": xlsx,
+                "src_excel_filename": "test.xlsx",
+                "sheet": "data",
+                "region_profile_name": "detail_region",
             },
             run.store,
         )
 
-    df = result[op.Outputs.DF]
+    df = result["df"]
     assert list(df.columns) == ["LineNo", "Item", "Qty", "Extra1", "Extra2", "Note", "Date"]
     assert len(df) == 4
     assert df.iloc[2]["Item"] == "c"
@@ -161,13 +161,13 @@ def test_read_excel_detect_region_op_without_filename() -> None:
     with engine.create_run() as run:
         result = op(
             {
-                op.Inputs.SRC_EXCEL_BYTES: xlsx,
-                op.Inputs.SHEET: "data",
-                op.Inputs.REGION_PROFILE_NAME: "detail_region",
+                "src_excel_bytes": xlsx,
+                "sheet": "data",
+                "region_profile_name": "detail_region",
             },
             run.store,
         )
 
-    df = result[op.Outputs.DF]
+    df = result["df"]
     assert list(df.columns) == ["LineNo", "Item", "Qty"]
     assert len(df) == 4

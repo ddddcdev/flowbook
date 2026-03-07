@@ -5,68 +5,59 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
+from pydantic import ConfigDict
 
-from flowbook.core.registry.base_op import BaseOp
-from flowbook.core.registry.spec import InputsBase, OutputsBase
+from flowbook.core.registry.base_op import BaseInputs, BaseOp, BaseOutputs
 from flowbook.core.registry.step_decorator import register_from_steps, step
 from flowbook.core.runtime.store import RunStore
+from flowbook.extensions.steps._types import DataFrame
 
 
 @step("conditional_update")
 class ConditionalUpdateOp(BaseOp):
-    class Inputs(InputsBase):
-        DF = "df"
-        CONDITION = "condition"
-        SOURCE = "source"
-        COLUMNS = "columns"
-        KEY = "key"
-        SOURCE_COLUMNS = "source_columns"
-        REQUIRED = (DF, CONDITION, SOURCE, COLUMNS)
-        OPTIONAL = (KEY, SOURCE_COLUMNS)
+    class Inputs(BaseInputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
+        condition: str
+        source: DataFrame | int | float | str
+        columns: list[str] | str
+        key: str | None = None
+        source_columns: list[str] | str | None = None
 
-    class Outputs(OutputsBase):
-        DF = "df"
+    class Outputs(BaseOutputs):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        df: DataFrame
 
     def __call__(self, inputs: dict[str, Any], store: RunStore) -> dict[str, Any]:
-        df = inputs[self.Inputs.DF]
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError("conditional_update df must be a DataFrame")
-        condition = inputs[self.Inputs.CONDITION]
-        if not isinstance(condition, str):
-            raise TypeError("conditional_update condition must be a string expr")
-        source = inputs[self.Inputs.SOURCE]
-        columns = inputs[self.Inputs.COLUMNS]
-        if isinstance(columns, str):
-            columns = [columns]
-        key = inputs.get(self.Inputs.KEY)
-        source_columns = inputs.get(self.Inputs.SOURCE_COLUMNS)
-        if isinstance(source_columns, str):
-            source_columns = [source_columns]
-        out = df.copy()
+        inp = self.Inputs.model_validate(inputs)
+        columns = [inp.columns] if isinstance(inp.columns, str) else list(inp.columns)
+        source_columns = (
+            [inp.source_columns] if isinstance(inp.source_columns, str) else inp.source_columns
+        )
+        out = inp.df.copy()
         try:
-            mask = out.eval(condition, engine="python")
+            mask = out.eval(inp.condition, engine="python")
         except Exception as e:
-            raise ValueError(f"conditional_update condition failed: {condition!r}") from e
+            raise ValueError(f"conditional_update condition failed: {inp.condition!r}") from e
         if not mask.any():
-            return {self.Outputs.DF: out}
-        if isinstance(source, pd.DataFrame):
-            if key is None:
+            return self.Outputs(df=out).model_dump(mode="python")
+        if isinstance(inp.source, pd.DataFrame):
+            if inp.key is None:
                 raise ValueError("conditional_update: key required when source is DataFrame")
-            if source_columns is None:
-                source_columns = columns
-            if len(source_columns) != len(columns):
+            scols = source_columns or columns
+            if len(scols) != len(columns):
                 raise ValueError("conditional_update: source_columns and columns length must match")
-            src = source.set_index(key)
-            for tcol, scol in zip(columns, source_columns, strict=True):
+            src = inp.source.set_index(inp.key)
+            for tcol, scol in zip(columns, scols, strict=True):
                 if tcol not in out.columns:
                     out[tcol] = None
-                out.loc[mask, tcol] = out.loc[mask, key].map(src[scol].to_dict()).values
+                out.loc[mask, tcol] = out.loc[mask, inp.key].map(src[scol].to_dict()).values
         else:
             for col in columns:
                 if col not in out.columns:
                     out[col] = None
-                out.loc[mask, col] = source
-        return {self.Outputs.DF: out}
+                out.loc[mask, col] = inp.source
+        return self.Outputs(df=out).model_dump(mode="python")
 
 
 register = register_from_steps()

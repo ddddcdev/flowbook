@@ -16,8 +16,6 @@ from flowbook import (
 from flowbook.core.configs.spec_types import Plan
 from flowbook.core.runtime.build import build
 from flowbook.core.runtime.executor import ResultArtifactsValidationError
-from flowbook.extensions.steps.add import AddOp
-from flowbook.extensions.steps.load_plan import LoadPlanOp
 
 pytestmark = pytest.mark.e2e
 
@@ -72,7 +70,7 @@ def test_exec_plan_with_result_artifacts_succeeds() -> None:
             {
                 "name": "add",
                 "op": "add",
-                "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},
+                "inputs": {"x": "@x", "y": "@y"},
             }
         ],
         "result_artifacts": [{"step": "add", "key": "sum", "label": "Sum"}],
@@ -86,8 +84,8 @@ def test_exec_plan_with_result_artifacts_succeeds() -> None:
 
     assert info.status == "succeeded"
     assert len(info.steps) == 1
-    assert info.steps[0].outputs[AddOp.Outputs.SUM]
-    assert run.get(info.steps[0].outputs[AddOp.Outputs.SUM]) == 5
+    assert info.steps[0].outputs["sum"]
+    assert run.get(info.steps[0].outputs["sum"]) == 5
 
 
 def test_build_result_artifacts_invalid_entry_raises() -> None:
@@ -111,7 +109,7 @@ def test_exec_plan_result_artifacts_path_not_produced_raises() -> None:
             {
                 "name": "add",
                 "op": "add",
-                "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},
+                "inputs": {"x": "@x", "y": "@y"},
             }
         ],
         "result_artifacts": [{"step": "add", "key": "nonexistent"}],
@@ -139,7 +137,7 @@ def test_load_plan_with_result_artifacts_passes_through() -> None:
                 {
                     "name": "add",
                     "op": "add",
-                    "inputs": {AddOp.Inputs.X: "@x", AddOp.Inputs.Y: "@y"},
+                    "inputs": {"x": "@x", "y": "@y"},
                 }
             ],
         },
@@ -171,7 +169,7 @@ def test_load_plan_with_result_artifacts_passes_through() -> None:
                 {
                     "name": "planner",
                     "op": "load_plan",
-                    "inputs": {LoadPlanOp.Inputs.PLAN_NAME: "@plan_name"},
+                    "inputs": {"plan_name": "@plan_name"},
                 }
             ]
         }
@@ -181,4 +179,4 @@ def test_load_plan_with_result_artifacts_passes_through() -> None:
         assert info1.status == "succeeded"
         assert "result_artifacts" in info1.steps[0].outputs
         assert info2.status == "succeeded"
-        assert run.get(info2.steps[0].outputs[AddOp.Outputs.SUM]) == 5
+        assert run.get(info2.steps[0].outputs["sum"]) == 5
