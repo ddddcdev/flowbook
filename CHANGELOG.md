@@ -8,21 +8,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- **Config CRUD API**: `POST /configs` (create), `PUT /configs/{kind}/{name}` (upsert), `POST /configs/{kind}/{name}/activate`, `POST /configs/{kind}/{name}/deactivate`.
-- **update_config step**: Write config spec to ConfigStore. Used by AI edit flow.
+( none )
+
+### Changed
+
+( none )
+
+### Breaking
+
+( none )
+
+## [0.1.0a9] - 2026-03-08
+
+### Added
+
+- **Config CRUD API**: `POST /configs` (create), `PUT /configs/{config_type}/{config_name}` (upsert), `POST /configs/{config_type}/{config_name}/activate`, `POST /configs/{config_type}/{config_name}/deactivate`. Optional `spec_text` in create/update for AI edit flow.
+- **POST /configs/ai-edit**: AI-driven config edit. Body: `config_type`, `config_name`, `spec_text`. Uses `ai_config` step (requires OPENAI_API_KEY, `flowbook[ai]`).
+- **ai_config step**: Edit config spec via natural language. Inputs: `spec_text`, `config_type`, `config_name`, optional `context`. Writes spec and spec_text to ConfigStore. See `flowbook/docs/ai-config-guide.md`, ADR-AI-CONFIG-PROMPT-PAYLOAD.
+- **update_config step**: Write config spec (and optional spec_text) to ConfigStore. Used by AI edit flow.
 - **Spec validation**: `put_spec` enforces validation via `validate_spec`.
+- **Config document**: Configs store optional `spec_text` (user/AI-maintained; returned by GET config, used by ai-edit).
 - **chat_completion step**: Single-turn OpenAI chat completion. Uses OPENAI_API_KEY.
 - **hello_ai step**: OpenAI API demo (optional).
 - **POST /chat**: Chat API endpoint.
 - **Streamlit Chat**: Chat tab with demo context.
-- **3b: step/config self-description for AI**:
-  - **OpSpec**: `input_schema`, `output_schema` (name, type, required per field). `config_refs` (input_key → kind). Removed redundant `required_inputs`/`optional_inputs`/`output_keys` from output.
-  - **Config introspect**: `flowbook/core/configs/introspect.py`. `get_config_kind_schema(kind)` returns doc, fields, `item_schema` (KindRule, DateRule, ResultArtifactSpec), `plan_structure` (plan steps), `nested_types`.
-  - **API**: `GET /configs/schema/{kind}`, `GET /configs/index`, `GET /steps/index`. Steps index includes `input_schema`, `output_schema`, `config_refs`.
-  - **CLI**: `flowbook steps index`, `flowbook steps show <op>`, `flowbook configs index`, `flowbook configs schema <kind>`.
+- **Step and config self-description (for AI / tooling)**:
+  - **OpSpec**: `input_schema`, `output_schema` (name, type, required per field). `config_refs` (input_key → config_type). Removed redundant `required_inputs`/`optional_inputs`/`output_keys` from output.
+  - **Config introspect**: `flowbook/core/configs/introspect.py`. `get_config_type_schema(config_type)` returns doc, fields, `item_schema` (KindRule, DateRule, ResultArtifactSpec), `plan_structure` (plan steps), `nested_types`.
+  - **API**: `GET /configs/schema/{config_type}`, `GET /configs/index`, `GET /steps/index`. Steps index includes `input_schema`, `output_schema`, `config_refs`.
+  - **CLI**: `flowbook steps index`, `flowbook steps show <op>`, `flowbook configs index`, `flowbook configs schema <config_type>`.
   - **Docs**: `flowbook/docs/ai-config-guide.md` (AI config creation workflow), `flowbook/docs/steps-index.md`, `flowbook/docs/config-schema.md`.
   - **Streamlit Steps tab**: Input/Output schema display, config_refs.
   - **package.json**: `lint:fix`, `ci:fix` (ruff --fix).
+- **.env.example**: `OPENAI_API_KEY`, `FLOWBOOK_AI_LOG_PROMPT` (optional; for ai_config/chat_completion and prompt logging).
 
 ### Changed
 
@@ -30,6 +48,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Steps**: All steps migrated to BaseInputs/BaseOutputs. Added concise docstrings.
 - **Executor**: Skip persisting None outputs (fixes result_artifacts 404 when plan has no result_artifacts).
 - **CI**: Lint, typecheck, test fixes (concat_df, lookup_table, introspect, etc.).
+
+### Breaking
+
+- **Config API and store**: `kind`/`name` → `config_type`/`config_name` in API paths (`/configs/{config_type}/{config_name}`), query params (`GET /configs?config_type=` replaces `?kind=`), request/response bodies, and configs table columns. Migrate clients and DB (column rename or new schema).
 
 ## [0.1.0a8] - 2026-03-03
 
@@ -81,6 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `PlanTemplate` → `Plan` (config kind `plan`). Config dir `templates/` → `plans/`.
 - Renamed InputProfile `source` → `demo_excel_inspect`.
 
+[0.1.0a9]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a9
 [0.1.0a8]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a8
 [0.1.0a7]: https://github.com/ddddcdev/flowbook/releases/tag/v0.1.0a7
 

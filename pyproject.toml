@@ -1,6 +1,6 @@
 [project]
 name = "flowbook"
-version = "0.1.0a8"
+version = "0.1.0a9"
 description = "Config-driven data flow framework with pluggable ops and extensions (Excel, Postgres, FastAPI)."
 authors = [{ name = "d4c.dev", email = "info@d4c.dev" }]
 readme = "README.md"
