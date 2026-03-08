@@ -32,7 +32,7 @@ def test_validate_spec_raises_for_missing_keys() -> None:
         validate_spec("plan", {})
     with pytest.raises(ValueError, match="kind_rules"):
         validate_spec("input_profile", {})
-    with pytest.raises(ValueError, match="unknown kind"):
+    with pytest.raises(ValueError, match="unknown config_type"):
         validate_spec("unknown", {})
 
 
@@ -71,8 +71,8 @@ def test_update_config_roundtrip() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            "kind": "plan",
-                            "name": "plan_add",
+                            "config_type": "plan",
+                            "config_name": "plan_add",
                             "spec": plan_spec,
                         },
                     }
@@ -86,8 +86,8 @@ def test_update_config_roundtrip() -> None:
     assert step_info.name == "writer"
     assert step_info.status == "succeeded"
     assert "config_id" in step_info.outputs
-    assert run.get(step_info.outputs["kind"]) == "plan"
-    assert run.get(step_info.outputs["name"]) == "plan_add"
+    assert run.get(step_info.outputs["config_type"]) == "plan"
+    assert run.get(step_info.outputs["config_name"]) == "plan_add"
 
     # Roundtrip: read back via ConfigStore
     loaded = config_store.get_spec(Plan, "plan_add")
@@ -132,8 +132,8 @@ def test_update_config_then_load_plan_in_same_run() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            "kind": "plan",
-                            "name": "plan_add",
+                            "config_type": "plan",
+                            "config_name": "plan_add",
                             "spec": plan_spec,
                         },
                     },
@@ -161,8 +161,8 @@ def test_update_config_then_load_plan_in_same_run() -> None:
     }
 
 
-def test_update_config_unknown_kind_raises() -> None:
-    """Unknown kind causes plan to fail with helpful error in info.errors."""
+def test_update_config_unknown_config_type_raises() -> None:
+    """Unknown config_type causes plan to fail with helpful error in info.errors."""
     artifacts_store = InMemoryArtifactsStore()
     config_store = InMemoryConfigStore()
 
@@ -182,8 +182,8 @@ def test_update_config_unknown_kind_raises() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            "kind": "unknown_kind",
-                            "name": "foo",
+                            "config_type": "unknown_kind",
+                            "config_name": "foo",
                             "spec": {},
                         },
                     }
@@ -217,8 +217,8 @@ def test_update_config_missing_required_keys_fails() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            "kind": "plan",
-                            "name": "bad_plan",
+                            "config_type": "plan",
+                            "config_name": "bad_plan",
                             "spec": {},  # missing "plan" key
                         },
                     }
@@ -252,8 +252,8 @@ def test_update_config_config_id_optional() -> None:
                         "name": "writer",
                         "op": "update_config",
                         "inputs": {
-                            "kind": "plan",
-                            "name": "auto_id_plan",
+                            "config_type": "plan",
+                            "config_name": "auto_id_plan",
                             "spec": {"plan": {"steps": []}},
                         },
                     }

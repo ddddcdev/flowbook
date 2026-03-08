@@ -28,16 +28,16 @@ def api(base: str, path: str) -> str:
 
 
 def _fetch_input_profile_names(base: str, *, inspectable: bool = False) -> list[str]:
-    """Fetch input_profile config names from GET /configs?kind=input_profile.
+    """Fetch input_profile config names from GET /configs?config_type=input_profile.
     When inspectable=True, only profiles with inspect_step_name are returned."""
     try:
-        params: dict[str, str | bool] = {"kind": "input_profile"}
+        params: dict[str, str | bool] = {"config_type": "input_profile"}
         if inspectable:
             params["inspectable"] = True
         r = requests.get(api(base, "/configs"), params=params, timeout=10)
         r.raise_for_status()
         configs = r.json().get("configs", [])
-        return [c["name"] for c in configs]
+        return [c["config_name"] for c in configs]
     except requests.RequestException:
         return []
 
@@ -484,6 +484,7 @@ def main() -> None:
         "Artifacts",
         "Entities",
         "Configs",
+        "AI Edit",
         "Steps",
     ]
     tabs = st.tabs(tab_names)
@@ -496,7 +497,8 @@ def main() -> None:
     tab_artifacts = tabs[6]
     tab_entities = tabs[7]
     tab_configs = tabs[8]
-    tab_steps = tabs[9]
+    tab_ai_edit = tabs[9]
+    tab_steps = tabs[10]
 
     with tab_health:
         st.subheader("API connection")
@@ -554,66 +556,6 @@ def main() -> None:
                         response = f"Error: {e}"
             st.session_state["chat_messages"].append({"role": "assistant", "content": response})
             st.rerun()
-
-    with tab_steps:
-        st.subheader("Steps (ops)")
-        st.caption("Select a row to view its spec below.")
-        if st.button("Refresh", key="steps_refresh"):
-            st.session_state.pop("steps_list", None)
-        try:
-            r = requests.get(api(base, "/steps"), timeout=10)
-            r.raise_for_status()
-            ops = r.json().get("ops", [])
-            if ops:
-                df = pd.DataFrame({"op": ops})
-                event = st.dataframe(
-                    df,
-                    key="steps_df",
-                    width="stretch",
-                    hide_index=True,
-                    on_select="rerun",
-                    selection_mode="single-row",
-                )
-                row_idx = None
-                if event.selection and event.selection.rows:
-                    row_idx = event.selection.rows[0]
-                if row_idx is not None and 0 <= row_idx < len(ops):
-                    op_name = ops[row_idx]
-                    r2 = requests.get(api(base, f"/steps/{op_name}"), timeout=10)
-                    r2.raise_for_status()
-                    spec = r2.json()
-                    st.subheader(f"Spec: {op_name}")
-                    st.markdown(spec.get("docstring") or "(no docstring)")
-                    inp_schema = spec.get("input_schema", [])
-                    out_schema = spec.get("output_schema", [])
-                    config_refs = spec.get("config_refs", {})
-                    if config_refs:
-                        st.caption(
-                            "Config refs: "
-                            + ", ".join(f"{k}→{v}" for k, v in config_refs.items())
-                        )
-                    with st.expander("Input schema", expanded=True):
-                        if inp_schema:
-                            st.dataframe(
-                                pd.DataFrame(inp_schema),
-                                use_container_width=True,
-                                hide_index=True,
-                            )
-                        else:
-                            st.caption("(none)")
-                    with st.expander("Output schema", expanded=True):
-                        if out_schema:
-                            st.dataframe(
-                                pd.DataFrame(out_schema),
-                                use_container_width=True,
-                                hide_index=True,
-                            )
-                        else:
-                            st.caption("(none)")
-            else:
-                st.info("No steps. API may not have discover_steps loaded.")
-        except requests.RequestException as e:
-            st.error(str(e))
 
     with tab_inspect:
         st.subheader("Inspect (optional)")
@@ -1184,6 +1126,7 @@ def main() -> None:
 
     with tab_configs:
         st.subheader("Configs (input_profiles, mappings, plans, entity_plan_maps)")
+
         if st.button("Refresh list", key="configs_refresh"):
             try:
                 r = requests.get(api(base, "/configs"), timeout=10)
@@ -1209,11 +1152,12 @@ def main() -> None:
                 row_idx = event.selection.rows[0]
             if row_idx is not None and 0 <= row_idx < len(configs_list):
                 c = configs_list[row_idx]
-                kind, name = c["kind"], c["name"]
+                ct = c["config_type"]
+                cn = c["config_name"]
                 try:
-                    r = requests.get(api(base, f"/configs/{kind}/{name}"), timeout=10)
+                    r = requests.get(api(base, f"/configs/{ct}/{cn}"), timeout=10)
                     r.raise_for_status()
-                    st.subheader(f"Spec: {kind} / {name}")
+                    st.subheader(f"Spec: {ct} / {cn}")
                     st.json(r.json().get("spec", {}))
                 except requests.RequestException as e:
                     st.error(str(e))
@@ -1224,6 +1168,248 @@ def main() -> None:
                 )
             else:
                 st.caption("Click «Refresh list» to load configs from the API.")
+
+    with tab_ai_edit:
+        st.subheader("AI Edit")
+        st.caption(
+            "spec_text = full spec text. User edits and maintains it. "
+            "Requires OPENAI_API_KEY and flowbook[ai]. Step 1: select planner → inputs → dry run. "
+            "Step 2: select referenced config → spec_text → Run AI Edit."
+        )
+        try:
+            idx_r = requests.get(api(base, "/configs/index"), timeout=10)
+            idx_r.raise_for_status()
+            idx_data = idx_r.json()
+            all_configs = idx_data.get("configs", [])
+            plans = [c["config_name"] for c in all_configs if c.get("config_type") == "plan"]
+        except requests.RequestException:
+            plans = []
+            all_configs = []
+
+        # Step 1: planner selection + inputs
+        st.subheader("Step 1: Planner & inputs (dry run)")
+        plan_name = st.selectbox(
+            "Plan (planner)",
+            options=plans if plans else [""],
+            key="ai_edit_plan_name",
+        )
+        inputs_dict: dict[str, str] = {}
+        plan_inputs_schema: list[dict] = []
+        if plan_name:
+            try:
+                pi_r = requests.get(
+                    api(base, "/configs/plan-inputs"),
+                    params={"plan_name": plan_name},
+                    timeout=10,
+                )
+                pi_r.raise_for_status()
+                plan_inputs_schema = pi_r.json().get("inputs", [])
+            except requests.RequestException:
+                plan_inputs_schema = []
+
+            for inp in plan_inputs_schema:
+                name = inp.get("name", "")
+                config_type = inp.get("config_type")
+                key = f"ai_edit_input_{name}"
+                if config_type:
+                    opts = [
+                        c["config_name"] for c in all_configs if c.get("config_type") == config_type
+                    ]
+                    val = st.selectbox(
+                        f"{name} ({config_type})",
+                        options=opts if opts else [""],
+                        key=key,
+                    )
+                else:
+                    val = st.text_input(name, key=key)
+                if val:
+                    inputs_dict[name] = val
+
+        if st.button("Dry run (list referenced configs)", key="ai_edit_dry_run"):
+            if not plan_name:
+                st.error("Select a plan.")
+            else:
+                with st.spinner("Loading referenced configs..."):
+                    try:
+                        ref_r = requests.get(
+                            api(base, "/configs/referenced"),
+                            params={"plan_name": plan_name, "inputs": json.dumps(inputs_dict)},
+                            timeout=10,
+                        )
+                        ref_r.raise_for_status()
+                        refs = ref_r.json().get("referenced", [])
+                        st.session_state["ai_edit_referenced"] = refs
+                        st.session_state["ai_edit_inputs"] = {**inputs_dict, "plan_name": plan_name}
+                        st.session_state["ai_edit_preview_refresh"] = (
+                            st.session_state.get("ai_edit_preview_refresh", 0) + 1
+                        )
+                        st.success(f"Found {len(refs)} referenced config(s).")
+                    except requests.RequestException as e:
+                        st.error(str(e))
+
+        referenced = st.session_state.get("ai_edit_referenced", [])
+        if referenced:
+            st.write("**Referenced configs:**")
+            for r in referenced:
+                st.caption(f"• {r.get('config_type', '')} / {r.get('config_name', '')}")
+
+        # Step 2: select config, spec_text, run
+        st.subheader("Step 2: Select config & AI Edit")
+        ref_options = [f"{r['config_type']}/{r['config_name']}" for r in referenced]
+        selected_ref = st.selectbox(
+            "Target config",
+            options=ref_options if ref_options else [""],
+            key="ai_edit_selected_ref",
+        )
+        ai_config_type = ""
+        ai_config_name = ""
+        if selected_ref and "/" in selected_ref:
+            ai_config_type, ai_config_name = selected_ref.split("/", 1)
+
+        default_spec_text = ""
+        preview_refresh = st.session_state.get("ai_edit_preview_refresh", 0)
+        if ai_config_name:
+            try:
+                r_doc = requests.get(
+                    api(base, f"/configs/{ai_config_type}/{ai_config_name}"),
+                    timeout=10,
+                )
+                r_doc.raise_for_status()
+                doc = r_doc.json()
+                default_spec_text = doc.get("spec_text") or ""
+                with st.expander("Current spec (preview)", expanded=True):
+                    if st.button("Refresh preview", key="ai_edit_refresh_preview"):
+                        st.session_state["ai_edit_preview_refresh"] = preview_refresh + 1
+                        st.rerun()
+                    st.json(doc.get("spec", {}))
+                    if default_spec_text:
+                        st.text_area(
+                            "Current spec_text",
+                            value=default_spec_text,
+                            height=100,
+                            disabled=True,
+                            key=f"ai_edit_current_spec_text_{ai_config_type}_{ai_config_name}_{preview_refresh}",
+                        )
+            except requests.RequestException:
+                pass
+
+        ai_spec_text = st.text_area(
+            "Spec (full spec text) — edit and save",
+            value=default_spec_text,
+            height=200,
+            placeholder="Describe spec in natural language. E.g. kind_rules: '^report_' -> plan",
+            key=f"ai_edit_spec_text_{ai_config_type}_{ai_config_name}",
+        )
+        if st.button("Run AI Edit", key="ai_edit_run"):
+            if not ai_spec_text.strip():
+                st.error("Enter spec_text.")
+            elif not ai_config_name:
+                st.error("Select a target config.")
+            else:
+                saved_inputs = dict(st.session_state.get("ai_edit_inputs", {}))
+                if plan_name and "plan_name" not in saved_inputs:
+                    saved_inputs["plan_name"] = plan_name
+                with st.spinner("Editing..."):
+                    try:
+                        r = requests.post(
+                            api(base, "/configs/ai-edit"),
+                            json={
+                                "config_type": ai_config_type,
+                                "config_name": ai_config_name,
+                                "spec_text": ai_spec_text.strip(),
+                                "inputs": saved_inputs,
+                            },
+                            timeout=120,
+                        )
+                        r.raise_for_status()
+                        resp = r.json()
+                        if resp.get("status") == "succeeded":
+                            steps = resp.get("steps", [])
+                            out = steps[0].get("outputs", {}) if steps else {}
+                            ct, cn = out.get("config_type", ""), out.get("config_name", "")
+                            st.success(f"Done. {ct}/{cn}")
+                            try:
+                                r2 = requests.get(api(base, f"/configs/{ct}/{cn}"), timeout=10)
+                                r2.raise_for_status()
+                                doc = r2.json()
+                                with st.expander("Updated spec (click to view)", expanded=True):
+                                    st.json(doc.get("spec", {}))
+                                if doc.get("spec_text"):
+                                    st.subheader("spec_text (full spec text)")
+                                    st.text_area(
+                                        "spec_text",
+                                        value=doc["spec_text"],
+                                        height=150,
+                                        disabled=True,
+                                        key="ai_edit_result_spec_text",
+                                    )
+                            except requests.RequestException:
+                                pass
+                            st.session_state.pop("configs_list", None)
+                        else:
+                            errs = resp.get("errors", ["Unknown error"])
+                            st.error("; ".join(errs))
+                    except requests.RequestException as e:
+                        st.error(str(e))
+
+    with tab_steps:
+        st.subheader("Steps (ops)")
+        st.caption("Select a row to view its spec below.")
+        if st.button("Refresh", key="steps_refresh"):
+            st.session_state.pop("steps_list", None)
+        try:
+            r = requests.get(api(base, "/steps"), timeout=10)
+            r.raise_for_status()
+            ops = r.json().get("ops", [])
+            if ops:
+                df = pd.DataFrame({"op": ops})
+                event = st.dataframe(
+                    df,
+                    key="steps_df",
+                    width="stretch",
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                )
+                row_idx = None
+                if event.selection and event.selection.rows:
+                    row_idx = event.selection.rows[0]
+                if row_idx is not None and 0 <= row_idx < len(ops):
+                    op_name = ops[row_idx]
+                    r2 = requests.get(api(base, f"/steps/{op_name}"), timeout=10)
+                    r2.raise_for_status()
+                    spec = r2.json()
+                    st.subheader(f"Spec: {op_name}")
+                    st.markdown(spec.get("docstring") or "(no docstring)")
+                    inp_schema = spec.get("input_schema", [])
+                    out_schema = spec.get("output_schema", [])
+                    config_refs = spec.get("config_refs", {})
+                    if config_refs:
+                        st.caption(
+                            "Config refs: " + ", ".join(f"{k}→{v}" for k, v in config_refs.items())
+                        )
+                    with st.expander("Input schema", expanded=True):
+                        if inp_schema:
+                            st.dataframe(
+                                pd.DataFrame(inp_schema),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                        else:
+                            st.caption("(none)")
+                    with st.expander("Output schema", expanded=True):
+                        if out_schema:
+                            st.dataframe(
+                                pd.DataFrame(out_schema),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                        else:
+                            st.caption("(none)")
+            else:
+                st.info("No steps. API may not have discover_steps loaded.")
+        except requests.RequestException as e:
+            st.error(str(e))
 
 
 if __name__ == "__main__":

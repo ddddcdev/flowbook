@@ -23,7 +23,7 @@ class LookupTableOp(BaseOp):
         df: DataFrame = Field(description="DataFrame")
         lookup_df: DataFrame | None = Field(None, description="DataFrame or from lookup_spec_name")
         lookup_spec_name: str | None = Field(
-            None, json_schema_extra={"x-config-kind": LookupTable.KIND}
+            None, json_schema_extra={"x-config-type": LookupTable.CONFIG_TYPE}
         )
         on: str | None = None
         lookup_on: str | None = None

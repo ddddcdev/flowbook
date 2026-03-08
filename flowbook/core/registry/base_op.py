@@ -37,9 +37,9 @@ class BaseInputs(BaseModel):
         schema = cls.model_json_schema()
         refs: dict[str, str] = {}
         for name, prop in schema.get("properties", {}).items():
-            kind = prop.get("x-config-kind")
-            if isinstance(kind, str):
-                refs[name] = kind
+            config_type = prop.get("x-config-type")
+            if isinstance(config_type, str):
+                refs[name] = config_type
         return refs
 
 
@@ -57,7 +57,7 @@ class BaseOp(ABC):
     Subclasses override with inner class Inputs(BaseInputs) and class Outputs(BaseOutputs).
     Implement __call__(self, inputs, store) -> dict.
 
-    Config refs: Field(json_schema_extra={"x-config-kind": "..."}) on Inputs.
+    Config refs: Field(json_schema_extra={"x-config-type": "..."}) on Inputs.
     Subclass BaseInputs/BaseOutputs for allowed_keys(), required_keys(), etc.
     """
 

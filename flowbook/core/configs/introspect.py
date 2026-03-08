@@ -1,7 +1,7 @@
 """
 Introspect ConfigSpecKind Spec types for schema documentation.
 
-Returns kind-level docstring and field info (name, type, required) for API/docs.
+Returns config_type-level docstring and field info (name, type, required) for API/docs.
 Expands nested TypedDicts (KindRule, DateRule, ResultArtifactSpec) for AI/config generation.
 """
 
@@ -11,7 +11,7 @@ import re
 from typing import Any, NotRequired, get_args, get_origin
 
 from flowbook.core.configs.spec_types import (
-    KIND_TO_SPEC_TYPE,
+    CONFIG_TYPE_TO_SPEC_TYPE,
     DateRule,
     KindRule,
     ResultArtifactSpec,
@@ -73,12 +73,14 @@ _NESTED_BY_NAME: dict[str, list[dict[str, Any]]] = {
 }
 
 
-def get_config_kind_schema(kind: str) -> dict[str, Any]:
-    """Return schema info for a config kind: docstring and field definitions."""
+def get_config_type_schema(config_type: str) -> dict[str, Any]:
+    """Return schema info for a config type: docstring and field definitions."""
     try:
-        spec_type = KIND_TO_SPEC_TYPE[kind]
+        spec_type = CONFIG_TYPE_TO_SPEC_TYPE[config_type]
     except KeyError as e:
-        raise ValueError(f"unknown kind '{kind}'. Known: {sorted(KIND_TO_SPEC_TYPE.keys())}") from e
+        raise ValueError(
+            f"unknown config_type '{config_type}'. Known: {sorted(CONFIG_TYPE_TO_SPEC_TYPE.keys())}"
+        ) from e
 
     spec_cls = spec_type.Spec
     doc = (spec_cls.__doc__ or "").strip() or None
@@ -110,7 +112,7 @@ def get_config_kind_schema(kind: str) -> dict[str, Any]:
             fields.append(field_entry)
 
     result: dict[str, Any] = {
-        "kind": kind,
+        "config_type": config_type,
         "doc": doc,
         "fields": fields,
         "nested_types": {
@@ -120,8 +122,24 @@ def get_config_kind_schema(kind: str) -> dict[str, Any]:
         },
     }
 
+    # InputProfile: expected output shape
+    if config_type == "input_profile":
+        result["expected_output_schema"] = {
+            "kind_rules": "list of KindRule: {pattern, kind, plan_name, match_mode?}",
+            "date_rule": "optional {sheet, cell}",
+            "entity_plan_map_name": "optional str",
+            "inspect_step_name": "optional str",
+            "match_mode": "optional 'start'|'search'",
+        }
+
+    # Mapping: expected output. Plan + steps index give apply_mapping.
+    if config_type == "mapping":
+        result["expected_output_schema"] = {
+            "ops": "list of { op, ...args }. Valid: select_cols, rename, filter_rows, expr_df.",
+        }
+
     # Plan: add nested plan structure (plan.plan dict shape)
-    if kind == "plan":
+    if config_type == "plan":
         result["plan_structure"] = {
             "doc": "Nested plan dict. Required: name, steps.",
             "fields": [

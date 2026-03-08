@@ -39,11 +39,11 @@ def _cleanup(store: PostgresArtifactsStore, keys: list[str]) -> None:
                 )
 
 
-def _cleanup_config(cfg: PostgresConfigStore, kind: str, name: str) -> None:
+def _cleanup_config(cfg: PostgresConfigStore, config_type: str, config_name: str) -> None:
     with cfg.engine.begin() as conn:
         conn.execute(
-            text("DELETE FROM configs WHERE kind = :kind AND name = :name"),
-            {"kind": kind, "name": name},
+            text("DELETE FROM configs WHERE config_type = :ct AND config_name = :cn"),
+            {"ct": config_type, "cn": config_name},
         )
 
 
@@ -84,4 +84,4 @@ def test_apply_mapping_op_df_to_df() -> None:
         assert out["A"].tolist() == [1, 2]
         assert out["b"].tolist() == [10, 30]
     finally:
-        _cleanup_config(configs, Mapping.KIND, mapping_name)
+        _cleanup_config(configs, Mapping.CONFIG_TYPE, mapping_name)

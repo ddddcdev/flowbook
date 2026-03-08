@@ -10,6 +10,7 @@ from flowbook.core.runtime.store import RunStore
 @step("add")
 class AddOp(BaseOp):
     """Add two numbers. Demo step."""
+
     class Inputs(BaseInputs):
         x: int | float
         y: int | float

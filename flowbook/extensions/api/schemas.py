@@ -99,8 +99,8 @@ class ChatResponse(BaseModel):
 
 
 class ConfigEntry(BaseModel):
-    kind: str
-    name: str
+    config_type: str
+    config_name: str
 
 
 class ConfigsListResponse(BaseModel):
@@ -108,23 +108,37 @@ class ConfigsListResponse(BaseModel):
 
 
 class ConfigGetResponse(BaseModel):
-    kind: str
-    name: str
+    config_type: str
+    config_name: str
     spec: dict[str, Any]
+    spec_text: str | None = None
 
 
 class ConfigCreateRequest(BaseModel):
     """Body for POST /configs."""
 
-    kind: str
-    name: str
+    config_type: str
+    config_name: str
     spec: dict[str, Any]
+    spec_text: str | None = None
 
 
 class ConfigUpdateRequest(BaseModel):
-    """Body for PUT /configs/{kind}/{name}."""
+    """Body for PUT /configs/{config_type}/{config_name}."""
 
     spec: dict[str, Any]
+    spec_text: str | None = None
+
+
+class ConfigAiEditRequest(BaseModel):
+    """Body for POST /configs/ai-edit. spec_text = full spec (user edits and maintains)."""
+
+    config_type: str
+    config_name: str
+    spec_text: str
+    """Full spec text. AI interprets and generates spec. Stored as-is."""
+    inputs: dict[str, Any] = {}
+    """Optional plan/run context (JSON). Passed to AI. Plan-specific."""
 
 
 # ---- /runs ----

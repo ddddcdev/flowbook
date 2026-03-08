@@ -19,7 +19,7 @@ def test_load_plan_reads_plan_from_config_store() -> None:
     Plans loaded from ConfigStore via RunStore.configs.
 
     Scenario:
-    1. Store a plan in ConfigStore (kind="plan", name="plan_add")
+    1. Store a plan in ConfigStore (config_type="plan", config_name="plan_add")
     2. Use load_plan step to load and return the plan
     3. Execute that plan (add operation) with inputs x=2, y=3
     4. Verify planner output and final result (sum=5)
@@ -188,8 +188,8 @@ def test_load_plan_missing_plan_key() -> None:
     register_steps(registry)
 
     # Put plan without "plan" key (bypass put_spec validation to test load_plan behavior)
-    config_store._put_spec_by_kind(
-        Plan.KIND,
+    config_store._put_spec_by_config_type(
+        Plan.CONFIG_TYPE,
         "bad_plan",
         {"description": "missing plan"},  # ← No "plan" key
         config_id="test_config_v1",

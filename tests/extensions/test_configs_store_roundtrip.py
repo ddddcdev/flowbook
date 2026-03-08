@@ -30,11 +30,11 @@ def config_store() -> PostgresConfigStore:
     return PostgresConfigStore(database_url=_database_url())
 
 
-def _cleanup(store: PostgresConfigStore, kind: str, name: str) -> None:
+def _cleanup(store: PostgresConfigStore, config_type: str, config_name: str) -> None:
     with store.engine.begin() as conn:
         conn.execute(
-            text("DELETE FROM configs WHERE kind = :kind AND name = :name"),
-            {"kind": kind, "name": name},
+            text("DELETE FROM configs WHERE config_type = :ct AND config_name = :cn"),
+            {"ct": config_type, "cn": config_name},
         )
 
 
@@ -54,7 +54,7 @@ def test_config_spec_roundtrip(config_store: PostgresConfigStore) -> None:
         got = config_store.get_spec(Mapping, name)
         assert got == spec
     finally:
-        _cleanup(config_store, Mapping.KIND, name)
+        _cleanup(config_store, Mapping.CONFIG_TYPE, name)
 
 
 def test_config_upsert_updates_spec(config_store: PostgresConfigStore) -> None:
@@ -67,8 +67,8 @@ def test_config_upsert_updates_spec(config_store: PostgresConfigStore) -> None:
         config_store.put_spec(Mapping, name, spec1, config_id=str(uuid4()))
         assert config_store.get_spec(Mapping, name) == spec1
 
-        # (kind, name) が同一なら upsert で更新される想定
+        # (config_type, config_name) が同一なら upsert で更新される想定
         config_store.put_spec(Mapping, name, spec2, config_id=str(uuid4()))
         assert config_store.get_spec(Mapping, name) == spec2
     finally:
-        _cleanup(config_store, Mapping.KIND, name)
+        _cleanup(config_store, Mapping.CONFIG_TYPE, name)

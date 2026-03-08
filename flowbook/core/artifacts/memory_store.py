@@ -27,7 +27,7 @@ class InMemoryArtifactsStore(ArtifactsStore):
 
     # ---- JSON only ----
     def put(self, key: str, value: JsonValue, **kwargs: object) -> str:
-        # JSON限定を"仕様"として固定
+        # JSON-only as spec
         try:
             json.dumps(value)
         except TypeError as e:

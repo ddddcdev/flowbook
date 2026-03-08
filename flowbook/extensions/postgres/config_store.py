@@ -10,9 +10,11 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
+    Text,
     create_engine,
     select,
     text,
+    update,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -26,9 +28,10 @@ configs = Table(
     "configs",
     metadata,
     Column("config_id", UUID(as_uuid=False), primary_key=True),
-    Column("kind", String, nullable=False),
-    Column("name", String, nullable=False),
+    Column("config_type", String, nullable=False),
+    Column("config_name", String, nullable=False),
     Column("spec", JSONB, nullable=False, server_default=text("'{}'::jsonb")),
+    Column("spec_text", Text, nullable=True, server_default=text("''")),
     Column("meta", JSONB, nullable=False, server_default=text("'{}'::jsonb")),
     Column("is_active", Boolean, nullable=False, server_default=text("true")),
     Column("created_at", TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")),
@@ -43,41 +46,51 @@ class PostgresConfigStore(ConfigStore):
     def __post_init__(self) -> None:
         self.engine: Engine = create_engine(self.database_url, future=True)
 
-    def _get_spec_by_kind(self, kind: str, name: str) -> dict[str, Any]:
+    def _get_spec_by_config_type(self, config_type: str, config_name: str) -> dict[str, Any]:
+        doc = self.get_config_document(config_type, config_name)
+        return doc["spec"]
+
+    def get_config_document(self, config_type: str, config_name: str) -> dict[str, Any]:
         stmt = (
-            select(configs.c.spec)
-            .where(configs.c.kind == kind)
-            .where(configs.c.name == name)
+            select(configs.c.spec, configs.c.spec_text)
+            .where(configs.c.config_type == config_type)
+            .where(configs.c.config_name == config_name)
             .where(configs.c.is_active.is_(True))
+            .order_by(configs.c.updated_at.desc())
             .limit(1)
         )
         with self.engine.begin() as conn:
             row = conn.execute(stmt).fetchone()
         if row is None:
-            raise KeyError(f"config not found: kind={kind} name={name}")
-        return dict(row[0])
+            raise KeyError(f"config not found: config_type={config_type} config_name={config_name}")
+        spec, spec_text = row[0], row[1]
+        return {"spec": dict(spec), "spec_text": spec_text or ""}
 
-    def _put_spec_by_kind(
-        self, kind: str, name: str, spec: dict[str, Any], *, config_id: str
+    def _put_spec_by_config_type(
+        self,
+        config_type: str,
+        config_name: str,
+        spec: dict[str, Any],
+        *,
+        config_id: str,
+        spec_text: str = "",
     ) -> None:
-        stmt = (
-            pg_insert(configs)
-            .values(
-                config_id=config_id,
-                kind=kind,
-                name=name,
-                spec=spec,
-                meta={},
-                is_active=True,
-            )
-            .on_conflict_do_update(
-                index_elements=[configs.c.kind, configs.c.name],
-                set_={
-                    "spec": spec,
-                    "is_active": True,
-                    "updated_at": text("now()"),
-                },
-            )
-        )
         with self.engine.begin() as conn:
-            conn.execute(stmt)
+            conn.execute(
+                pg_insert(configs).values(
+                    config_id=config_id,
+                    config_type=config_type,
+                    config_name=config_name,
+                    spec=spec,
+                    spec_text=spec_text or "",
+                    meta={},
+                    is_active=True,
+                )
+            )
+            conn.execute(
+                update(configs)
+                .where(configs.c.config_type == config_type)
+                .where(configs.c.config_name == config_name)
+                .where(configs.c.config_id != config_id)
+                .values(is_active=False, updated_at=text("now()"))
+            )

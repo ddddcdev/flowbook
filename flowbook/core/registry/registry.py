@@ -58,11 +58,13 @@ def _model_to_fields(model: type[BaseModel]) -> list[dict[str, Any]]:
             type_str = info.get("type", "any")
             if isinstance(type_str, list):
                 type_str = " | ".join(str(t) for t in type_str)
-        fields.append({
-            "name": name,
-            "type": type_str,
-            "required": name in required_set,
-        })
+        fields.append(
+            {
+                "name": name,
+                "type": type_str,
+                "required": name in required_set,
+            }
+        )
     return fields
 
 

@@ -15,10 +15,11 @@ from flowbook.extensions.steps._types import DataFrame
 @step("apply_mapping")
 class ApplyMappingOp(BaseOp):
     """Apply mapping config (rename, map, etc.) to DataFrame."""
+
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame = Field(description="DataFrame")
-        mapping_name: str = Field(json_schema_extra={"x-config-kind": Mapping.KIND})
+        mapping_name: str = Field(json_schema_extra={"x-config-type": Mapping.CONFIG_TYPE})
 
     class Outputs(BaseOutputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)

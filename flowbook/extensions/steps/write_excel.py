@@ -14,6 +14,7 @@ from flowbook.extensions.steps._types import DataFrame
 @step("write_excel")
 class WriteExcelOp(BaseOp):
     """Write DataFrame to Excel bytes."""
+
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame

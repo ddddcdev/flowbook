@@ -47,7 +47,7 @@ See [ref-and-path-grammar.md](../spec/ref-and-path-grammar.md) for details.
 
 ## Plans
 
-The `load_plan` op loads a pre-defined plan from ConfigStore (`Plan` kind). Use when the plan structure is fixed and only bindings vary.
+The `load_plan` op loads a pre-defined plan from ConfigStore (Plan config type). Use when the plan structure is fixed and only bindings vary.
 
 ```json
 {
