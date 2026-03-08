@@ -8,7 +8,7 @@ Config types and their Spec schemas. Use for AI conf, plan composition, and vali
 - **config_type** = type/category
 - **config_name** = config identifier
 - **spec** = executable structured configuration
-- **spec_text** = full natural-language specification text
+- **spec_text** = full spec (natural language). User edits and maintains. Input for AI Edit to generate spec.
 
 ## Config types
 

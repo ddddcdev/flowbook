@@ -130,6 +130,17 @@ class ConfigUpdateRequest(BaseModel):
     spec_text: str | None = None
 
 
+class ConfigAiEditRequest(BaseModel):
+    """Body for POST /configs/ai-edit. spec_text = full spec (user edits and maintains)."""
+
+    config_type: str
+    config_name: str
+    spec_text: str
+    """Full spec text. AI interprets and generates spec. Stored as-is."""
+    inputs: dict[str, Any] = {}
+    """Optional plan/run context (JSON). Passed to AI. Plan-specific."""
+
+
 # ---- /runs ----
 
 

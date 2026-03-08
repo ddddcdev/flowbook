@@ -122,6 +122,22 @@ def get_config_type_schema(config_type: str) -> dict[str, Any]:
         },
     }
 
+    # InputProfile: expected output shape
+    if config_type == "input_profile":
+        result["expected_output_schema"] = {
+            "kind_rules": "list of KindRule: {pattern, kind, plan_name, match_mode?}",
+            "date_rule": "optional {sheet, cell}",
+            "entity_plan_map_name": "optional str",
+            "inspect_step_name": "optional str",
+            "match_mode": "optional 'start'|'search'",
+        }
+
+    # Mapping: expected output. Plan + steps index give apply_mapping.
+    if config_type == "mapping":
+        result["expected_output_schema"] = {
+            "ops": "list of { op, ...args }. Valid: select_cols, rename, filter_rows, expr_df.",
+        }
+
     # Plan: add nested plan structure (plan.plan dict shape)
     if config_type == "plan":
         result["plan_structure"] = {

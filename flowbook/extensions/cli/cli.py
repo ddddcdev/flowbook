@@ -332,7 +332,7 @@ def register_cli(app: Typer) -> None:
             False,
             "--run-through",
             "-y",
-            help="Run through all steps without prompts (通し実行)",
+            help="Run through all steps without prompts",
         ),
     ) -> None:
         """Run hands-on: Health -> Inspect -> Import -> Verify -> Export -> Verify -> Download."""

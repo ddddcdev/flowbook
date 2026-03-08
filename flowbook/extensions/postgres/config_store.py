@@ -14,6 +14,7 @@ from sqlalchemy import (
     create_engine,
     select,
     text,
+    update,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -55,6 +56,7 @@ class PostgresConfigStore(ConfigStore):
             .where(configs.c.config_type == config_type)
             .where(configs.c.config_name == config_name)
             .where(configs.c.is_active.is_(True))
+            .order_by(configs.c.updated_at.desc())
             .limit(1)
         )
         with self.engine.begin() as conn:
@@ -73,26 +75,22 @@ class PostgresConfigStore(ConfigStore):
         config_id: str,
         spec_text: str = "",
     ) -> None:
-        stmt = (
-            pg_insert(configs)
-            .values(
-                config_id=config_id,
-                config_type=config_type,
-                config_name=config_name,
-                spec=spec,
-                spec_text=spec_text or "",
-                meta={},
-                is_active=True,
-            )
-            .on_conflict_do_update(
-                index_elements=[configs.c.config_type, configs.c.config_name],
-                set_={
-                    "spec": spec,
-                    "spec_text": spec_text or "",
-                    "is_active": True,
-                    "updated_at": text("now()"),
-                },
-            )
-        )
         with self.engine.begin() as conn:
-            conn.execute(stmt)
+            conn.execute(
+                pg_insert(configs).values(
+                    config_id=config_id,
+                    config_type=config_type,
+                    config_name=config_name,
+                    spec=spec,
+                    spec_text=spec_text or "",
+                    meta={},
+                    is_active=True,
+                )
+            )
+            conn.execute(
+                update(configs)
+                .where(configs.c.config_type == config_type)
+                .where(configs.c.config_name == config_name)
+                .where(configs.c.config_id != config_id)
+                .values(is_active=False, updated_at=text("now()"))
+            )

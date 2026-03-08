@@ -42,9 +42,10 @@ def _reset_engine():
     get_engine.cache_clear()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session" if os.environ.get("FLOWBOOK_DATABASE_URL") else "function")
 def client() -> TestClient:
-    """Seed config store with test configs, then return a TestClient."""
+    """Seed config store with test configs, then return a TestClient.
+    Session scope when Postgres: avoids duplicate config rows from repeated put_spec."""
     engine = get_engine()
     assert engine.config_store is not None
 
