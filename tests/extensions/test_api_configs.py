@@ -31,15 +31,15 @@ def test_post_configs_create(client_in_memory: TestClient) -> None:
     resp = client_in_memory.post(
         "/configs",
         json={
-            "kind": "plan",
-            "name": "test_plan",
+            "config_type": "plan",
+            "config_name": "test_plan",
             "spec": {"plan": {"steps": []}},
         },
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["kind"] == "plan"
-    assert data["name"] == "test_plan"
+    assert data["config_type"] == "plan"
+    assert data["config_name"] == "test_plan"
     assert data["spec"]["plan"]["steps"] == []
 
     get_resp = client_in_memory.get("/configs/plan/test_plan")
@@ -48,7 +48,7 @@ def test_post_configs_create(client_in_memory: TestClient) -> None:
 
 
 def test_put_configs_upsert(client_in_memory: TestClient) -> None:
-    """PUT /configs/{kind}/{name} creates or updates."""
+    """PUT /configs/{config_type}/{config_name} creates or updates."""
     # Create via PUT
     resp = client_in_memory.put(
         "/configs/plan/upsert_plan",
@@ -70,17 +70,19 @@ def test_post_configs_invalid_spec_returns_400(client_in_memory: TestClient) -> 
     """POST /configs with missing required keys returns 400."""
     resp = client_in_memory.post(
         "/configs",
-        json={"kind": "plan", "name": "bad", "spec": {}},
+        json={"config_type": "plan", "config_name": "bad", "spec": {}},
     )
     assert resp.status_code == 400
     assert "missing" in resp.json()["detail"]["reason"].lower()
 
 
-def test_post_configs_unknown_kind_returns_400(client_in_memory: TestClient) -> None:
-    """POST /configs with unknown kind returns 400."""
+def test_post_configs_unknown_config_type_returns_400(
+    client_in_memory: TestClient,
+) -> None:
+    """POST /configs with unknown config_type returns 400."""
     resp = client_in_memory.post(
         "/configs",
-        json={"kind": "unknown", "name": "x", "spec": {}},
+        json={"config_type": "unknown", "config_name": "x", "spec": {}},
     )
     assert resp.status_code == 400
 
@@ -116,7 +118,7 @@ def test_activate_deactivate_in_memory_returns_501(client_in_memory: TestClient)
     """activate/deactivate with InMemory returns 501."""
     client_in_memory.post(
         "/configs",
-        json={"kind": "plan", "name": "p", "spec": {"plan": {"steps": []}}},
+        json={"config_type": "plan", "config_name": "p", "spec": {"plan": {"steps": []}}},
     )
     resp_a = client_in_memory.post("/configs/plan/p/activate")
     assert resp_a.status_code == 501

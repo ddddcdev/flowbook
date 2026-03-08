@@ -9,10 +9,10 @@ Step (op) specs: docstring, config_refs, input_schema, output_schema (name, type
 
 ## Step → Config mapping
 
-Steps that reference configs declare `InputSchema` with `Field(json_schema_extra={"x-config-kind": "..."})` on config ref fields. Each such field maps to a config kind. **Correlate with config schema**: `config_refs[input_key]` = kind → use `GET /configs/schema/{kind}` for full schema.
+Steps that reference configs declare `InputSchema` with `Field(json_schema_extra={"x-config-type": "..."})` on config ref fields. Each such field maps to a config type. **Correlate with config schema**: `config_refs[input_key]` = config_type → use `GET /configs/schema/{config_type}` for full schema.
 
-| Input key | Kind | Step(s) |
-|-----------|------|---------|
+| Input key | Config type | Step(s) |
+|-----------|-------------|---------|
 | `plan_name` | plan | load_plan |
 | `mapping_name` | mapping | apply_mapping |
 | `lookup_spec_name` | lookup_table | lookup_table |

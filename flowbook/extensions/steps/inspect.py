@@ -44,7 +44,9 @@ class InspectFilenameKindOp(BaseOp):
     """Identifies input kind from filename pattern only."""
 
     class Inputs(BaseInputs):
-        input_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        input_profile_name: str = Field(
+            json_schema_extra={"x-config-type": InputProfile.CONFIG_TYPE}
+        )
         path: str = Field(description="File path")
 
     class Outputs(BaseOutputs):
@@ -109,7 +111,9 @@ class InspectFilenameOp(BaseOp):
     """Identifies input kind from filename only. Returns plan_name from EntityPlanMap."""
 
     class Inputs(BaseInputs):
-        input_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        input_profile_name: str = Field(
+            json_schema_extra={"x-config-type": InputProfile.CONFIG_TYPE}
+        )
         filename: str = Field(description="Filename only")
 
     class Outputs(BaseOutputs):

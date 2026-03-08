@@ -269,15 +269,17 @@ def test_configs_inspectable_filter(client: TestClient):
         config_id=str(uuid.uuid4()),
     )
 
-    r_all = client.get("/configs", params={"kind": "input_profile"})
+    r_all = client.get("/configs", params={"config_type": "input_profile"})
     assert r_all.status_code == 200
-    names_all = [c["name"] for c in r_all.json()["configs"]]
+    names_all = [c["config_name"] for c in r_all.json()["configs"]]
     assert "demo_excel_inspect" in names_all
     assert "detail_region" in names_all
 
-    r_inspectable = client.get("/configs", params={"kind": "input_profile", "inspectable": "true"})
+    r_inspectable = client.get(
+        "/configs", params={"config_type": "input_profile", "inspectable": "true"}
+    )
     assert r_inspectable.status_code == 200
-    names_inspectable = [c["name"] for c in r_inspectable.json()["configs"]]
+    names_inspectable = [c["config_name"] for c in r_inspectable.json()["configs"]]
     assert "demo_excel_inspect" in names_inspectable
     assert "detail_region" not in names_inspectable
 

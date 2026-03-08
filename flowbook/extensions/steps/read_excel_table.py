@@ -14,6 +14,7 @@ from flowbook.extensions.steps._types import DataFrame
 @step("read_excel_table")
 class ReadExcelTableOp(BaseOp):
     """Read Excel sheet as table with header detection."""
+
     class Inputs(BaseInputs):
         path: str
         sheet: int | str

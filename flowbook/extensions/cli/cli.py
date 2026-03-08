@@ -425,8 +425,8 @@ def register_cli(app: Typer) -> None:
         if spec.config_refs:
             t.echo()
             t.echo("## Config refs")
-            for inp, kind in spec.config_refs.items():
-                t.echo(f"  {inp} -> {kind}")
+            for inp, config_type in spec.config_refs.items():
+                t.echo(f"  {inp} -> {config_type}")
 
     @steps_app.command("index")
     def steps_index() -> None:
@@ -455,11 +455,11 @@ def register_cli(app: Typer) -> None:
     app.add_typer(steps_app, name="steps")
 
     # ---- configs ----
-    configs_app = t.Typer(help="Config kinds and schema. Use for AI conf / plan composition.")
+    configs_app = t.Typer(help="Config types and schema. Use for AI conf / plan composition.")
 
     @configs_app.command("index")
     def configs_index_cli() -> None:
-        """Print config kinds and entries (JSON). Requires engine with config store."""
+        """Print config types and entries (JSON). Requires engine with config store."""
         import json
 
         from flowbook.extensions.api.deps import get_engine
@@ -468,9 +468,9 @@ def register_cli(app: Typer) -> None:
         if engine.config_store is None:
             t.echo("Config store not configured.", err=True)
             raise t.Exit(1)
-        from flowbook.core.configs.spec_types import KIND_TO_SPEC_TYPE
+        from flowbook.core.configs.spec_types import CONFIG_TYPE_TO_SPEC_TYPE
 
-        kinds = sorted(KIND_TO_SPEC_TYPE.keys())
+        config_types = sorted(CONFIG_TYPE_TO_SPEC_TYPE.keys())
         store = engine.config_store
         try:
             if hasattr(store, "engine") and getattr(store, "engine", None) is not None:
@@ -479,30 +479,30 @@ def register_cli(app: Typer) -> None:
                 with store.engine.begin() as conn:  # type: ignore[union-attr]
                     rows = conn.execute(
                         text(
-                            "SELECT kind, name FROM configs "
-                            "WHERE is_active = true ORDER BY kind, name"
+                            "SELECT config_type, config_name FROM configs "
+                            "WHERE is_active = true ORDER BY config_type, config_name"
                         )
                     ).fetchall()
-                configs = [{"kind": r[0], "name": r[1]} for r in rows]
+                configs = [{"config_type": r[0], "config_name": r[1]} for r in rows]
             else:
                 pairs = list(getattr(store, "_specs", {}).keys())
-                configs = [{"kind": k, "name": n} for k, n in sorted(pairs)]
+                configs = [{"config_type": k, "config_name": n} for k, n in sorted(pairs)]
         except Exception as e:
             t.echo(str(e), err=True)
             raise t.Exit(1) from e
-        t.echo(json.dumps({"kinds": kinds, "configs": configs}, indent=2))
+        t.echo(json.dumps({"config_types": config_types, "configs": configs}, indent=2))
 
     @configs_app.command("schema")
     def configs_schema(
-        kind: str = t.Argument(..., help="Config kind (e.g. input_profile, mapping)"),
+        config_type: str = t.Argument(..., help="Config type (e.g. input_profile, mapping)"),
     ) -> None:
-        """Print schema for a config kind (JSON)."""
+        """Print schema for a config type (JSON)."""
         import json
 
-        from flowbook.core.configs.introspect import get_config_kind_schema
+        from flowbook.core.configs.introspect import get_config_type_schema
 
         try:
-            schema = get_config_kind_schema(kind)
+            schema = get_config_type_schema(config_type)
             t.echo(json.dumps(schema, indent=2))
         except ValueError as e:
             t.echo(str(e), err=True)

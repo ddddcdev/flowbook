@@ -1,11 +1,19 @@
 # Config schema reference
 
-Config kinds and their Spec schemas. Use for AI conf, plan composition, and validation.
+Config types and their Spec schemas. Use for AI conf, plan composition, and validation.
 
-## Kinds
+## Conceptual model
 
-| Kind | Description |
-|------|-------------|
+- **config** = whole document (spec + spec_text)
+- **config_type** = type/category
+- **config_name** = config identifier
+- **spec** = executable structured configuration
+- **spec_text** = full natural-language specification text
+
+## Config types
+
+| Config type | Description |
+|-------------|-------------|
 | `input_profile` | Kind rules, date rule, entity plan map. Used by inspect, read_excel_detect_region. |
 | `mapping` | Ops list. Used by apply_mapping. |
 | `plan` | Plan config, result_artifacts. Used by load_plan. |
@@ -14,11 +22,11 @@ Config kinds and their Spec schemas. Use for AI conf, plan composition, and vali
 
 ## Schema API
 
-- **API**: `GET /configs/schema/{kind}` — returns `{kind, doc, fields, nested_types}`.
-- **CLI**: `flowbook configs schema <kind>` — JSON output.
+- **API**: `GET /configs/schema/{config_type}` — returns `{config_type, doc, fields, nested_types}`.
+- **CLI**: `flowbook configs schema <config_type>` — JSON output.
 
-Fields may include `item_schema` for list items (KindRule, ResultArtifactSpec). Plan kind includes `plan_structure` for the nested plan dict (name, steps, result_artifacts).
+Fields may include `item_schema` for list items (KindRule, ResultArtifactSpec). Plan type includes `plan_structure` for the nested plan dict (name, steps, result_artifacts).
 
 ## Field reference
 
-Schema is introspected from `flowbook.core.configs.spec_types`. Each kind has a nested `Spec` TypedDict. See `flowbook/docs/ai-config-guide.md` for AI-oriented creation workflow.
+Schema is introspected from `flowbook.core.configs.spec_types`. Each config type has a nested `Spec` TypedDict. See `flowbook/docs/ai-config-guide.md` for AI-oriented creation workflow.

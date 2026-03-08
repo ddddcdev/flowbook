@@ -99,8 +99,8 @@ class ChatResponse(BaseModel):
 
 
 class ConfigEntry(BaseModel):
-    kind: str
-    name: str
+    config_type: str
+    config_name: str
 
 
 class ConfigsListResponse(BaseModel):
@@ -108,23 +108,26 @@ class ConfigsListResponse(BaseModel):
 
 
 class ConfigGetResponse(BaseModel):
-    kind: str
-    name: str
+    config_type: str
+    config_name: str
     spec: dict[str, Any]
+    spec_text: str | None = None
 
 
 class ConfigCreateRequest(BaseModel):
     """Body for POST /configs."""
 
-    kind: str
-    name: str
+    config_type: str
+    config_name: str
     spec: dict[str, Any]
+    spec_text: str | None = None
 
 
 class ConfigUpdateRequest(BaseModel):
-    """Body for PUT /configs/{kind}/{name}."""
+    """Body for PUT /configs/{config_type}/{config_name}."""
 
     spec: dict[str, Any]
+    spec_text: str | None = None
 
 
 # ---- /runs ----

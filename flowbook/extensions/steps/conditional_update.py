@@ -16,6 +16,7 @@ from flowbook.extensions.steps._types import DataFrame
 @step("conditional_update")
 class ConditionalUpdateOp(BaseOp):
     """Update DataFrame rows where condition matches. Adds or updates columns."""
+
     class Inputs(BaseInputs):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         df: DataFrame

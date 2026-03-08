@@ -91,7 +91,7 @@ After the first install, **code changes** in your step modules are picked up on 
 
 - **Inputs**: Subclass `BaseModel` (Pydantic). Define fields with types; required/optional is inferred from the schema.
 - **Outputs**: Subclass `BaseModel` (Pydantic). Define fields for the returned keys.
-- **Config refs**: Use `Field(json_schema_extra={"x-config-kind": "input_profile"})` on config ref fields.
+- **Config refs**: Use `Field(json_schema_extra={"x-config-type": "input_profile"})` on config ref fields.
 - **Docstring**: Add a class docstring; it appears in `flowbook steps show` and API `GET /steps/{op_name}`.
 
 ---

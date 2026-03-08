@@ -28,16 +28,16 @@ def api(base: str, path: str) -> str:
 
 
 def _fetch_input_profile_names(base: str, *, inspectable: bool = False) -> list[str]:
-    """Fetch input_profile config names from GET /configs?kind=input_profile.
+    """Fetch input_profile config names from GET /configs?config_type=input_profile.
     When inspectable=True, only profiles with inspect_step_name are returned."""
     try:
-        params: dict[str, str | bool] = {"kind": "input_profile"}
+        params: dict[str, str | bool] = {"config_type": "input_profile"}
         if inspectable:
             params["inspectable"] = True
         r = requests.get(api(base, "/configs"), params=params, timeout=10)
         r.raise_for_status()
         configs = r.json().get("configs", [])
-        return [c["name"] for c in configs]
+        return [c["config_name"] for c in configs]
     except requests.RequestException:
         return []
 
@@ -589,8 +589,7 @@ def main() -> None:
                     config_refs = spec.get("config_refs", {})
                     if config_refs:
                         st.caption(
-                            "Config refs: "
-                            + ", ".join(f"{k}→{v}" for k, v in config_refs.items())
+                            "Config refs: " + ", ".join(f"{k}→{v}" for k, v in config_refs.items())
                         )
                     with st.expander("Input schema", expanded=True):
                         if inp_schema:
@@ -1209,11 +1208,12 @@ def main() -> None:
                 row_idx = event.selection.rows[0]
             if row_idx is not None and 0 <= row_idx < len(configs_list):
                 c = configs_list[row_idx]
-                kind, name = c["kind"], c["name"]
+                ct = c["config_type"]
+                cn = c["config_name"]
                 try:
-                    r = requests.get(api(base, f"/configs/{kind}/{name}"), timeout=10)
+                    r = requests.get(api(base, f"/configs/{ct}/{cn}"), timeout=10)
                     r.raise_for_status()
-                    st.subheader(f"Spec: {kind} / {name}")
+                    st.subheader(f"Spec: {ct} / {cn}")
                     st.json(r.json().get("spec", {}))
                 except requests.RequestException as e:
                     st.error(str(e))

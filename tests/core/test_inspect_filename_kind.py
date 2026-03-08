@@ -207,8 +207,8 @@ def test_inspect_missing_kind_rules_raises_error():
     config_store = InMemoryConfigStore()
 
     # Preload config without kind_rules (bypass put_spec validation to test inspect behavior)
-    config_store._put_spec_by_kind(
-        InputProfile.KIND,
+    config_store._put_spec_by_config_type(
+        InputProfile.CONFIG_TYPE,
         "incomplete",
         {"some_other_field": "value"},
         config_id="test-incomplete",

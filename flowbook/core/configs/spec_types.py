@@ -1,6 +1,6 @@
 """
 ConfigStore spec types: each Outer (InputProfile, Mapping, ...) subclasses ConfigSpecKind,
-has KIND and nested Spec(TypedDict).
+has CONFIG_TYPE and nested Spec(TypedDict).
 Typed access: store.configs.get_spec(InputProfile, name) -> InputProfile.Spec.
 """
 
@@ -10,14 +10,14 @@ from typing import Any, NotRequired, TypedDict
 
 
 class ConfigSpecKind:
-    """Descriptor base for ConfigStore kinds.
+    """Descriptor base for ConfigStore config types.
 
     Subclasses must define:
-    - KIND: kind string used in ConfigStore.get_spec/put_spec
-    - Spec: nested TypedDict that describes the dict shape for this kind
+    - CONFIG_TYPE: config type string used in ConfigStore.get_spec/put_spec
+    - Spec: nested TypedDict that describes the dict shape for this config type
     """
 
-    KIND: str = ""
+    CONFIG_TYPE: str = ""
     Spec: type = object  # overridden by nested class in each subclass
 
     def __init_subclass__(cls) -> None:
@@ -25,9 +25,9 @@ class ConfigSpecKind:
         if cls is ConfigSpecKind:
             return
 
-        kind = getattr(cls, "KIND", None)
-        if not isinstance(kind, str) or not kind:
-            raise TypeError(f"{cls.__name__!r} must define non-empty KIND")
+        config_type = getattr(cls, "CONFIG_TYPE", None)
+        if not isinstance(config_type, str) or not config_type:
+            raise TypeError(f"{cls.__name__!r} must define non-empty CONFIG_TYPE")
 
         spec = getattr(cls, "Spec", None)
         if spec is None or spec is object:
@@ -51,10 +51,10 @@ class DateRule(TypedDict, total=False):
 
 
 class InputProfile(ConfigSpecKind):
-    KIND: str = "input_profile"
+    CONFIG_TYPE: str = "input_profile"
 
     class Spec(TypedDict):
-        """Spec for kind='input_profile'. kind_rules required."""
+        """Spec for config_type='input_profile'. kind_rules required."""
 
         kind_rules: list[KindRule]
         date_rule: NotRequired[DateRule | dict[str, Any]]
@@ -64,10 +64,10 @@ class InputProfile(ConfigSpecKind):
 
 
 class Mapping(ConfigSpecKind):
-    KIND: str = "mapping"
+    CONFIG_TYPE: str = "mapping"
 
     class Spec(TypedDict):
-        """Spec for kind='mapping'. ops is list of op configs."""
+        """Spec for config_type='mapping'. ops is list of op configs."""
 
         ops: list[dict[str, Any]]
 
@@ -81,10 +81,10 @@ class ResultArtifactSpec(TypedDict):
 
 
 class Plan(ConfigSpecKind):
-    KIND: str = "plan"
+    CONFIG_TYPE: str = "plan"
 
     class Spec(TypedDict):
-        """Spec for kind='plan'. plan is a plan config.
+        """Spec for config_type='plan'. plan is a plan config.
         result_artifacts: optional list of (step, key) paths to treat as main results.
         When present, these paths are used instead of last step's first output.
         """
@@ -94,32 +94,29 @@ class Plan(ConfigSpecKind):
 
 
 class LookupTable(ConfigSpecKind):
-    KIND: str = "lookup_table"
+    CONFIG_TYPE: str = "lookup_table"
 
     class Spec(TypedDict):
-        """Spec for kind='lookup_table'. artifact_key points to stored DataFrame."""
+        """Spec for config_type='lookup_table'. artifact_key points to stored DataFrame."""
 
         artifact_key: str
 
 
 class EntityPlanMap(ConfigSpecKind):
-    KIND: str = "entity_plan_map"
+    CONFIG_TYPE: str = "entity_plan_map"
 
     class Spec(TypedDict, total=False):
-        """Spec for kind='entity_plan_map'. map: kind -> plan_name; default fallback."""
+        """Spec for config_type='entity_plan_map'. map: kind -> plan_name; default fallback."""
 
         map: dict[str, str]
         default: str | None
 
 
-# Deprecated alias for backward compatibility
-Routing = EntityPlanMap
-
-# Registry for update_config step: kind string -> spec_type
-KIND_TO_SPEC_TYPE: dict[str, type[ConfigSpecKind]] = {
-    InputProfile.KIND: InputProfile,
-    Mapping.KIND: Mapping,
-    Plan.KIND: Plan,
-    LookupTable.KIND: LookupTable,
-    EntityPlanMap.KIND: EntityPlanMap,
+# Registry for update_config step: config_type string -> spec_type
+CONFIG_TYPE_TO_SPEC_TYPE: dict[str, type[ConfigSpecKind]] = {
+    InputProfile.CONFIG_TYPE: InputProfile,
+    Mapping.CONFIG_TYPE: Mapping,
+    Plan.CONFIG_TYPE: Plan,
+    LookupTable.CONFIG_TYPE: LookupTable,
+    EntityPlanMap.CONFIG_TYPE: EntityPlanMap,
 }

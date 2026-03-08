@@ -79,7 +79,10 @@ def seed_configs_from_dir(config_dir: str | Path) -> int:
     configs_meta.create_all(store.engine)
     with store.engine.begin() as conn:
         conn.execute(
-            text("CREATE UNIQUE INDEX IF NOT EXISTS configs_kind_name_uq ON configs(kind, name)")
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS configs_config_type_config_name_uq "
+                "ON configs(config_type, config_name)"
+            )
         )
 
     type_map: dict[str, Any] = {
@@ -127,7 +130,10 @@ def seed_configs_from_bundled_and_overlay(overlay_dir: str | Path | None = None)
     configs_meta.create_all(store.engine)
     with store.engine.begin() as conn:
         conn.execute(
-            text("CREATE UNIQUE INDEX IF NOT EXISTS configs_kind_name_uq ON configs(kind, name)")
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS configs_config_type_config_name_uq "
+                "ON configs(config_type, config_name)"
+            )
         )
 
     type_map: dict[str, Any] = {

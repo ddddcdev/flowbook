@@ -116,7 +116,9 @@ class ReadExcelDetectRegionOp(BaseOp):
 
     class Inputs(BaseInputs):
         src_excel_bytes: bytes = Field(description="Excel file bytes")
-        region_profile_name: str = Field(json_schema_extra={"x-config-kind": InputProfile.KIND})
+        region_profile_name: str = Field(
+            json_schema_extra={"x-config-type": InputProfile.CONFIG_TYPE}
+        )
         src_excel_filename: str | None = Field(None, description="Optional filename hint")
         sheet: int | str | None = Field(None, description="Sheet index or name")
         output_filename: str | None = None
